@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cabax Admin Pro - Luxury Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -14,6 +14,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         
         :root {
@@ -27,6 +28,7 @@
         body { 
             background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
             color: #f5f5f5;
+            overflow-x: hidden;
         }
         
         .glass-effect {
@@ -60,6 +62,12 @@
             font-weight: 600;
             transition: all 0.3s ease;
             border: none;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        
+        .luxury-btn:active {
+            transform: scale(0.98);
         }
         
         .luxury-btn:hover {
@@ -71,6 +79,58 @@
             background: linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(26, 26, 26, 0.98) 100%);
             border-right: 1px solid rgba(212, 175, 55, 0.15);
             backdrop-filter: blur(10px);
+        }
+        
+        /* モバイルボトムナビゲーション */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(26, 26, 26, 0.98) 100%);
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            backdrop-filter: blur(20px);
+            z-index: 50;
+            padding: 8px 0;
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .bottom-nav {
+                display: block;
+            }
+            .main-content {
+                padding-bottom: 80px !important;
+            }
+            .sidebar-luxury {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar-luxury.active {
+                transform: translateX(0);
+            }
+        }
+        
+        .bottom-nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            color: #9ca3af;
+            transition: all 0.2s ease;
+            border-radius: 12px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        
+        .bottom-nav-btn.active {
+            color: #d4af37;
+            background: rgba(212, 175, 55, 0.1);
+        }
+        
+        .bottom-nav-btn:active {
+            transform: scale(0.95);
         }
         
         .menu-image-container {
@@ -112,13 +172,9 @@
             margin-top: 12px;
         }
         
-        @media (max-width: 768px) {
-            .sidebar-mobile { transform: translateX(-100%); transition: transform 0.3s; }
-            .sidebar-mobile.active { transform: translateX(0); }
-        }
-        
         @media print {
             .no-print { display: none !important; }
+            .bottom-nav { display: none !important; }
         }
         
         .tab-content { display: none; }
@@ -142,10 +198,25 @@
             min-width: 300px;
         }
         
+        @media (max-width: 640px) {
+            .notification {
+                top: 16px;
+                right: 16px;
+                left: 16px;
+                min-width: auto;
+            }
+        }
+        
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 8px;
+        }
+        
+        @media (max-width: 640px) {
+            .calendar-grid {
+                gap: 4px;
+            }
         }
         
         .calendar-cell {
@@ -153,6 +224,13 @@
             padding: 8px;
             border-radius: 8px;
             transition: all 0.2s ease;
+        }
+        
+        @media (max-width: 640px) {
+            .calendar-cell {
+                min-height: 60px;
+                padding: 4px;
+            }
         }
         
         .calendar-cell:hover {
@@ -170,11 +248,19 @@
             margin-top: 4px;
         }
         
+        @media (max-width: 640px) {
+            .shift-badge {
+                font-size: 0.6rem;
+                padding: 2px 4px;
+            }
+        }
+        
         input, select, textarea {
             background: rgba(255, 255, 255, 0.04) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             color: #f5f5f5 !important;
             transition: all 0.2s ease;
+            font-size: 16px !important; /* iOS zoom prevention */
         }
         
         input:focus, select:focus, textarea:focus {
@@ -224,6 +310,24 @@
             letter-spacing: -0.02em;
         }
         
+        @media (max-width: 640px) {
+            .table-name {
+                font-size: 1.5rem;
+            }
+        }
+        
+        /* タッチフレンドリーなボタンサイズ */
+        button {
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+        
+        @media (max-width: 640px) {
+            button {
+                min-height: 48px;
+            }
+        }
+        
         scrollbar-width: thin;
         scrollbar-color: rgba(212, 175, 55, 0.3) rgba(26, 26, 26, 0.3);
         
@@ -243,6 +347,19 @@
         
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(212, 175, 55, 0.5);
+        }
+        
+        /* モバイル最適化 */
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem !important;
+            }
+            .text-5xl {
+                font-size: 2.5rem !important;
+            }
+            .text-4xl {
+                font-size: 1.875rem !important;
+            }
         }
     </style>
 </head>
@@ -270,11 +387,12 @@
 
     <!-- メインダッシュボード -->
     <div id="dashboardPage" class="hidden">
-        <!-- サイドバー -->
-        <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 sidebar-luxury sidebar-mobile md:translate-x-0 no-print">
+        <!-- デスクトップサイドバー -->
+        <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 sidebar-luxury no-print">
             <div class="flex h-full flex-col">
-                <div class="flex h-24 items-center justify-center px-6 border-b border-gray-800">
+                <div class="flex h-24 items-center justify-between px-6 border-b border-gray-800">
                     <h1 class="text-3xl font-bold gold-accent tracking-tight">Cabax</h1>
+                    <button onclick="toggleMobileSidebar()" class="md:hidden text-gray-400 text-2xl">✕</button>
                 </div>
                 
                 <div class="border-b border-gray-800 p-6">
@@ -321,102 +439,129 @@
             </div>
         </div>
 
+        <!-- モバイルメニューボタン -->
+        <button onclick="toggleMobileSidebar()" class="md:hidden fixed top-4 left-4 z-50 bg-gray-800/80 backdrop-blur-sm text-gray-300 p-3 rounded-xl no-print">
+            ☰
+        </button>
+
+        <!-- モバイルボトムナビゲーション -->
+        <div class="bottom-nav no-print">
+            <div class="grid grid-cols-4 gap-1 px-2">
+                <button onclick="showTab('dashboard')" class="bottom-nav-btn active" data-tab="dashboard">
+                    <span class="text-xl">📊</span>
+                    <span class="text-xs">ダッシュ</span>
+                </button>
+                <button onclick="showTab('tables')" class="bottom-nav-btn" data-tab="tables">
+                    <span class="text-xl">🪑</span>
+                    <span class="text-xs">テーブル</span>
+                </button>
+                <button onclick="showTab('menu')" class="bottom-nav-btn" data-tab="menu">
+                    <span class="text-xl">🍽️</span>
+                    <span class="text-xs">メニュー</span>
+                </button>
+                <button onclick="showTab('reports')" class="bottom-nav-btn" data-tab="reports">
+                    <span class="text-xl">📈</span>
+                    <span class="text-xs">売上</span>
+                </button>
+            </div>
+        </div>
+
         <!-- メインコンテンツ -->
-        <div class="md:pl-72 min-h-screen">
-            <main class="p-6 md:p-10">
+        <div class="md:pl-72 min-h-screen main-content">
+            <main class="p-4 md:p-10">
                 
                 <!-- ダッシュボード -->
                 <div id="dashboard-tab" class="tab-content active">
-                    <div class="mb-10">
-                        <h1 class="text-5xl font-bold gold-accent mb-4">Dashboard</h1>
-                        <p class="text-gray-400 text-lg mb-8">リアルタイム営業状況</p>
-                        <div class="flex flex-wrap gap-3">
-                            <button onclick="syncWithBackend()" class="luxury-btn px-8 py-3.5 rounded-xl text-sm">
+                    <div class="mb-8 md:mb-10">
+                        <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-3 md:mb-4">Dashboard</h1>
+                        <p class="text-gray-400 text-base md:text-lg mb-6 md:mb-8">リアルタイム営業状況</p>
+                        <div class="flex flex-wrap gap-2 md:gap-3">
+                            <button onclick="syncWithBackend()" class="luxury-btn px-6 md:px-8 py-3 md:py-3.5 rounded-xl text-sm">
                                 🔄 API同期
                             </button>
-                            <button onclick="printDailyReport()" class="bg-gray-800 text-gray-300 px-8 py-3.5 rounded-xl hover:bg-gray-700 transition text-sm">
+                            <button onclick="printDailyReport()" class="bg-gray-800 text-gray-300 px-6 md:px-8 py-3 md:py-3.5 rounded-xl hover:bg-gray-700 transition text-sm">
                                 🖨️ 日報印刷
                             </button>
-                            <button onclick="exportCSV()" class="bg-gray-800 text-gray-300 px-8 py-3.5 rounded-xl hover:bg-gray-700 transition text-sm">
+                            <button onclick="exportCSV()" class="bg-gray-800 text-gray-300 px-6 md:px-8 py-3 md:py-3.5 rounded-xl hover:bg-gray-700 transition text-sm">
                                 📥 CSV出力
                             </button>
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <p class="text-sm text-gray-400 mb-3 uppercase tracking-wide">本日の売上</p>
-                            <p class="text-4xl font-bold gold-accent" id="totalSales">¥0</p>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8 md:mb-10">
+                        <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl">
+                            <p class="text-xs md:text-sm text-gray-400 mb-2 md:mb-3 uppercase tracking-wide">本日の売上</p>
+                            <p class="text-2xl md:text-4xl font-bold gold-accent" id="totalSales">¥0</p>
                         </div>
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <p class="text-sm text-gray-400 mb-3 uppercase tracking-wide">来店組数</p>
-                            <p class="text-4xl font-bold text-gray-200" id="totalCustomers">0組</p>
+                        <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl">
+                            <p class="text-xs md:text-sm text-gray-400 mb-2 md:mb-3 uppercase tracking-wide">来店組数</p>
+                            <p class="text-2xl md:text-4xl font-bold text-gray-200" id="totalCustomers">0組</p>
                         </div>
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <p class="text-sm text-gray-400 mb-3 uppercase tracking-wide">出勤中</p>
-                            <p class="text-4xl font-bold text-gray-200" id="workingCasts">0名</p>
+                        <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl">
+                            <p class="text-xs md:text-sm text-gray-400 mb-2 md:mb-3 uppercase tracking-wide">出勤中</p>
+                            <p class="text-2xl md:text-4xl font-bold text-gray-200" id="workingCasts">0名</p>
                         </div>
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <p class="text-sm text-gray-400 mb-3 uppercase tracking-wide">客単価</p>
-                            <p class="text-4xl font-bold text-gray-200" id="averageSpend">¥0</p>
+                        <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl">
+                            <p class="text-xs md:text-sm text-gray-400 mb-2 md:mb-3 uppercase tracking-wide">客単価</p>
+                            <p class="text-2xl md:text-4xl font-bold text-gray-200" id="averageSpend">¥0</p>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <h3 class="text-xl font-semibold mb-6 text-gray-200">時間帯別売上</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                        <div class="luxury-card rounded-2xl p-6 md:p-8 shadow-xl">
+                            <h3 class="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-gray-200">時間帯別売上</h3>
                             <canvas id="salesChart"></canvas>
                         </div>
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <h3 class="text-xl font-semibold mb-6 text-gray-200">最近の活動</h3>
-                            <div id="recentActivities" class="space-y-4"></div>
+                        <div class="luxury-card rounded-2xl p-6 md:p-8 shadow-xl">
+                            <h3 class="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-gray-200">最近の活動</h3>
+                            <div id="recentActivities" class="space-y-3 md:space-y-4"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- 勤怠管理タブ -->
                 <div id="attendance-tab" class="tab-content">
-                    <h1 class="text-5xl font-bold gold-accent mb-10">勤怠管理</h1>
+                    <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-8 md:mb-10">勤怠管理</h1>
                     
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <h3 class="text-2xl font-semibold mb-6 text-gray-200">📍 打刻</h3>
-                            <select id="attendanceCast" class="w-full rounded-xl px-5 py-4 mb-6 text-sm">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8 md:mb-10">
+                        <div class="luxury-card rounded-2xl p-6 md:p-8 shadow-xl">
+                            <h3 class="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-gray-200">📍 打刻</h3>
+                            <select id="attendanceCast" class="w-full rounded-xl px-4 md:px-5 py-3 md:py-4 mb-4 md:mb-6 text-sm">
                                 <option value="">キャストを選択</option>
                             </select>
-                            <div class="grid grid-cols-2 gap-4">
-                                <button onclick="clockIn()" class="bg-green-900/30 border border-green-700/50 text-green-400 py-5 rounded-xl font-semibold hover:bg-green-900/50 transition">
+                            <div class="grid grid-cols-2 gap-3 md:gap-4">
+                                <button onclick="clockIn()" class="bg-green-900/30 border border-green-700/50 text-green-400 py-4 md:py-5 rounded-xl font-semibold hover:bg-green-900/50 transition text-sm md:text-base">
                                     ✅ 出勤
                                 </button>
-                                <button onclick="clockOut()" class="bg-red-900/30 border border-red-700/50 text-red-400 py-5 rounded-xl font-semibold hover:bg-red-900/50 transition">
+                                <button onclick="clockOut()" class="bg-red-900/30 border border-red-700/50 text-red-400 py-4 md:py-5 rounded-xl font-semibold hover:bg-red-900/50 transition text-sm md:text-base">
                                     ❌ 退勤
                                 </button>
                             </div>
                         </div>
 
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <h3 class="text-2xl font-semibold mb-6 text-gray-200">👥 本日の出勤者</h3>
+                        <div class="luxury-card rounded-2xl p-6 md:p-8 shadow-xl">
+                            <h3 class="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-gray-200">👥 本日の出勤者</h3>
                             <div id="todayAttendance" class="space-y-3"></div>
                         </div>
                     </div>
 
-                    <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                        <div class="flex justify-between items-center mb-8">
-                            <h3 class="text-2xl font-semibold text-gray-200">📋 勤怠履歴</h3>
-                            <button onclick="exportAttendanceCSV()" class="luxury-btn px-8 py-3 rounded-xl text-sm">
+                    <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+                            <h3 class="text-xl md:text-2xl font-semibold text-gray-200">📋 勤怠履歴</h3>
+                            <button onclick="exportAttendanceCSV()" class="luxury-btn px-6 md:px-8 py-2.5 md:py-3 rounded-xl text-sm w-full md:w-auto">
                                 CSV出力
                             </button>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full">
+                            <table class="min-w-full text-sm">
                                 <thead>
                                     <tr>
-                                        <th class="text-left py-5 px-6 text-gray-400 font-medium text-sm">日付</th>
-                                        <th class="text-left py-5 px-6 text-gray-400 font-medium text-sm">キャスト</th>
-                                        <th class="text-center py-5 px-6 text-gray-400 font-medium text-sm">出勤</th>
-                                        <th class="text-center py-5 px-6 text-gray-400 font-medium text-sm">退勤</th>
-                                        <th class="text-center py-5 px-6 text-gray-400 font-medium text-sm">労働時間</th>
-                                        <th class="text-center py-5 px-6 text-gray-400 font-medium text-sm">状態</th>
+                                        <th class="text-left py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm">日付</th>
+                                        <th class="text-left py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm">キャスト</th>
+                                        <th class="text-center py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm">出勤</th>
+                                        <th class="text-center py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm">退勤</th>
+                                        <th class="text-center py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm hidden md:table-cell">労働時間</th>
+                                        <th class="text-center py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm">状態</th>
                                     </tr>
                                 </thead>
                                 <tbody id="attendanceTableBody"></tbody>
@@ -427,95 +572,95 @@
 
                 <!-- テーブル管理 -->
                 <div id="tables-tab" class="tab-content">
-                    <h1 class="text-5xl font-bold gold-accent mb-10">テーブル管理</h1>
-                    <div id="tablesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+                    <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-8 md:mb-10">テーブル管理</h1>
+                    <div id="tablesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4"></div>
                 </div>
 
                 <!-- シフト管理 -->
                 <div id="shifts-tab" class="tab-content">
-                    <h1 class="text-5xl font-bold gold-accent mb-8">シフト管理</h1>
-                    <div class="mb-8 flex gap-3">
-                        <button onclick="openAddShiftModal()" class="luxury-btn px-8 py-3.5 rounded-xl text-sm">
+                    <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-6 md:mb-8">シフト管理</h1>
+                    <div class="mb-6 md:mb-8 flex flex-wrap gap-2 md:gap-3">
+                        <button onclick="openAddShiftModal()" class="luxury-btn px-6 md:px-8 py-3 md:py-3.5 rounded-xl text-sm flex-1 md:flex-none">
                             ➕ シフト追加
                         </button>
-                        <button onclick="printShiftTable()" class="bg-gray-800 text-gray-300 px-8 py-3.5 rounded-xl hover:bg-gray-700 transition text-sm">
+                        <button onclick="printShiftTable()" class="bg-gray-800 text-gray-300 px-6 md:px-8 py-3 md:py-3.5 rounded-xl hover:bg-gray-700 transition text-sm flex-1 md:flex-none">
                             🖨️ 印刷
                         </button>
                     </div>
 
-                    <div class="luxury-card rounded-2xl p-8 shadow-xl mb-8">
-                        <div class="flex items-center justify-between mb-8">
-                            <button onclick="previousMonth()" class="px-6 py-3 bg-gray-800 rounded-xl hover:bg-gray-700 transition">←</button>
-                            <h3 class="text-2xl font-semibold text-gray-200" id="currentMonth">2024年11月</h3>
-                            <button onclick="nextMonth()" class="px-6 py-3 bg-gray-800 rounded-xl hover:bg-gray-700 transition">→</button>
+                    <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl mb-6 md:mb-8">
+                        <div class="flex items-center justify-between mb-6 md:mb-8">
+                            <button onclick="previousMonth()" class="px-4 md:px-6 py-2 md:py-3 bg-gray-800 rounded-xl hover:bg-gray-700 transition">←</button>
+                            <h3 class="text-lg md:text-2xl font-semibold text-gray-200" id="currentMonth">2024年11月</h3>
+                            <button onclick="nextMonth()" class="px-4 md:px-6 py-2 md:py-3 bg-gray-800 rounded-xl hover:bg-gray-700 transition">→</button>
                         </div>
                         <div class="calendar-grid" id="shiftCalendar"></div>
                     </div>
 
-                    <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                        <h3 class="text-2xl font-semibold mb-6 text-gray-200">今週のシフト</h3>
-                        <div id="weeklyShifts" class="space-y-4"></div>
+                    <div class="luxury-card rounded-2xl p-6 md:p-8 shadow-xl">
+                        <h3 class="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-gray-200">今週のシフト</h3>
+                        <div id="weeklyShifts" class="space-y-3 md:space-y-4"></div>
                     </div>
                 </div>
 
                 <!-- メニュー管理 -->
                 <div id="menu-tab" class="tab-content">
-                    <div class="mb-10 flex justify-between items-start">
+                    <div class="mb-8 md:mb-10 flex flex-col md:flex-row justify-between items-start gap-4">
                         <div>
-                            <h1 class="text-5xl font-bold gold-accent mb-3">メニュー管理</h1>
-                            <p class="text-gray-400 text-lg">商品画像付きメニュー</p>
+                            <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-2 md:mb-3">メニュー管理</h1>
+                            <p class="text-gray-400 text-base md:text-lg">商品画像付きメニュー</p>
                         </div>
-                        <button onclick="openAddMenuModal()" class="luxury-btn px-8 py-3.5 rounded-xl text-sm">
+                        <button onclick="openAddMenuModal()" class="luxury-btn px-6 md:px-8 py-3 md:py-3.5 rounded-xl text-sm w-full md:w-auto">
                             ➕ メニュー追加
                         </button>
                     </div>
-                    <div id="menuGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+                    <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"></div>
                 </div>
 
                 <!-- キャスト管理 -->
                 <div id="casts-tab" class="tab-content">
-                    <div class="mb-10 flex justify-between items-center">
-                        <h1 class="text-5xl font-bold gold-accent">キャスト管理</h1>
-                        <button onclick="openAddCastModal()" class="luxury-btn px-8 py-3.5 rounded-xl text-sm">
+                    <div class="mb-8 md:mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <h1 class="text-4xl md:text-5xl font-bold gold-accent">キャスト管理</h1>
+                        <button onclick="openAddCastModal()" class="luxury-btn px-6 md:px-8 py-3 md:py-3.5 rounded-xl text-sm w-full md:w-auto">
                             ➕ キャスト追加
                         </button>
                     </div>
-                    <div id="castsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                    <div id="castsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"></div>
                 </div>
 
                 <!-- 売上レポート -->
                 <div id="reports-tab" class="tab-content">
-                    <div class="mb-10">
-                        <h1 class="text-5xl font-bold gold-accent mb-4">売上レポート</h1>
-                        <div class="mt-8 flex flex-wrap gap-3">
-                            <button onclick="generateReport('daily')" class="luxury-btn px-8 py-3.5 rounded-xl text-sm">日次</button>
-                            <button onclick="generateReport('weekly')" class="bg-gray-800 text-gray-300 px-8 py-3.5 rounded-xl hover:bg-gray-700 transition text-sm">週次</button>
-                            <button onclick="generateReport('monthly')" class="bg-gray-800 text-gray-300 px-8 py-3.5 rounded-xl hover:bg-gray-700 transition text-sm">月次</button>
-                            <button onclick="exportFullReport()" class="bg-gray-800 text-gray-300 px-8 py-3.5 rounded-xl hover:bg-gray-700 transition text-sm">フル出力</button>
+                    <div class="mb-8 md:mb-10">
+                        <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-3 md:mb-4">売上レポート</h1>
+                        <div class="mt-6 md:mt-8 flex flex-wrap gap-2 md:gap-3">
+                            <button onclick="generateReport('daily')" class="luxury-btn px-6 md:px-8 py-3 md:py-3.5 rounded-xl text-sm flex-1 md:flex-none">日次</button>
+                            <button onclick="generateReport('weekly')" class="bg-gray-800 text-gray-300 px-6 md:px-8 py-3 md:py-3.5 rounded-xl hover:bg-gray-700 transition text-sm flex-1 md:flex-none">週次</button>
+                            <button onclick="generateReport('monthly')" class="bg-gray-800 text-gray-300 px-6 md:px-8 py-3 md:py-3.5 rounded-xl hover:bg-gray-700 transition text-sm flex-1 md:flex-none">月次</button>
+                            <button onclick="exportFullReport()" class="bg-gray-800 text-gray-300 px-6 md:px-8 py-3 md:py-3.5 rounded-xl hover:bg-gray-700 transition text-sm flex-1 md:flex-none">フル出力</button>
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <h3 class="text-xl font-semibold mb-6 text-gray-200">日別売上推移</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+                        <div class="luxury-card rounded-2xl p-6 md:p-8 shadow-xl">
+                            <h3 class="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-gray-200">日別売上推移</h3>
                             <canvas id="dailySalesChart"></canvas>
                         </div>
-                        <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                            <h3 class="text-xl font-semibold mb-6 text-gray-200">カテゴリ別売上</h3>
+                        <div class="luxury-card rounded-2xl p-6 md:p-8 shadow-xl">
+                            <h3 class="text-lg md:text-xl font-semibold mb-4 md:mb-6 text-gray-200">カテゴリ別売上</h3>
                             <canvas id="categorySalesChart"></canvas>
                         </div>
                     </div>
 
-                    <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                        <h3 class="text-2xl font-semibold mb-8 text-gray-200">売上明細</h3>
+                    <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl">
+                        <h3 class="text-xl md:text-2xl font-semibold mb-6 md:mb-8 text-gray-200">売上明細</h3>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full">
+                            <table class="min-w-full text-sm">
                                 <thead>
                                     <tr>
-                                        <th class="text-left py-5 px-6 text-gray-400 font-medium text-sm">日付</th>
-                                        <th class="text-left py-5 px-6 text-gray-400 font-medium text-sm">テーブル</th>
-                                        <th class="text-center py-5 px-6 text-gray-400 font-medium text-sm">人数</th>
-                                        <th class="text-right py-5 px-6 text-gray-400 font-medium text-sm">売上</th>
+                                        <th class="text-left py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm">日付</th>
+                                        <th class="text-left py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm">テーブル</th>
+                                        <th class="text-center py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm hidden md:table-cell">人数</th>
+                                        <th class="text-right py-3 md:py-5 px-3 md:px-6 text-gray-400 font-medium text-xs md:text-sm">売上</th>
                                     </tr>
                                 </thead>
                                 <tbody id="reportTableBody"></tbody>
@@ -531,33 +676,33 @@
     <!-- モーダル: メニュー追加 -->
     <div id="addMenuModal" class="modal fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-70 p-4">
         <div class="w-full max-w-lg glass-effect rounded-2xl shadow-2xl">
-            <div class="border-b border-gray-700 px-8 py-6 flex items-center justify-between">
-                <h2 class="text-2xl font-bold gold-accent">メニュー追加</h2>
+            <div class="border-b border-gray-700 px-6 md:px-8 py-5 md:py-6 flex items-center justify-between">
+                <h2 class="text-xl md:text-2xl font-bold gold-accent">メニュー追加</h2>
                 <button onclick="closeModal('addMenuModal')" class="text-gray-400 hover:text-gray-200 text-2xl">✕</button>
             </div>
-            <div class="p-8">
-                <form onsubmit="addMenuItem(event)" class="space-y-5">
+            <div class="p-6 md:p-8">
+                <form onsubmit="addMenuItem(event)" class="space-y-4 md:space-y-5">
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">商品画像</label>
-                        <div class="image-upload-area rounded-xl p-8 text-center" onclick="document.getElementById('menuImageInput').click()">
+                        <div class="image-upload-area rounded-xl p-6 md:p-8 text-center" onclick="document.getElementById('menuImageInput').click()">
                             <input type="file" id="menuImageInput" accept="image/*" class="hidden" onchange="previewMenuImage(event)">
-                            <p class="text-gray-400 mb-2">📸 クリックして画像をアップロード</p>
+                            <p class="text-gray-400 mb-2 text-sm md:text-base">📸 クリックして画像をアップロード</p>
                             <p class="text-xs text-gray-500">JPG, PNG, GIF (最大5MB)</p>
                         </div>
                         <img id="menuImagePreview" class="image-preview hidden" />
                     </div>
-                    <input type="text" id="menuName" placeholder="商品名" class="w-full px-5 py-4 rounded-xl text-sm" required>
-                    <select id="menuCategory" class="w-full px-5 py-4 rounded-xl text-sm">
+                    <input type="text" id="menuName" placeholder="商品名" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    <select id="menuCategory" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm">
                         <option value="bottle">ボトル</option>
                         <option value="drink">ドリンク</option>
                         <option value="food">フード</option>
                         <option value="set">セット</option>
                     </select>
-                    <input type="number" id="menuPrice" placeholder="価格" class="w-full px-5 py-4 rounded-xl text-sm" required>
-                    <textarea id="menuDescription" placeholder="説明（任意）" rows="3" class="w-full px-5 py-4 rounded-xl text-sm"></textarea>
+                    <input type="number" id="menuPrice" placeholder="価格" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    <textarea id="menuDescription" placeholder="説明（任意）" rows="3" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm"></textarea>
                     <div class="flex gap-3 pt-4">
-                        <button type="submit" class="flex-1 luxury-btn py-4 rounded-xl font-semibold">追加</button>
-                        <button type="button" onclick="closeModal('addMenuModal')" class="flex-1 bg-gray-800 text-gray-300 py-4 rounded-xl hover:bg-gray-700 transition">キャンセル</button>
+                        <button type="submit" class="flex-1 luxury-btn py-3 md:py-4 rounded-xl font-semibold text-sm">追加</button>
+                        <button type="button" onclick="closeModal('addMenuModal')" class="flex-1 bg-gray-800 text-gray-300 py-3 md:py-4 rounded-xl hover:bg-gray-700 transition text-sm">キャンセル</button>
                     </div>
                 </form>
             </div>
@@ -567,22 +712,22 @@
     <!-- モーダル: キャスト追加 -->
     <div id="addCastModal" class="modal fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-70 p-4">
         <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl">
-            <div class="border-b border-gray-700 px-8 py-6 flex items-center justify-between">
-                <h2 class="text-2xl font-bold gold-accent">キャスト追加</h2>
+            <div class="border-b border-gray-700 px-6 md:px-8 py-5 md:py-6 flex items-center justify-between">
+                <h2 class="text-xl md:text-2xl font-bold gold-accent">キャスト追加</h2>
                 <button onclick="closeModal('addCastModal')" class="text-gray-400 hover:text-gray-200 text-2xl">✕</button>
             </div>
-            <div class="p-8">
-                <form onsubmit="addCast(event)" class="space-y-5">
-                    <input type="text" id="castName" placeholder="名前" class="w-full px-5 py-4 rounded-xl text-sm" required>
-                    <select id="castRank" class="w-full px-5 py-4 rounded-xl text-sm">
+            <div class="p-6 md:p-8">
+                <form onsubmit="addCast(event)" class="space-y-4 md:space-y-5">
+                    <input type="text" id="castName" placeholder="名前" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    <select id="castRank" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm">
                         <option value="regular">レギュラー</option>
                         <option value="chief">チーフ</option>
                         <option value="manager">マネージャー</option>
                     </select>
-                    <input type="number" id="castHourlyRate" placeholder="時給" class="w-full px-5 py-4 rounded-xl text-sm" required>
+                    <input type="number" id="castHourlyRate" placeholder="時給" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
                     <div class="flex gap-3 pt-4">
-                        <button type="submit" class="flex-1 luxury-btn py-4 rounded-xl font-semibold">追加</button>
-                        <button type="button" onclick="closeModal('addCastModal')" class="flex-1 bg-gray-800 text-gray-300 py-4 rounded-xl hover:bg-gray-700 transition">キャンセル</button>
+                        <button type="submit" class="flex-1 luxury-btn py-3 md:py-4 rounded-xl font-semibold text-sm">追加</button>
+                        <button type="button" onclick="closeModal('addCastModal')" class="flex-1 bg-gray-800 text-gray-300 py-3 md:py-4 rounded-xl hover:bg-gray-700 transition text-sm">キャンセル</button>
                     </div>
                 </form>
             </div>
@@ -592,23 +737,23 @@
     <!-- モーダル: キャスト編集 -->
     <div id="editCastModal" class="modal fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-70 p-4">
         <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl">
-            <div class="border-b border-gray-700 px-8 py-6 flex items-center justify-between">
-                <h2 class="text-2xl font-bold gold-accent">キャスト編集</h2>
+            <div class="border-b border-gray-700 px-6 md:px-8 py-5 md:py-6 flex items-center justify-between">
+                <h2 class="text-xl md:text-2xl font-bold gold-accent">キャスト編集</h2>
                 <button onclick="closeModal('editCastModal')" class="text-gray-400 hover:text-gray-200 text-2xl">✕</button>
             </div>
-            <div class="p-8">
-                <form onsubmit="updateCast(event)" class="space-y-5">
+            <div class="p-6 md:p-8">
+                <form onsubmit="updateCast(event)" class="space-y-4 md:space-y-5">
                     <input type="hidden" id="editCastId">
-                    <input type="text" id="editCastName" placeholder="名前" class="w-full px-5 py-4 rounded-xl text-sm" required>
-                    <select id="editCastRank" class="w-full px-5 py-4 rounded-xl text-sm">
+                    <input type="text" id="editCastName" placeholder="名前" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    <select id="editCastRank" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm">
                         <option value="regular">レギュラー</option>
                         <option value="chief">チーフ</option>
                         <option value="manager">マネージャー</option>
                     </select>
-                    <input type="number" id="editCastHourlyRate" placeholder="時給" class="w-full px-5 py-4 rounded-xl text-sm" required>
+                    <input type="number" id="editCastHourlyRate" placeholder="時給" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
                     <div class="flex gap-3 pt-4">
-                        <button type="submit" class="flex-1 luxury-btn py-4 rounded-xl font-semibold">更新</button>
-                        <button type="button" onclick="closeModal('editCastModal')" class="flex-1 bg-gray-800 text-gray-300 py-4 rounded-xl hover:bg-gray-700 transition">キャンセル</button>
+                        <button type="submit" class="flex-1 luxury-btn py-3 md:py-4 rounded-xl font-semibold text-sm">更新</button>
+                        <button type="button" onclick="closeModal('editCastModal')" class="flex-1 bg-gray-800 text-gray-300 py-3 md:py-4 rounded-xl hover:bg-gray-700 transition text-sm">キャンセル</button>
                     </div>
                 </form>
             </div>
@@ -618,23 +763,23 @@
     <!-- モーダル: シフト追加 -->
     <div id="addShiftModal" class="modal fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-70 p-4">
         <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl">
-            <div class="border-b border-gray-700 px-8 py-6 flex items-center justify-between">
-                <h2 class="text-2xl font-bold gold-accent">シフト登録</h2>
+            <div class="border-b border-gray-700 px-6 md:px-8 py-5 md:py-6 flex items-center justify-between">
+                <h2 class="text-xl md:text-2xl font-bold gold-accent">シフト登録</h2>
                 <button onclick="closeModal('addShiftModal')" class="text-gray-400 hover:text-gray-200 text-2xl">✕</button>
             </div>
-            <div class="p-8">
-                <form onsubmit="saveShift(event)" class="space-y-5">
-                    <select id="shiftCast" class="w-full px-5 py-4 rounded-xl text-sm" required>
+            <div class="p-6 md:p-8">
+                <form onsubmit="saveShift(event)" class="space-y-4 md:space-y-5">
+                    <select id="shiftCast" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
                         <option value="">キャストを選択</option>
                     </select>
-                    <input type="date" id="shiftDate" class="w-full px-5 py-4 rounded-xl text-sm" required>
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="time" id="shiftStart" value="20:00" class="w-full px-5 py-4 rounded-xl text-sm">
-                        <input type="time" id="shiftEnd" value="01:00" class="w-full px-5 py-4 rounded-xl text-sm">
+                    <input type="date" id="shiftDate" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    <div class="grid grid-cols-2 gap-3 md:gap-4">
+                        <input type="time" id="shiftStart" value="20:00" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm">
+                        <input type="time" id="shiftEnd" value="01:00" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm">
                     </div>
                     <div class="flex gap-3 pt-4">
-                        <button type="submit" class="flex-1 luxury-btn py-4 rounded-xl font-semibold">登録</button>
-                        <button type="button" onclick="closeModal('addShiftModal')" class="flex-1 bg-gray-800 text-gray-300 py-4 rounded-xl hover:bg-gray-700 transition">キャンセル</button>
+                        <button type="submit" class="flex-1 luxury-btn py-3 md:py-4 rounded-xl font-semibold text-sm">登録</button>
+                        <button type="button" onclick="closeModal('addShiftModal')" class="flex-1 bg-gray-800 text-gray-300 py-3 md:py-4 rounded-xl hover:bg-gray-700 transition text-sm">キャンセル</button>
                     </div>
                 </form>
             </div>
@@ -677,13 +822,14 @@
         }
 
         function loadDemoData() {
+            // テーブルを1〜6の番号に変更
             appState.tables = [
-                { id: 1, name: 'A1', status: 'available' },
-                { id: 2, name: 'A2', status: 'occupied' },
-                { id: 3, name: 'VIP1', status: 'occupied', isVip: true },
-                { id: 4, name: 'B1', status: 'available' },
-                { id: 5, name: 'B2', status: 'reserved' },
-                { id: 6, name: 'C1', status: 'available' }
+                { id: 1, name: '1', status: 'available' },
+                { id: 2, name: '2', status: 'occupied' },
+                { id: 3, name: '3', status: 'occupied', isVip: true },
+                { id: 4, name: '4', status: 'available' },
+                { id: 5, name: '5', status: 'reserved' },
+                { id: 6, name: '6', status: 'available' }
             ];
 
             appState.menuItems = [
@@ -788,13 +934,50 @@
         }
 
         function showTab(tabName) {
+            // タブコンテンツ切替
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabName + '-tab').classList.add('active');
             
+            // デスクトップナビ
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            
+            // モバイルボトムナビ
+            document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // デスクトップのアクティブボタンを更新
+            const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => {
+                return btn.textContent.includes(getTabLabel(tabName));
+            });
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            // モバイルサイドバーを閉じる
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.remove('active');
+            }
+        }
+        
+        function getTabLabel(tabName) {
+            const labels = {
+                dashboard: 'ダッシュボード',
+                tables: 'テーブル管理',
+                attendance: '勤怠管理',
+                shifts: 'シフト管理',
+                menu: 'メニュー管理',
+                casts: 'キャスト管理',
+                reports: '売上レポート'
+            };
+            return labels[tabName] || '';
+        }
+
+        function toggleMobileSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
         }
 
         // 商品画像プレビュー
@@ -832,21 +1015,21 @@
                             </div>`
                         }
                     </div>
-                    <div class="p-6">
+                    <div class="p-4 md:p-6">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex-1">
-                                <h3 class="text-lg font-bold text-gray-200 mb-1">${item.name}</h3>
+                                <h3 class="text-base md:text-lg font-bold text-gray-200 mb-1">${item.name}</h3>
                                 <p class="text-xs text-gray-400">${item.description || ''}</p>
                             </div>
-                            <span class="ml-2 text-xs px-3 py-1 rounded-full ${getCategoryColor(item.category)}">
+                            <span class="ml-2 text-xs px-2 md:px-3 py-1 rounded-full ${getCategoryColor(item.category)}">
                                 ${getCategoryLabel(item.category)}
                             </span>
                         </div>
                         <div class="flex items-center justify-between mb-4">
-                            <p class="text-2xl font-bold gold-accent">¥${item.price.toLocaleString()}</p>
-                            <p class="text-sm text-gray-400">在庫: ${item.stock || '∞'}</p>
+                            <p class="text-xl md:text-2xl font-bold gold-accent">¥${item.price.toLocaleString()}</p>
+                            <p class="text-xs md:text-sm text-gray-400">在庫: ${item.stock || '∞'}</p>
                         </div>
-                        <button onclick="deleteMenuItem(${item.id})" class="w-full bg-red-900/20 border border-red-800/30 text-red-400 py-3 rounded-xl hover:bg-red-900/30 transition text-sm">
+                        <button onclick="deleteMenuItem(${item.id})" class="w-full bg-red-900/20 border border-red-800/30 text-red-400 py-2.5 md:py-3 rounded-xl hover:bg-red-900/30 transition text-sm">
                             削除
                         </button>
                     </div>
@@ -921,7 +1104,7 @@
             }
         }
 
-        // テーブル表示（修正版 - undefined問題を解決）
+        // テーブル表示
         function renderTables() {
             const grid = document.getElementById('tablesGrid');
             if (!grid) return;
@@ -946,13 +1129,13 @@
                 }[table.status];
                 
                 return `
-                    <div class="luxury-card ${statusClass} rounded-2xl p-6 cursor-pointer hover:shadow-2xl transition-all">
+                    <div class="luxury-card ${statusClass} rounded-2xl p-4 md:p-6 cursor-pointer hover:shadow-2xl transition-all">
                         ${table.isVip ? '<div class="text-xs gold-accent font-bold mb-2">⭐ VIP</div>' : ''}
                         <div class="text-center">
-                            <p class="table-name text-gray-200 mb-2">${table.name || 'テーブル'}</p>
+                            <p class="table-name text-gray-200 mb-2">${table.name}</p>
                             <div class="flex items-center justify-center">
                                 <span class="status-dot ${statusDot}"></span>
-                                <span class="text-sm text-gray-400">${statusText}</span>
+                                <span class="text-xs md:text-sm text-gray-400">${statusText}</span>
                             </div>
                         </div>
                     </div>
@@ -966,33 +1149,33 @@
             if (!grid) return;
             
             grid.innerHTML = appState.casts.map(cast => `
-                <div class="luxury-card rounded-2xl p-8 shadow-xl">
-                    <div class="flex items-center justify-center mb-6">
-                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl">
+                <div class="luxury-card rounded-2xl p-6 md:p-8 shadow-xl">
+                    <div class="flex items-center justify-center mb-4 md:mb-6">
+                        <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl md:text-3xl">
                             👤
                         </div>
                     </div>
-                    <div class="text-center mb-6">
-                        <h3 class="text-2xl font-bold text-gray-200 mb-2">${cast.name}</h3>
-                        <span class="text-xs px-4 py-2 rounded-full ${getRankColor(cast.rank)}">
+                    <div class="text-center mb-4 md:mb-6">
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-200 mb-2">${cast.name}</h3>
+                        <span class="text-xs px-3 md:px-4 py-1.5 md:py-2 rounded-full ${getRankColor(cast.rank)}">
                             ${getRankLabel(cast.rank)}
                         </span>
                     </div>
-                    <div class="space-y-3 text-sm mb-6">
-                        <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                            <span class="text-gray-400">時給</span>
-                            <span class="font-semibold text-gray-200">¥${cast.hourlyRate.toLocaleString()}</span>
+                    <div class="space-y-2 md:space-y-3 text-sm mb-4 md:mb-6">
+                        <div class="flex justify-between items-center p-2 md:p-3 bg-gray-800/30 rounded-lg">
+                            <span class="text-gray-400 text-xs md:text-sm">時給</span>
+                            <span class="font-semibold text-gray-200 text-xs md:text-sm">¥${cast.hourlyRate.toLocaleString()}</span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-800/30 rounded-lg">
-                            <span class="text-gray-400">本日売上</span>
-                            <span class="font-semibold gold-accent">¥${cast.sales.toLocaleString()}</span>
+                        <div class="flex justify-between items-center p-2 md:p-3 bg-gray-800/30 rounded-lg">
+                            <span class="text-gray-400 text-xs md:text-sm">本日売上</span>
+                            <span class="font-semibold gold-accent text-xs md:text-sm">¥${cast.sales.toLocaleString()}</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="editCast(${cast.id})" class="bg-blue-900/30 border border-blue-700/50 text-blue-400 py-3 rounded-xl hover:bg-blue-900/50 transition text-sm font-medium">
+                    <div class="grid grid-cols-2 gap-2 md:gap-3">
+                        <button onclick="editCast(${cast.id})" class="bg-blue-900/30 border border-blue-700/50 text-blue-400 py-2.5 md:py-3 rounded-xl hover:bg-blue-900/50 transition text-xs md:text-sm font-medium">
                             編集
                         </button>
-                        <button onclick="deleteCast(${cast.id})" class="bg-red-900/30 border border-red-700/50 text-red-400 py-3 rounded-xl hover:bg-red-900/50 transition text-sm font-medium">
+                        <button onclick="deleteCast(${cast.id})" class="bg-red-900/30 border border-red-700/50 text-red-400 py-2.5 md:py-3 rounded-xl hover:bg-red-900/50 transition text-xs md:text-sm font-medium">
                             削除
                         </button>
                     </div>
@@ -1168,16 +1351,16 @@
             const todayDiv = document.getElementById('todayAttendance');
             if (todayDiv) {
                 todayDiv.innerHTML = todayAttendances.length === 0 
-                    ? '<p class="text-gray-500 text-center py-6">出勤者なし</p>'
+                    ? '<p class="text-gray-500 text-center py-6 text-sm">出勤者なし</p>'
                     : todayAttendances.map(a => {
                         const cast = appState.casts.find(c => c.id === a.castId);
                         return `
-                            <div class="flex justify-between items-center p-4 bg-green-900/20 border border-green-700/40 rounded-xl">
+                            <div class="flex justify-between items-center p-3 md:p-4 bg-green-900/20 border border-green-700/40 rounded-xl">
                                 <div>
-                                    <p class="font-semibold text-gray-200">${cast?.name || ''}</p>
+                                    <p class="font-semibold text-gray-200 text-sm md:text-base">${cast?.name || ''}</p>
                                     <p class="text-xs text-gray-400">出勤: ${a.clockIn}</p>
                                 </div>
-                                <span class="text-xs px-3 py-1 bg-green-900/40 text-green-400 rounded-full">勤務中</span>
+                                <span class="text-xs px-2 md:px-3 py-1 bg-green-900/40 text-green-400 rounded-full">勤務中</span>
                             </div>
                         `;
                     }).join('');
@@ -1193,12 +1376,12 @@
                     
                     return `
                         <tr>
-                            <td class="py-4 px-6 text-gray-300">${a.date}</td>
-                            <td class="py-4 px-6 text-gray-300">${cast?.name || ''}</td>
-                            <td class="py-4 px-6 text-center text-gray-300">${a.clockIn}</td>
-                            <td class="py-4 px-6 text-center text-gray-300">${a.clockOut || '-'}</td>
-                            <td class="py-4 px-6 text-center text-gray-300">${hours}</td>
-                            <td class="py-4 px-6 text-center ${statusClass} font-medium">${status}</td>
+                            <td class="py-3 md:py-4 px-3 md:px-6 text-gray-300 text-xs md:text-sm">${a.date}</td>
+                            <td class="py-3 md:py-4 px-3 md:px-6 text-gray-300 text-xs md:text-sm">${cast?.name || ''}</td>
+                            <td class="py-3 md:py-4 px-3 md:px-6 text-center text-gray-300 text-xs md:text-sm">${a.clockIn}</td>
+                            <td class="py-3 md:py-4 px-3 md:px-6 text-center text-gray-300 text-xs md:text-sm">${a.clockOut || '-'}</td>
+                            <td class="py-3 md:py-4 px-3 md:px-6 text-center text-gray-300 text-xs md:text-sm hidden md:table-cell">${hours}</td>
+                            <td class="py-3 md:py-4 px-3 md:px-6 text-center ${statusClass} font-medium text-xs md:text-sm">${status}</td>
                         </tr>
                     `;
                 }).join('');
@@ -1250,7 +1433,7 @@
             let html = '';
             const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
             weekDays.forEach(day => {
-                html += `<div class="text-center font-semibold p-3 text-gray-400 text-sm">${day}</div>`;
+                html += `<div class="text-center font-semibold p-2 md:p-3 text-gray-400 text-xs md:text-sm">${day}</div>`;
             });
 
             for (let i = 0; i < firstDay; i++) {
@@ -1263,7 +1446,7 @@
                 const isToday = dateStr === new Date().toISOString().split('T')[0];
                 
                 html += `<div class="calendar-cell border border-gray-800 ${isToday ? 'bg-yellow-900/10 border-yellow-700/30' : ''}">
-                    <div class="font-semibold text-sm mb-2 ${isToday ? 'text-yellow-500' : 'text-gray-400'}">${date}</div>
+                    <div class="font-semibold text-xs md:text-sm mb-1 md:mb-2 ${isToday ? 'text-yellow-500' : 'text-gray-400'}">${date}</div>
                     <div class="space-y-1">
                         ${shiftsForDate.map(shift => {
                             const cast = appState.casts.find(c => c.id === shift.castId);
@@ -1288,17 +1471,17 @@
             });
 
             container.innerHTML = weekShifts.length === 0 
-                ? '<p class="text-gray-500 text-center py-6">今週のシフトなし</p>'
+                ? '<p class="text-gray-500 text-center py-6 text-sm">今週のシフトなし</p>'
                 : weekShifts.map(shift => {
                     const cast = appState.casts.find(c => c.id === shift.castId);
                     return `
-                        <div class="flex justify-between items-center p-5 bg-gray-800/30 rounded-xl hover:bg-gray-800/50 transition">
+                        <div class="flex justify-between items-center p-4 md:p-5 bg-gray-800/30 rounded-xl hover:bg-gray-800/50 transition">
                             <div>
-                                <p class="font-bold text-lg text-gray-200">${cast?.name || ''}</p>
-                                <p class="text-sm text-gray-400">${shift.date}</p>
+                                <p class="font-bold text-base md:text-lg text-gray-200">${cast?.name || ''}</p>
+                                <p class="text-xs md:text-sm text-gray-400">${shift.date}</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-sm text-gray-300">${shift.start} - ${shift.end}</p>
+                                <p class="text-xs md:text-sm text-gray-300">${shift.start} - ${shift.end}</p>
                             </div>
                         </div>
                     `;
@@ -1360,10 +1543,10 @@
                 const table = appState.tables.find(t => t.id === session.tableId);
                 return `
                     <tr>
-                        <td class="py-4 px-6 text-gray-300">${new Date().toLocaleDateString()}</td>
-                        <td class="py-4 px-6 text-gray-300">${table?.name || '-'}</td>
-                        <td class="py-4 px-6 text-center text-gray-300">${session.guests}</td>
-                        <td class="py-4 px-6 text-right font-semibold gold-accent">¥${session.total.toLocaleString()}</td>
+                        <td class="py-3 md:py-4 px-3 md:px-6 text-gray-300 text-xs md:text-sm">${new Date().toLocaleDateString()}</td>
+                        <td class="py-3 md:py-4 px-3 md:px-6 text-gray-300 text-xs md:text-sm">${table?.name || '-'}</td>
+                        <td class="py-3 md:py-4 px-3 md:px-6 text-center text-gray-300 text-xs md:text-sm hidden md:table-cell">${session.guests}</td>
+                        <td class="py-3 md:py-4 px-3 md:px-6 text-right font-semibold gold-accent text-xs md:text-sm">¥${session.total.toLocaleString()}</td>
                     </tr>
                 `;
             }).join('');
@@ -1383,7 +1566,7 @@
             }, 1500);
         }
 
-        // ダッシュボード更新（修正版 - 金額表示を確実に）
+        // ダッシュボード更新
         function updateDashboard() {
             const totalSales = appState.sessions.reduce((sum, s) => sum + s.total, 0);
             const workingCount = appState.attendances.filter(a => a.status === 'working').length;
@@ -1400,14 +1583,14 @@
                 activities.innerHTML = `
                     <div class="flex justify-between items-center py-3 border-b border-gray-800">
                         <div>
-                            <p class="text-sm text-gray-300">テーブルA2を開きました</p>
+                            <p class="text-sm text-gray-300">テーブル2を開きました</p>
                             <p class="text-xs text-gray-500">22:30</p>
                         </div>
                         <span class="text-xs px-3 py-1 bg-green-900/30 text-green-400 rounded-full">新規</span>
                     </div>
                     <div class="flex justify-between items-center py-3 border-b border-gray-800">
                         <div>
-                            <p class="text-sm text-gray-300">VIP1に注文追加</p>
+                            <p class="text-sm text-gray-300">テーブル3に注文追加</p>
                             <p class="text-xs text-gray-500">22:15</p>
                         </div>
                         <span class="text-xs px-3 py-1 bg-blue-900/30 text-blue-400 rounded-full">注文</span>
@@ -1539,10 +1722,6 @@
             document.getElementById(modalId).classList.remove('active');
         }
 
-        function toggleMobileSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
-        }
-
         function showNotification(message, type = 'info') {
             const colors = {
                 success: 'bg-green-900/90 border-green-700',
@@ -1559,11 +1738,11 @@
             };
             
             const notification = document.createElement('div');
-            notification.className = `notification ${colors[type]} border px-6 py-4 rounded-xl shadow-2xl backdrop-blur-sm`;
+            notification.className = `notification ${colors[type]} border px-4 md:px-6 py-3 md:py-4 rounded-xl shadow-2xl backdrop-blur-sm`;
             notification.innerHTML = `
                 <div class="flex items-center gap-3">
-                    <span class="text-2xl">${icons[type]}</span>
-                    <span class="text-gray-200 font-medium">${message}</span>
+                    <span class="text-xl md:text-2xl">${icons[type]}</span>
+                    <span class="text-gray-200 font-medium text-sm md:text-base">${message}</span>
                 </div>
             `;
             
@@ -1571,6 +1750,7 @@
             
             setTimeout(() => {
                 notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
         }
@@ -1582,6 +1762,19 @@
                     this.classList.remove('active');
                 }
             });
+        });
+
+        // サイドバー外クリックで閉じる（モバイル）
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const menuBtn = e.target.closest('button[onclick="toggleMobileSidebar()"]');
+            
+            if (window.innerWidth < 768 && 
+                sidebar.classList.contains('active') && 
+                !sidebar.contains(e.target) && 
+                !menuBtn) {
+                sidebar.classList.remove('active');
+            }
         });
     </script>
 </body>
