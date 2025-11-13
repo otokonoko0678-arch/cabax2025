@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cabax Order - Luxury Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * { 
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        :root {
+            --luxury-black: #0a0a0a;
+            --luxury-dark: #1a1a1a;
+            --luxury-gray: #2a2a2a;
+            --luxury-gold: #d4af37;
+            --luxury-light: #f5f5f5;
+        }
+        
+        body { 
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #f5f5f5;
+            overflow-x: hidden;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .gold-accent {
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .luxury-card {
+            background: rgba(26, 26, 26, 0.6);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .luxury-card:hover {
+            border-color: rgba(212, 175, 55, 0.4);
+            box-shadow: 0 8px 32px rgba(212, 175, 55, 0.12);
+            transform: translateY(-2px);
+        }
+        
+        .luxury-btn {
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            color: #0a0a0a;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            touch-action: manipulation;
+            min-height: 56px;
+        }
+        
+        .luxury-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .luxury-btn:hover {
+            box-shadow: 0 8px 24px rgba(212, 175, 55, 0.35);
+        }
+        
+        .cart-fixed {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 400px;
+            background: linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(26, 26, 26, 0.98) 100%);
+            border-left: 1px solid rgba(212, 175, 55, 0.15);
+            backdrop-filter: blur(20px);
+            z-index: 50;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 1024px) {
+            .cart-fixed {
+                width: 100%;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            }
+            .cart-fixed.active {
+                transform: translateX(0);
+            }
+        }
+        
+        .category-tab {
+            padding: 16px 32px;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        
+        .category-tab.active {
+            border-bottom-color: #d4af37;
+            background: rgba(212, 175, 55, 0.1);
+            color: #f4d03f;
+        }
+        
+        .menu-item-card {
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        
+        .menu-item-card:active {
+            transform: scale(0.98);
+        }
+        
+        .menu-item-card:hover {
+            border-color: rgba(212, 175, 55, 0.4);
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.12);
+        }
+        
+        .cart-item {
+            background: rgba(42, 42, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .screen {
+            display: none;
+        }
+        
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            animation: slideDown 0.3s ease-out;
+            min-width: 400px;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); }
+            to { transform: translate(-50%, 0); }
+        }
+        
+        .quantity-btn {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+        }
+        
+        .quantity-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .quantity-btn:hover {
+            background: rgba(212, 175, 55, 0.25);
+        }
+        
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            color: #0a0a0a;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        input[type="number"] {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #f5f5f5 !important;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            width: 80px;
+            height: 48px;
+            border-radius: 12px;
+        }
+        
+        .premium-badge {
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            color: #0a0a0a;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div id="notificationArea"></div>
+
+    <!-- テーブル選択画面 -->
+    <div id="tableSelectScreen" class="screen active min-h-screen p-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-12">
+                <h1 class="text-6xl font-bold gold-accent mb-4">Cabax</h1>
+                <div class="w-20 h-1 bg-gradient-to-r from-transparent via-yellow-600 to-transparent mx-auto mb-6"></div>
+                <p class="text-2xl text-gray-400">テーブルを選択してください</p>
+            </div>
+
+            <div id="tablesGrid" class="grid grid-cols-3 gap-6"></div>
+        </div>
+    </div>
+
+    <!-- メニュー選択画面 -->
+    <div id="menuScreen" class="screen">
+        <!-- ヘッダー -->
+        <div class="fixed top-0 left-0 right-0 bg-gradient-to-b from-black via-black/95 to-transparent z-40 pb-4">
+            <div class="flex items-center justify-between px-8 py-6">
+                <div>
+                    <h2 class="text-3xl font-bold gold-accent" id="currentTableName">テーブル A1</h2>
+                    <p class="text-gray-400 mt-1" id="sessionInfo">セッション開始</p>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="toggleCart()" class="lg:hidden luxury-btn px-8 py-4 rounded-xl relative">
+                        🛒 カート
+                        <span id="cartBadgeMobile" class="badge hidden">0</span>
+                    </button>
+                    <button onclick="showHistory()" class="bg-gray-800 text-gray-300 px-8 py-4 rounded-xl hover:bg-gray-700 transition font-semibold">
+                        📋 注文履歴
+                    </button>
+                </div>
+            </div>
+
+            <!-- カテゴリタブ -->
+            <div class="flex gap-2 px-8 overflow-x-auto" id="categoryTabs">
+              <button onclick="filterCategory('all')" class="category-tab active" data-category="all">
+    すべて
+</button>
+<button onclick="filterCategory('セット')" class="category-tab" data-category="セット">
+    🎫 セット
+</button>
+<button onclick="filterCategory('ボトル')" class="category-tab" data-category="ボトル">
+    🍾 ボトル
+</button>
+<button onclick="filterCategory('ドリンク')" class="category-tab" data-category="ドリンク">
+    🥃 ドリンク
+</button>
+<button onclick="filterCategory('フード')" class="category-tab" data-category="フード">
+    🍽️ フード
+</button>
+            </div>
+        </div>
+
+        <!-- メニュー一覧 -->
+        <div class="pt-48 pb-8 pr-8 lg:pr-[420px] pl-8">
+            <div id="menuGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- カート（デスクトップは固定、モバイルはスライド） -->
+        <div id="cart" class="cart-fixed">
+            <div class="sticky top-0 bg-gradient-to-b from-black to-transparent p-6 border-b border-gray-800">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-bold gold-accent">🛒 注文カート</h3>
+                    <button onclick="toggleCart()" class="lg:hidden text-gray-400 text-2xl">✕</button>
+                </div>
+                <div class="text-sm text-gray-400">
+                    <span id="cartItemCount">0</span> 品
+                </div>
+            </div>
+
+            <div id="cartItems" class="p-6 space-y-4 min-h-[300px]">
+                <div class="text-center text-gray-500 py-12">
+                    カートは空です
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 bg-gradient-to-t from-black to-transparent p-6 border-t border-gray-800 space-y-4">
+                <div class="flex justify-between items-center text-2xl font-bold">
+                    <span class="text-gray-300">合計</span>
+                    <span class="gold-accent" id="cartTotal">¥0</span>
+                </div>
+                <button onclick="submitOrder()" id="orderButton" class="w-full luxury-btn py-5 rounded-xl text-lg font-bold" disabled>
+                    注文する
+                </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="callStaff()" class="bg-blue-900/30 border border-blue-700/50 text-blue-400 py-4 rounded-xl hover:bg-blue-900/50 transition font-semibold">
+                        🔔 スタッフ
+                    </button>
+                    <button onclick="requestCheck()" class="bg-green-900/30 border border-green-700/50 text-green-400 py-4 rounded-xl hover:bg-green-900/50 transition font-semibold">
+                        💰 会計
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注文履歴画面 -->
+    <div id="historyScreen" class="screen min-h-screen p-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-4xl font-bold gold-accent">📋 注文履歴</h2>
+                <button onclick="backToMenu()" class="bg-gray-800 text-gray-300 px-8 py-4 rounded-xl hover:bg-gray-700 transition font-semibold">
+                    ← メニューに戻る
+                </button>
+            </div>
+
+            <div id="historyList" class="space-y-4"></div>
+
+            <div class="luxury-card rounded-2xl p-8 mt-8">
+                <div class="flex justify-between items-center text-3xl font-bold">
+                    <span class="text-gray-300">現在の合計</span>
+                    <span class="gold-accent" id="historyTotal">¥0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1';
+        
+        const appState = {
+            selectedTable: null,
+            sessionId: null,
+            menuItems: [],
+            cart: [],
+            orders: [],
+            currentCategory: 'all'
+        };
+
+        // 初期化
+        async function init() {
+            await loadTables();
+        }
+
+        // テーブル一覧取得
+        async function loadTables() {
+            try {
+                const response = await fetch(`${API_BASE}/tables`);
+                const data = await response.json();
+                const tables = Array.isArray(data) ? data : (data.tables || []);
+                
+                const grid = document.getElementById('tablesGrid');
+                grid.innerHTML = tables
+                    .filter(t => t.status === 'available' || t.status === 'occupied')
+                    .map(table => {
+                        const statusClass = table.status === 'available' 
+                            ? 'bg-green-900/20 border-green-700/40' 
+                            : 'bg-red-900/20 border-red-700/40';
+                        
+                        const statusText = table.status === 'available' ? '空席' : '使用中';
+                        
+                        return `
+                            <div onclick="selectTable('${table.id}')" 
+                                 class="luxury-card ${statusClass} rounded-3xl p-12 cursor-pointer text-center">
+                                ${table.is_vip ? '<div class="text-sm gold-accent font-bold mb-3">⭐ VIP</div>' : ''}
+                                <div class="text-5xl font-bold text-gray-200 mb-4">${table.table_name || table.table_number || table.name || 'テーブル'}</div>
+                                <div class="text-lg text-gray-400">${statusText}</div>
+                                <div class="text-sm text-gray-500 mt-2">${table.capacity}名様</div>
+                            </div>
+                        `;
+                    }).join('');
+            } catch (error) {
+                console.error('テーブル取得エラー:', error);
+                showNotification('テーブル情報の取得に失敗しました', 'error');
+            }
+        }
+
+        // テーブル選択
+        async function selectTable(tableId) {
+            try {
+                appState.selectedTable = tableId;
+                
+                // セッション開始
+              const response = await fetch(`${API_BASE}/sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ 
+   table_id: parseInt(tableId),
+    guest_count: 1 
+    })
+});
+                
+                const data = await response.json();
+                appState.sessionId = data.id; 
+                
+                document.getElementById('currentTableName').textContent = data.table_name || tableId;
+                document.getElementById('sessionInfo').textContent = `開始: ${new Date().toLocaleTimeString('ja-JP')}`;
+                
+                await loadMenu();
+                showScreen('menuScreen');
+                showNotification('セッションを開始しました', 'success');
+            } catch (error) {
+                console.error('セッション開始エラー:', error);
+                showNotification('セッションの開始に失敗しました', 'error');
+            }
+        }
+
+        // メニュー読み込み
+        async function loadMenu() {
+            try {
+                const response = await fetch(`${API_BASE}/menu`);
+                const data = await response.json();
+                appState.menuItems = Array.isArray(data) ? data : (data.menu || []);
+                renderMenu();
+            } catch (error) {
+                console.error('メニュー取得エラー:', error);
+                showNotification('メニューの取得に失敗しました', 'error');
+            }
+        }
+
+        // メニュー表示
+        function renderMenu() {
+            const grid = document.getElementById('menuGrid');
+            const filtered = appState.currentCategory === 'all' 
+                ? appState.menuItems 
+                : appState.menuItems.filter(item => item.category === appState.currentCategory);
+            
+            grid.innerHTML = filtered.map(item => `
+                <div onclick="addToCart(${item.id})" class="menu-item-card rounded-2xl p-6">
+                    ${item.premium ? '<div class="mb-3"><span class="premium-badge">⭐ PREMIUM</span></div>' : ''}
+                    <h3 class="text-xl font-bold text-gray-200 mb-2">${item.name}</h3>
+                    ${item.description ? `<p class="text-sm text-gray-400 mb-4">${item.description}</p>` : ''}
+                    <div class="text-3xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>
+                </div>
+            `).join('');
+        }
+
+        // カテゴリフィルター
+        function filterCategory(category) {
+            appState.currentCategory = category;
+            
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.category === category) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            renderMenu();
+        }
+
+        // カートに追加
+        function addToCart(itemId) {
+            const item = appState.menuItems.find(m => m.id === itemId);
+            if (!item) return;
+            
+            const existingItem = appState.cart.find(c => c.id === itemId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                appState.cart.push({
+                    ...item,
+                    quantity: 1
+                });
+            }
+            
+            renderCart();
+            showNotification(`${item.name} をカートに追加しました`, 'success');
+        }
+
+        // カート表示
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            const total = appState.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const itemCount = appState.cart.reduce((sum, item) => sum + item.quantity, 0);
+            
+            document.getElementById('cartItemCount').textContent = itemCount;
+            document.getElementById('cartTotal').textContent = `¥${total.toLocaleString()}`;
+            
+            const badge = document.getElementById('cartBadgeMobile');
+            if (itemCount > 0) {
+                badge.textContent = itemCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+            
+            const orderBtn = document.getElementById('orderButton');
+            orderBtn.disabled = appState.cart.length === 0;
+            
+            if (appState.cart.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-12">カートは空です</div>';
+                return;
+            }
+            
+            container.innerHTML = appState.cart.map(item => `
+                <div class="cart-item rounded-xl p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-200 mb-1">${item.name}</h4>
+                            <p class="text-lg gold-accent font-semibold">¥${item.price.toLocaleString()}</p>
+                        </div>
+                        <button onclick="removeFromCart('${item.id}')" class="text-red-400 text-xl ml-2">✕</button>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <button onclick="decreaseQuantity('${item.id}')" class="quantity-btn">−</button>
+                            <span class="text-2xl font-bold text-gray-200 w-12 text-center">${item.quantity}</span>
+                            <button onclick="increaseQuantity('${item.id}')" class="quantity-btn">+</button>
+                        </div>
+                        <div class="text-xl font-bold gold-accent">
+                            ¥${(item.price * item.quantity).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // カート操作
+        function increaseQuantity(itemId) {
+            const item = appState.cart.find(c => c.id === itemId);
+            if (item) {
+                item.quantity++;
+                renderCart();
+            }
+        }
+
+        function decreaseQuantity(itemId) {
+            const item = appState.cart.find(c => c.id === itemId);
+            if (item && item.quantity > 1) {
+                item.quantity--;
+                renderCart();
+            }
+        }
+
+        function removeFromCart(itemId) {
+            appState.cart = appState.cart.filter(c => c.id !== itemId);
+            renderCart();
+            showNotification('カートから削除しました', 'info');
+        }
+
+        function toggleCart() {
+            document.getElementById('cart').classList.toggle('active');
+        }
+
+        // 注文送信
+      async function submitOrder() {
+    if (appState.cart.length === 0) return;
+    
+    try {
+        // 各アイテムを個別に注文として送信
+        const orderPromises = appState.cart.map(item => 
+            fetch(`${API_BASE}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: appState.sessionId,
+                    menu_item_id: item.id,
+                    quantity: item.quantity
+                })
+            })
+        );
+
+        const responses = await Promise.all(orderPromises);
+        
+        // すべて成功したか確認
+        const allSuccess = responses.every(r => r.ok);
+        
+        if (allSuccess) {
+            appState.cart = [];
+            renderCart();
+            
+            showNotification('ご注文を承りました！', 'success');
+            
+            setTimeout(() => {
+                loadOrderHistory();
+            }, 1000);
+        } else {
+            throw new Error('注文の一部が失敗しました');
+        }
+    } catch (error) {
+        console.error('注文エラー:', error);
+        showNotification('注文の送信に失敗しました', 'error');
+    }
+}
+async function showHistory() {
+    await loadOrderHistory();
+    showScreen('historyScreen');
+}
+
+       async function loadOrderHistory() {
+    try {
+        const response = await fetch(`${API_BASE}/sessions/${appState.sessionId}/orders`);
+        const data = await response.json();
+        appState.orders = Array.isArray(data) ? data : [];
+        
+        renderHistory();
+    } catch (error) {
+        console.error('履歴取得エラー:', error);
+        appState.orders = [];
+        renderHistory();
+    }
+}
+
+        function renderHistory() {
+    const container = document.getElementById('historyList');
+    const total = appState.orders.reduce((sum, order) => sum + (order.subtotal || 0), 0);
+    
+    document.getElementById('historyTotal').textContent = `¥${total.toLocaleString()}`;
+    
+    if (appState.orders.length === 0) {
+        container.innerHTML = '<div class="luxury-card rounded-2xl p-12 text-center text-gray-500">まだ注文がありません</div>';
+        return;
+    }
+    
+    container.innerHTML = appState.orders.map(order => {
+        const menuItem = appState.menuItems.find(m => m.id === order.menu_item_id) || {};
+        const itemName = menuItem.name || 'メニュー';
+        
+        return `
+            <div class="luxury-card rounded-2xl p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-sm text-gray-400">${new Date(order.created_at || order.ordered_at || Date.now()).toLocaleTimeString('ja-JP')}</p>
+                        <p class="text-xs text-gray-500 mt-1">注文ID: ${order.id}</p>
+                    </div>
+                    <span class="px-4 py-2 rounded-full text-sm font-semibold bg-green-900/30 text-green-400">
+                        承認済み
+                    </span>
+                </div>
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-gray-300">
+                        <span>${itemName} × ${order.quantity}</span>
+                        <span>¥${((order.unit_price || 0) * order.quantity).toLocaleString()}</span>
+                    </div>
+                </div>
+                <div class="border-t border-gray-700 pt-3 flex justify-between items-center">
+                    <span class="font-semibold text-gray-300">小計</span>
+                    <span class="text-2xl font-bold gold-accent">¥${(order.subtotal || 0).toLocaleString()}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '準備中',
+                'accepted': '承認済み',
+                'preparing': '調理中',
+                'delivered': '提供済み',
+                'cancelled': 'キャンセル'
+            };
+            return statusMap[status] || status;
+        }
+
+        // スタッフ呼び出し
+        async function callStaff() {
+            try {
+                await fetch(`${API_BASE}/sessions/${appState.sessionId}/call-staff`, {
+                    method: 'POST'
+                });
+                showNotification('スタッフを呼び出しました', 'success');
+            } catch (error) {
+                console.error('スタッフ呼び出しエラー:', error);
+                showNotification('呼び出しに失敗しました', 'error');
+            }
+        }
+
+        // 会計呼び出し
+        async function requestCheck() {
+            try {
+                await fetch(`${API_BASE}/sessions/${appState.sessionId}/request-check`, {
+                    method: 'POST'
+                });
+                showNotification('会計を呼び出しました。スタッフがお伺いします', 'success');
+            } catch (error) {
+                console.error('会計呼び出しエラー:', error);
+                showNotification('呼び出しに失敗しました', 'error');
+            }
+        }
+
+        // 画面切替
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function backToMenu() {
+            showScreen('menuScreen');
+        }
+
+        // 通知
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-900/90 border-green-700',
+                error: 'bg-red-900/90 border-red-700',
+                warning: 'bg-yellow-900/90 border-yellow-700',
+                info: 'bg-blue-900/90 border-blue-700'
+            };
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${colors[type]} border px-6 py-4 rounded-xl shadow-2xl backdrop-blur-sm`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">${icons[type]}</span>
+                    <span class="text-gray-200 font-medium text-lg">${message}</span>
+                </div>
+            `;
+            
+            document.getElementById('notificationArea').appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // 初期化実行
+        init();
+    </script>
+</body>
+</html>
