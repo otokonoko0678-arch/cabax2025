@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cabax Order - Luxury Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * { 
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        :root {
+            --luxury-black: #0a0a0a;
+            --luxury-dark: #1a1a1a;
+            --luxury-gray: #2a2a2a;
+            --luxury-gold: #d4af37;
+            --luxury-light: #f5f5f5;
+        }
+        
+        body { 
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #f5f5f5;
+            overflow-x: hidden;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .gold-accent {
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .luxury-card {
+            background: rgba(26, 26, 26, 0.6);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .luxury-card:hover {
+            border-color: rgba(212, 175, 55, 0.4);
+            box-shadow: 0 8px 32px rgba(212, 175, 55, 0.12);
+            transform: translateY(-2px);
+        }
+        
+        .luxury-btn {
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            color: #0a0a0a;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            touch-action: manipulation;
+            min-height: 56px;
+        }
+        
+        .luxury-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .luxury-btn:hover {
+            box-shadow: 0 8px 24px rgba(212, 175, 55, 0.35);
+        }
+        
+        .cart-fixed {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 400px;
+            background: linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(26, 26, 26, 0.98) 100%);
+            border-left: 1px solid rgba(212, 175, 55, 0.15);
+            backdrop-filter: blur(20px);
+            z-index: 50;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 1024px) {
+            .cart-fixed {
+                width: 100%;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            }
+            .cart-fixed.active {
+                transform: translateX(0);
+            }
+        }
+        
+        .category-tab {
+            padding: 16px 32px;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        
+        .category-tab.active {
+            border-bottom-color: #d4af37;
+            background: rgba(212, 175, 55, 0.1);
+            color: #f4d03f;
+        }
+        
+        .menu-item-card {
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        
+        .menu-item-card:active {
+            transform: scale(0.98);
+        }
+        
+        .menu-item-card:hover {
+            border-color: rgba(212, 175, 55, 0.4);
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.12);
+        }
+        
+        .cart-item {
+            background: rgba(42, 42, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .screen {
+            display: none;
+        }
+        
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            animation: slideDown 0.3s ease-out;
+            min-width: 400px;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); }
+            to { transform: translate(-50%, 0); }
+        }
+        
+        .quantity-btn {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+        }
+        
+        .quantity-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .quantity-btn:hover {
+            background: rgba(212, 175, 55, 0.25);
+        }
+        
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            color: #0a0a0a;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        input[type="number"] {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #f5f5f5 !important;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            width: 80px;
+            height: 48px;
+            border-radius: 12px;
+        }
+        
+        .premium-badge {
+            background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+            color: #0a0a0a;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+        }
+        
+        /* iPhone対応 */
+        @supports (-webkit-touch-callout: none) {
+            body {
+                min-height: -webkit-fill-available;
+            }
+        }
+        
+        /* セーフエリア対応 */
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top, 0px);
+        }
+        
+        /* モバイル最適化 */
+        @media (max-width: 640px) {
+            .category-tab {
+                padding: 10px 14px;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+            
+            .menu-item-card {
+                padding: 16px;
+            }
+            
+            .menu-item-card h3 {
+                font-size: 16px;
+            }
+            
+            .menu-item-card .text-3xl {
+                font-size: 22px;
+            }
+            
+            #tablesGrid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            
+            .table-card {
+                padding: 20px;
+            }
+            
+            .table-card .text-6xl {
+                font-size: 36px;
+            }
+            
+            /* カートスライド */
+            .cart-slide {
+                max-height: 85vh;
+            }
+            
+            /* ヘッダー調整 */
+            .fixed.top-0 {
+                padding-top: env(safe-area-inset-top, 0px);
+            }
+        }
+        
+        /* スクロールバー非表示 */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="notificationArea"></div>
+
+    <!-- テーブル選択画面 -->
+    <div id="tableSelectScreen" class="screen active min-h-screen p-4 sm:p-8 safe-area-top safe-area-bottom">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-8 sm:mb-12">
+                <h1 class="text-4xl sm:text-6xl font-bold gold-accent mb-3 sm:mb-4">Cabax</h1>
+                <div class="w-16 sm:w-20 h-1 bg-gradient-to-r from-transparent via-yellow-600 to-transparent mx-auto mb-4 sm:mb-6"></div>
+                <p class="text-lg sm:text-2xl text-gray-400">テーブルを選択してください</p>
+            </div>
+
+            <div id="tablesGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6"></div>
+        </div>
+    </div>
+
+    <!-- メニュー選択画面 -->
+    <div id="menuScreen" class="screen">
+               <div class="fixed top-0 left-0 right-0 bg-gradient-to-b from-black via-black/95 to-transparent z-40 pb-4 safe-area-top">
+            <div class="flex flex-wrap items-center justify-between gap-2 sm:gap-4 px-4 sm:px-8 py-4 sm:py-6">
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-xl sm:text-3xl font-bold gold-accent truncate" id="currentTableName">テーブル A1</h2>
+                    <p class="text-gray-400 mt-1 text-xs sm:text-base" id="sessionInfo">セッション開始</p>
+                </div>
+                <div class="flex gap-2 sm:gap-3 flex-shrink-0">
+                    <!-- モバイル用：カート＆履歴ボタン（デスクトップでは非表示） -->
+                    <button onclick="toggleCart()" class="lg:hidden luxury-btn px-4 sm:px-6 py-2 sm:py-3 rounded-xl relative text-sm sm:text-base">
+                        🛒 <span class="hidden sm:inline">カート</span>
+                        <span id="cartBadgeMobile" class="badge hidden">0</span>
+                    </button>
+                    <button onclick="showHistory()" class="lg:hidden bg-gray-800 text-gray-300 px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-gray-700 transition font-semibold text-sm sm:text-base">
+                        📋 <span class="hidden sm:inline">注文履歴</span>
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- カテゴリタブ -->
+            <div class="flex gap-2 px-4 sm:px-8 overflow-x-auto hide-scrollbar" id="categoryTabs">
+              <button onclick="filterCategory('all')" class="category-tab active" data-category="all">
+    すべて
+</button>
+<button onclick="filterCategory('bottle')" class="category-tab" data-category="bottle">
+    🍾 ボトル
+</button>
+<button onclick="filterCategory('champagne')" class="category-tab" data-category="champagne">
+    🥂 シャンパン
+</button>
+<button onclick="filterCategory('wine')" class="category-tab" data-category="wine">
+    🍷 ワイン
+</button>
+<button onclick="filterCategory('drink')" class="category-tab" data-category="drink">
+    🥃 ドリンク
+</button>
+<button onclick="filterCategory('food')" class="category-tab" data-category="food">
+    🍽️ フード
+</button>
+<button onclick="filterCategory('set')" class="category-tab" data-category="set">
+    🎫 セット
+</button>
+            </div>
+        </div>
+
+
+
+        <!-- カート（デスクトップは固定、モバイルはスライド） -->
+                    <div class="sticky top-0 bg-gradient-to-b from-black to-transparent p-6 border-b border-gray-800">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-bold gold-accent">🛒 注文カート</h3>
+                    <div class="flex items-center gap-3">
+                        <!-- デスクトップ用：注文履歴ボタン -->
+                        <button onclick="showHistory()" class="hidden lg:inline-flex items-center px-4 py-2 rounded-lg bg-gray-800 text-gray-200 text-sm hover:bg-gray-700 transition">
+                            📋 注文履歴
+                        </button>
+                        <!-- モバイル用：カートを閉じるボタン -->
+                        <button onclick="toggleCart()" class="lg:hidden text-gray-400 text-2xl">✕</button>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-400">
+                    <span id="cartItemCount">0</span> 品
+                </div>
+            </div>
+
+
+            <div id="cartItems" class="p-6 space-y-4 min-h-[300px]">
+                <div class="text-center text-gray-500 py-12">
+                    カートは空です
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 bg-gradient-to-t from-black to-transparent p-6 border-t border-gray-800 space-y-4">
+                <div class="flex justify-between items-center text-2xl font-bold">
+                    <span class="text-gray-300">合計</span>
+                    <span class="gold-accent" id="cartTotal">¥0</span>
+                </div>
+                <button onclick="submitOrder()" id="orderButton" class="w-full luxury-btn py-5 rounded-xl text-lg font-bold" disabled>
+                    注文する
+                </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="callStaff()" class="bg-blue-900/30 border border-blue-700/50 text-blue-400 py-4 rounded-xl hover:bg-blue-900/50 transition font-semibold">
+                        🔔 スタッフ
+                    </button>
+                    <button onclick="requestCheck()" class="bg-green-900/30 border border-green-700/50 text-green-400 py-4 rounded-xl hover:bg-green-900/50 transition font-semibold">
+                        💰 会計
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注文履歴画面 -->
+    <div id="historyScreen" class="screen min-h-screen p-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-4xl font-bold gold-accent">📋 注文履歴</h2>
+                <button onclick="backToMenu()" class="bg-gray-800 text-gray-300 px-8 py-4 rounded-xl hover:bg-gray-700 transition font-semibold">
+                    ← メニューに戻る
+                </button>
+            </div>
+
+            <div id="historyList" class="space-y-4"></div>
+
+            <div class="luxury-card rounded-2xl p-8 mt-8">
+                <div class="flex justify-between items-center text-3xl font-bold">
+                    <span class="text-gray-300">現在の合計</span>
+                    <span class="gold-accent" id="historyTotal">¥0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// オーダー画面
+// APIベースURLを動的に設定
+const API_BASE = (() => {
+    // 本番環境: 同じドメインのAPIを使用
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return `${window.location.origin}/api`;
+    }
+    // 開発環境
+    return 'http://localhost:8000/api';
+})();
+
+console.log('[Cabax] API_BASE:', API_BASE);  
+        
+      const appState = {
+    selectedTable: null,
+    sessionId: null,
+    menuItems: [],
+    cart: [],
+    orders: [],
+    currentCategory: 'all',   // ★ ここにカンマ！
+    activeSessions: [],       // これでOK
+};
+
+// ★ 会計処理（セッションを清算してテーブルを空席にする）
+async function requestCheck() {
+    try {
+        // 念のため、最新のセッションIDを同期してから会計
+        await syncSessionForCurrentTable();
+
+        if (!appState.sessionId) {
+            showNotification('このテーブルにはアクティブなセッションがありません（まだ入店処理がされていない可能性があります）', 'error');
+            return;
+        }
+
+        const response = await fetch(
+            `${API_BASE}/sessions/${appState.sessionId}/checkout`,
+            {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            console.error('会計処理APIエラー:', response.status, text);
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        showNotification('会計処理が完了しました。ありがとうございました。', 'success');
+    } catch (error) {
+        console.error('会計処理エラー:', error);
+        showNotification('会計処理に失敗しました', 'error');
+    }
+}
+
+
+        // 初期化
+async function init() {
+    console.log('[order] init start');
+    try {
+        await loadTables();          // 既存
+        await loadMenu();            // ★ メニュー読み込み関数があるならここで
+        await loadActiveSessions();  // ★ さっき足したやつ
+
+        console.log('[order] init finished');
+    } catch (error) {
+        console.error('[order] init error', error);
+    }
+}
+async function handleAddOrder() {
+    // ここは画面の構造に合わせて変更
+    const menuSelect = document.getElementById('menuSelect');
+    const qtyInput = document.getElementById('orderQuantity');
+
+    const menuItemId = menuSelect ? Number(menuSelect.value) : null;
+    const quantity = qtyInput ? Number(qtyInput.value || '1') : 1;
+
+    if (!menuItemId) {
+        alert('メニューを選択してください');
+        return;
+    }
+    if (!quantity || quantity <= 0) {
+        alert('数量が不正です');
+        return;
+    }
+
+    try {
+        await createOrderForCurrentTable(menuItemId, quantity, {
+            isDrinkBack: false,
+            castName: null,
+        });
+        alert('注文を送信しました');
+
+        if (qtyInput) qtyInput.value = '1';
+    } catch (e) {
+        console.error('[order] handleAddOrder error', e);
+    }
+}
+
+// このテーブルに対して注文を作成して API に送る
+async function createOrderForCurrentTable(menuItemId, quantity, options = {}) {
+    const { isDrinkBack = false, castName = null } = options;
+
+    const tableId = appState.selectedTable;
+    if (!tableId) {
+        alert('テーブルが選択されていません');
+        throw new Error('no selectedTable');
+    }
+
+    // このテーブルのアクティブセッションを探す
+    const session = appState.activeSessions.find(s => s.tableId === tableId);
+    if (!session) {
+        alert('このテーブルにはアクティブなセッションがありません（入店処理がまだ）');
+        throw new Error('no active session for table ' + tableId);
+    }
+
+    const payload = {
+        session_id: session.id,
+        menu_item_id: menuItemId,
+        quantity: quantity,
+        is_drink_back: isDrinkBack,
+        cast_name: castName,
+    };
+
+    const res = await fetch(`${API_BASE}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.error('[order] createOrder error', res.status, text);
+        alert('注文の送信に失敗しました');
+        throw new Error('order error ' + res.status);
+    }
+
+    const order = await res.json().catch(() => null);
+    console.log('[order] createOrder success', order);
+
+    // 金額など最新化
+    await loadActiveSessions();
+
+    return order;
+}
+
+// ★ カート内の全アイテムを /api/orders に送信する
+async function submitCartOrders() {
+    if (!appState.selectedTable) {
+        alert('テーブルが選択されていません');
+        return;
+    }
+    if (!appState.cart || appState.cart.length === 0) {
+        alert('カートが空です');
+        return;
+    }
+
+    try {
+        // 念のため最新のアクティブセッションを取得
+        await loadActiveSessions();
+
+        // カート内アイテムを1件ずつ /api/orders に送信
+        for (const item of appState.cart) {
+            // cart の構造に合わせてIDと数量を取り出す
+            const menuItemId = item.menuItemId ?? item.id;
+            const quantity = item.quantity ?? item.qty ?? 1;
+
+            await createOrderForCurrentTable(menuItemId, quantity, {
+                isDrinkBack: false,
+                castName: null,
+            });
+        }
+
+        // 送信完了したらカートを空にして画面更新
+        appState.cart = [];
+        renderCart();
+
+        alert('注文を送信しました');
+    } catch (e) {
+        console.error('[order] submitCartOrders error', e);
+        alert('注文の送信に失敗しました。ネットワークかAPIを確認してください。');
+    }
+}
+
+// 稼働中セッション一覧を API から取得して state に反映（注文アプリ側）
+async function loadActiveSessions() {
+    try {
+        const res = await fetch(`${API_BASE}/sessions/active`);
+        if (!res.ok) {
+            throw new Error(`active sessions error: ${res.status}`);
+        }
+        const data = await res.json();
+
+        if (!Array.isArray(data)) {
+            console.error('[order] activeSessions is not array', data);
+            return;
+        }
+
+        appState.activeSessions = data.map(s => ({
+            id: s.id,
+            tableId: s.table_id ?? s.tableId,
+            castName: s.cast_name ?? s.castName ?? (s.cast && s.cast.name) ?? '未設定',
+            guests: s.guests ?? s.guest_count ?? 0,
+            currentTotal: s.current_total ?? s.total_amount ?? 0,
+        }));
+
+        console.log('[order] activeSessions loaded', appState.activeSessions);
+    } catch (e) {
+        console.error('[order] loadActiveSessions error', e);
+    }
+}
+
+// 固定テーブル一覧（バックエンドに /tables が無い場合に使う）
+const STATIC_TABLES = [
+    { id: 1, table_name: '1', capacity: 4, is_vip: false, status: 'available' },
+    { id: 2, table_name: '2', capacity: 4, is_vip: false, status: 'available' },
+    { id: 3, table_name: '3', capacity: 4, is_vip: false, status: 'available' },
+    { id: 4, table_name: 'VIP-1', capacity: 6, is_vip: true,  status: 'available' },
+    { id: 5, table_name: 'VIP-2', capacity: 6, is_vip: true,  status: 'available' },
+    { id: 6, table_name: 'BOX-1', capacity: 5, is_vip: false, status: 'available' },
+    { id: 7, table_name: 'BOX-2', capacity: 5, is_vip: false, status: 'available' },
+    { id: 8, table_name: 'BOX-3', capacity: 5, is_vip: false, status: 'available' }
+];
+// 固定メニュー一覧（APIからメニューが取れないときに使う）
+const STATIC_MENU_ITEMS = [
+    // セット
+    {
+        id: 101,
+        name: '60分セット（焼酎・ウイスキー飲み放題）',
+        price: 8000,
+        category: 'セット',
+        description: 'アイス・ミネ・割り物込み / サ込税別',
+        premium: false
+    },
+    {
+        id: 102,
+        name: '90分セット（ゆったりコース）',
+        price: 12000,
+        category: 'セット',
+        description: '焼酎・ウイスキー飲み放題 / サ込税別',
+        premium: true
+    },
+
+    // ボトル
+    {
+        id: 201,
+        name: '鏡月',
+        price: 4000,
+        category: 'ボトル',
+        description: '焼酎ボトル',
+        premium: false
+    },
+    {
+        id: 202,
+        name: '黒霧島',
+        price: 6000,
+        category: 'ボトル',
+        description: '芋焼酎ボトル',
+        premium: false
+    },
+    {
+        id: 203,
+        name: 'モエ・エ・シャンドン',
+        price: 25000,
+        category: 'ボトル',
+        description: '定番シャンパン',
+        premium: true
+    },
+
+    // ドリンク
+    {
+        id: 301,
+        name: '生ビール',
+        price: 900,
+        category: 'ドリンク',
+        description: '',
+        premium: false
+    },
+    {
+        id: 302,
+        name: 'ハイボール',
+        price: 900,
+        category: 'ドリンク',
+        description: '',
+        premium: false
+    },
+    {
+        id: 303,
+        name: 'レディースドリンク',
+        price: 1500,
+        category: 'ドリンク',
+        description: 'キャスト用ドリンク',
+        premium: false
+    },
+
+    // フード
+    {
+        id: 401,
+        name: '枝豆',
+        price: 600,
+        category: 'フード',
+        description: '',
+        premium: false
+    },
+    {
+        id: 402,
+        name: 'ポテトフライ',
+        price: 800,
+        category: 'フード',
+        description: '',
+        premium: false
+    },
+    {
+        id: 403,
+        name: 'ソーセージ盛り合わせ',
+        price: 1200,
+        category: 'フード',
+        description: '',
+        premium: false
+    }
+];
+
+// テーブル一覧取得
+async function loadTables() {
+    console.log('[order] loadTables', API_BASE);
+    try {
+        const response = await fetch(`${API_BASE}/tables`);
+        console.log('[order] /tables status', response.status);
+
+        let tables;
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[order] /tables data', data);
+            tables = Array.isArray(data) ? data : (data.tables || []);
+        } else if (response.status === 404) {
+            // APIに /tables が無い場合 → 固定テーブルで代用
+            console.warn('[order] /tables 404, using STATIC_TABLES fallback');
+            tables = STATIC_TABLES;
+        } else {
+            // その他のエラーは例外として扱う
+            const errData = await response.json().catch(() => ({}));
+            console.error('[order] /tables error response', errData);
+             if (errData.detail) {
+        console.error('エラーの詳細:');
+        console.error(JSON.stringify(errData.detail, null, 2));
+    }
+            throw new Error('テーブル情報の取得に失敗しました');
+        }
+
+        const grid = document.getElementById('tablesGrid');
+        grid.innerHTML = tables
+            .filter(t => t.status === 'available' || t.status === 'occupied' || !t.status)
+            .map(table => {
+                const status = table.status || 'available';
+                const statusClass = status === 'available'
+                    ? 'bg-green-900/20 border-green-700/40'
+                    : 'bg-red-900/20 border-red-700/40';
+
+                const statusText = status === 'available' ? '空席' : '使用中';
+
+                return `
+                    <div onclick="selectTable('${table.id}')"
+                         class="luxury-card ${statusClass} rounded-3xl p-12 cursor-pointer text-center">
+                        ${table.is_vip ? '<div class="text-sm gold-accent font-bold mb-3">⭐ VIP</div>' : ''}
+                        <div class="text-5xl font-bold text-gray-100 mb-2">
+                            ${table.table_name || table.table_number || table.name || 'テーブル'}
+                        </div>
+                        <div class="text-lg text-gray-400">${statusText}</div>
+                        <div class="text-sm text-gray-500 mt-2">${table.capacity || 4}名様</div>
+                    </div>
+                `;
+            }).join('');
+    } catch (error) {
+        console.error('[order] loadTables error', error);
+        // ネットワークエラーなど → 最後の保険として固定テーブルを使う
+        const grid = document.getElementById('tablesGrid');
+        grid.innerHTML = STATIC_TABLES.map(table => `
+            <div onclick="selectTable('${table.id}')"
+                 class="luxury-card bg-green-900/20 border-green-700/40 rounded-3xl p-12 cursor-pointer text-center">
+                ${table.is_vip ? '<div class="text-sm gold-accent font-bold mb-3">⭐ VIP</div>' : ''}
+                <div class="text-5xl font-bold text-gray-100 mb-2">
+                    ${table.table_name}
+                </div>
+                <div class="text-lg text-gray-400">空席</div>
+                <div class="text-sm text-gray-500 mt-2">${table.capacity}名様</div>
+            </div>
+        `).join('');
+
+        showNotification('テーブル情報の取得に失敗したため、固定テーブルを表示しています', 'error');
+    }
+}
+
+// ★ テーブル選択：自動でセッションは作らない（管理側で入店してから注文する）
+async function selectTable(tableId) {
+    console.log('[order] selectTable', tableId);
+
+    appState.selectedTable = tableId;
+    appState.cart = [];
+
+    // テーブル名表示
+    const tableNameEl = document.getElementById('currentTableName');
+    if (tableNameEl) tableNameEl.textContent = tableId;
+
+    let sessionId = null;
+
+    // 1) 既存のアクティブセッションを探す
+    try {
+        const res = await fetch(`${API_BASE}/sessions/active`);
+        if (res.ok) {
+            const sessions = await res.json();
+            const session = sessions.find(
+                s => Number(s.table_id ?? s.tableId) === Number(tableId)
+            );
+            if (session) {
+                sessionId = session.id;
+                console.log('[order] active session found for table', tableId, '=> sessionId', sessionId);
+            } else {
+                console.log('[order] no active session for table', tableId);
+            }
+        } else {
+            console.error('[order] /sessions/active error', res.status);
+        }
+    } catch (e) {
+        console.error('[order] selectTable /sessions/active error', e);
+    }
+
+    // 2) ★無ければ作らない（ここが重要）
+    if (!sessionId) {
+        appState.sessionId = null;
+        appState.selectedTable = null;
+
+        const infoEl = document.getElementById('sessionInfo');
+        if (infoEl) infoEl.textContent = 'アクティブセッションがありません（管理で入店してください）';
+
+        showNotification('このテーブルは未入店です。管理画面で入店（セッション作成）してください。', 'error');
+        // 画面は切り替えない（テーブル選択のまま）
+        return;
+    }
+
+    // 3) appState に反映
+    appState.sessionId = sessionId;
+
+    const infoEl = document.getElementById('sessionInfo');
+    if (infoEl) infoEl.textContent = `セッションID: ${sessionId}`;
+
+    // 4) メニュー読み込み＆画面切り替え
+    await loadMenu();
+    showScreen('menuScreen');
+    showNotification('テーブルを選択しました', 'info');
+}
+
+
+// メニュー読み込み
+async function loadMenu() {
+    console.log('[order] loadMenu');
+    
+    try {
+        const response = await fetch(`${API_BASE}/menu`);
+        console.log('[order] /menu URL:', `${API_BASE}/menu`);
+        console.log('[order] /menu status', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[order] /menu data', data);
+            appState.menuItems = data;
+            renderMenu();
+        } else {
+            throw new Error(`Menu fetch failed: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('メニュー取得エラー:', error);
+        // フォールバック：デモデータを使用
+        appState.menuItems = [
+            { id: 1, name: 'ハイボール', category: 'drink', price: 800 },
+            { id: 2, name: 'ビール', category: 'drink', price: 700 },
+            { id: 3, name: 'カシスオレンジ', category: 'drink', price: 800 },
+            { id: 4, name: 'フルーツ盛り合わせ', category: 'food', price: 8000 }
+        ];
+        renderMenu();
+        showNotification('メニューの取得に失敗しました（デモデータ使用）', 'warning');
+    }
+}
+// カテゴリ変換関数
+function convertCategory(category) {
+    const categoryMap = {
+        'drink': 'ドリンク',
+        'food': 'フード',
+        'bottle': 'ボトル',
+        'set': 'セット',
+        'ドリンク': 'ドリンク',
+        'フード': 'フード',
+        'ボトル': 'ボトル',
+        'セット': 'セット'
+    };
+    return categoryMap[category] || category;
+}
+        // メニュー表示
+function renderMenu() {
+    // ★ メニュー表示コンテナを探す（既存のIDにもフォールバック）
+    let grid =
+        document.getElementById('menuGrid') ||      // 新しく置いたブロック
+        document.getElementById('menuList') ||      // もともとのID候補
+        document.getElementById('menuContainer');   // 他に使っていそうなID候補
+
+    // 見つからない場合は新しく作る
+    if (!grid) {
+        console.warn('[order] メニュー表示用コンテナが見つからないので新しく作成します');
+
+        // カテゴリタブのすぐ下に差し込む
+        const categoryTabs = document.getElementById('categoryTabs');
+        const parent = categoryTabs ? categoryTabs.parentElement : document.body;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pt-40 sm:pt-48 pb-24 px-4 sm:px-8 safe-area-bottom';
+
+        grid = document.createElement('div');
+        grid.id = 'menuGrid';
+        grid.className = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6';
+
+        wrapper.appendChild(grid);
+        parent.insertAdjacentElement('afterend', wrapper);
+    }
+
+    // ★ ここから下は元のロジックそのままでOK
+    const filtered =
+        appState.currentCategory === 'all'
+            ? appState.menuItems
+            : appState.menuItems.filter(
+                  (item) => (item.category || '').toLowerCase() === appState.currentCategory.toLowerCase()
+              );
+
+    grid.innerHTML = filtered
+        .map(
+            (item) => `
+                <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6">
+                    ${
+                        item.premium
+                            ? '<div class="mb-2 sm:mb-3"><span class="premium-badge">⭐ PREMIUM</span></div>'
+                            : ''
+                    }
+                    <h3 class="text-base sm:text-xl font-bold text-gray-200 mb-1 sm:mb-2 line-clamp-2">${item.name}</h3>
+                    ${
+                        item.description
+                            ? `<p class="text-xs sm:text-sm text-gray-400 mb-2 sm:mb-4 line-clamp-2">${item.description}</p>`
+                            : ''
+                    }
+                    <div class="text-xl sm:text-3xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>
+                </div>
+            `
+        )
+        .join('');
+}
+
+
+        // カテゴリフィルター
+        function filterCategory(category) {
+            appState.currentCategory = category;
+            
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.category === category) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            renderMenu();
+        }
+
+        // カートに追加
+        function addToCart(itemId) {
+            const item = appState.menuItems.find(m => m.id === itemId);
+            if (!item) return;
+            
+            const existingItem = appState.cart.find(c => c.id === itemId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                appState.cart.push({
+                    ...item,
+                    quantity: 1
+                });
+            }
+            
+            renderCart();
+            showNotification(`${item.name} をカートに追加しました`, 'success');
+        }
+
+        // カート表示
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            const total = appState.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const itemCount = appState.cart.reduce((sum, item) => sum + item.quantity, 0);
+            
+            document.getElementById('cartItemCount').textContent = itemCount;
+            document.getElementById('cartTotal').textContent = `¥${total.toLocaleString()}`;
+            
+            const badge = document.getElementById('cartBadgeMobile');
+            if (itemCount > 0) {
+                badge.textContent = itemCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+            
+            const orderBtn = document.getElementById('orderButton');
+            orderBtn.disabled = appState.cart.length === 0;
+            
+            if (appState.cart.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-12">カートは空です</div>';
+                return;
+            }
+            
+            container.innerHTML = appState.cart.map((item, idx) => `
+                <div class="cart-item rounded-xl p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-200 mb-1">${item.name}</h4>
+                            ${item.personName ? `<p class="text-sm text-gray-400 mb-1">→ ${item.personName}${item.isDrinkBack ? ' <span class="text-purple-400">💎DB</span>' : ''}</p>` : ''}
+                            <p class="text-lg gold-accent font-semibold">¥${item.price.toLocaleString()}</p>
+                        </div>
+                        <button onclick="removeFromCartByIndex(${idx})" class="text-red-400 text-xl ml-2">✕</button>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <button onclick="decreaseQuantityByIndex(${idx})" class="quantity-btn">−</button>
+                            <span class="text-2xl font-bold text-gray-200 w-12 text-center">${item.quantity}</span>
+                            <button onclick="increaseQuantityByIndex(${idx})" class="quantity-btn">+</button>
+                        </div>
+                        <div class="text-xl font-bold gold-accent">
+                            ¥${(item.price * item.quantity).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // カート操作（インデックスベースに変更）
+        function increaseQuantityByIndex(idx) {
+            if (appState.cart[idx]) {
+                appState.cart[idx].quantity++;
+                renderCart();
+            }
+        }
+
+        function decreaseQuantityByIndex(idx) {
+            if (appState.cart[idx] && appState.cart[idx].quantity > 1) {
+                appState.cart[idx].quantity--;
+                renderCart();
+            }
+        }
+
+        function removeFromCartByIndex(idx) {
+            appState.cart.splice(idx, 1);
+            renderCart();
+        }
+
+        // 旧関数（互換性のため残す）
+        function increaseQuantity(itemId) {
+            const item = appState.cart.find(c => c.id === itemId);
+            if (item) {
+                item.quantity++;
+                renderCart();
+            }
+        }
+
+        function decreaseQuantity(itemId) {
+            const item = appState.cart.find(c => c.id === itemId);
+            if (item && item.quantity > 1) {
+                item.quantity--;
+                renderCart();
+            }
+        }
+
+        function removeFromCart(itemId) {
+            appState.cart = appState.cart.filter(c => c.id !== itemId);
+            renderCart();
+            showNotification('カートから削除しました', 'info');
+        }
+
+        function toggleCart() {
+            document.getElementById('cart').classList.toggle('active');
+        }
+
+// 注文送信
+async function submitOrder() {
+    // テーブルとカートのチェック
+    if (appState.selectedTable == null) {
+        alert('テーブルが選択されていません');
+        return;
+    }
+    if (!appState.cart || appState.cart.length === 0) {
+        alert('カートが空です');
+        return;
+    }
+
+    try {
+        // 最新のアクティブセッションを取得
+        await loadActiveSessions();
+
+        // ★ selectedTable を数字にそろえる
+        const selectedTableId = Number(appState.selectedTable);
+        console.log('[order] selectedTableId:', selectedTableId, typeof selectedTableId);
+        console.log('[order] activeSessions:', appState.activeSessions);
+
+        // ★ tableId 側も Number() して比較
+        const session = appState.activeSessions.find(
+            s => Number(s.tableId) === selectedTableId
+        );
+
+        if (!session) {
+            alert('このテーブルにはアクティブなセッションがありません（入店処理がまだ）');
+            return;
+        }
+
+        // カート内のアイテムを1件ずつ /api/orders に送信
+        for (const item of appState.cart) {
+            const menuItemId = item.menuItemId ?? item.id;
+            const quantity   = item.quantity   ?? item.qty ?? 1;
+
+            const payload = {
+                session_id:    session.id,
+                menu_item_id:  menuItemId,
+                quantity:      quantity,
+                is_drink_back: false,
+                cast_name:     null,
+            };
+
+            const res = await fetch(`${API_BASE}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                console.error('[order] /api/orders error', res.status, text);
+                throw new Error('order error ' + res.status);
+            }
+
+            const order = await res.json().catch(() => null);
+            console.log('[order] createOrder success', order);
+        }
+
+        // 送信成功 → カートを空にして再描画
+        appState.cart = [];
+        renderCart();
+
+        alert('注文を送信しました');
+    } catch (e) {
+        console.error('[order] submitOrder error', e);
+        alert('注文の送信に失敗しました。APIかネットワークを確認してください。');
+    }
+}
+
+async function showHistory() {
+    await loadOrderHistory();
+    showScreen('historyScreen');
+}
+
+async function loadOrderHistory() {
+    console.log('[order] loadOrderHistory sessionId', appState.sessionId);
+    
+    // ローカルモード：履歴は既にappState.ordersにある
+    renderHistory();
+    
+    /* API呼び出しはコメントアウト
+    try {
+        const response = await fetch(`${API_BASE}/sessions/${appState.sessionId}/orders`);
+        const data = await response.json();
+        appState.orders = Array.isArray(data) ? data : [];
+        renderHistory();
+    } catch (error) {
+        console.error('履歴取得エラー:', error);
+    }
+    */
+}
+
+
+        function renderHistory() {
+    const container = document.getElementById('historyList');
+    const total = appState.orders.reduce((sum, order) => sum + (order.subtotal || 0), 0);
+    
+    document.getElementById('historyTotal').textContent = `¥${total.toLocaleString()}`;
+    
+    if (appState.orders.length === 0) {
+        container.innerHTML = '<div class="luxury-card rounded-2xl p-12 text-center text-gray-500">まだ注文がありません</div>';
+        return;
+    }
+    
+    container.innerHTML = appState.orders.map(order => {
+        const menuItem = appState.menuItems.find(m => m.id === order.menu_item_id) || {};
+        const itemName = menuItem.name || 'メニュー';
+        
+        return `
+            <div class="luxury-card rounded-2xl p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-sm text-gray-400">${new Date(order.created_at || order.ordered_at || Date.now()).toLocaleTimeString('ja-JP')}</p>
+                        <p class="text-xs text-gray-500 mt-1">注文ID: ${order.id}</p>
+                    </div>
+                    <span class="px-4 py-2 rounded-full text-sm font-semibold bg-green-900/30 text-green-400">
+                        承認済み
+                    </span>
+                </div>
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-gray-300">
+                        <span>${itemName} × ${order.quantity}</span>
+                        <span>¥${((order.unit_price || 0) * order.quantity).toLocaleString()}</span>
+                    </div>
+                </div>
+                <div class="border-t border-gray-700 pt-3 flex justify-between items-center">
+                    <span class="font-semibold text-gray-300">小計</span>
+                    <span class="text-2xl font-bold gold-accent">¥${(order.subtotal || 0).toLocaleString()}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '準備中',
+                'accepted': '承認済み',
+                'preparing': '調理中',
+                'delivered': '提供済み',
+                'cancelled': 'キャンセル'
+            };
+            return statusMap[status] || status;
+        }
+
+        // スタッフ呼び出し
+        async function callStaff() {
+            try {
+                await fetch(`${API_BASE}/sessions/${appState.sessionId}/call-staff`, {
+                    method: 'POST'
+                });
+                showNotification('スタッフを呼び出しました', 'success');
+            } catch (error) {
+                console.error('スタッフ呼び出しエラー:', error);
+                showNotification('呼び出しに失敗しました', 'error');
+            }
+        }
+
+        // ★ 会計処理（セッションを清算してテーブルを空席にする）
+async function requestCheck() {
+    try {
+        if (!appState.sessionId) {
+            showNotification('このテーブルにはアクティブなセッションがありません', 'error');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE}/sessions/${appState.sessionId}/checkout`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            console.error('会計処理APIエラー:', response.status, text);
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        // ✅ 会計成功
+        showNotification('会計処理が完了しました。ありがとうございました。', 'success');
+
+        // ✅ 会計成功後：状態リセット（ここに置く）
+        appState.sessionId = null;
+        appState.selectedTable = null;
+        appState.cart = [];
+
+        // （任意）テーブル選択画面に戻すなら
+        // showScreen('tableSelectScreen');
+
+    } catch (error) {
+        console.error('会計処理エラー:', error);
+        showNotification('会計処理に失敗しました', 'error');
+    }
+}
+
+        // 画面切替
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function backToMenu() {
+            showScreen('menuScreen');
+        }
+
+        // 通知
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-900/90 border-green-700',
+                error: 'bg-red-900/90 border-red-700',
+                warning: 'bg-yellow-900/90 border-yellow-700',
+                info: 'bg-blue-900/90 border-blue-700'
+            };
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${colors[type]} border px-6 py-4 rounded-xl shadow-2xl backdrop-blur-sm`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">${icons[type]}</span>
+                    <span class="text-gray-200 font-medium text-lg">${message}</span>
+                </div>
+            `;
+            
+            document.getElementById('notificationArea').appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // 初期化実行
+        init();
+    </script>
+    
+    <!-- ドリンク注文モーダル -->
+    <div id="drinkOrderModal" class="fixed inset-0 z-50 items-center justify-center bg-black/80 p-2 sm:p-4 hidden">
+        <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto safe-area-bottom">
+            <div class="border-b border-gray-700 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between sticky top-0 bg-gray-900/95 backdrop-blur z-10">
+                <h2 id="drinkModalTitle" class="text-lg sm:text-xl font-bold gold-accent">ドリンク注文</h2>
+                <button onclick="closeDrinkModal()" class="text-gray-400 hover:text-gray-200 text-2xl p-2">✕</button>
+            </div>
+            <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <input type="hidden" id="drinkModalItemId">
+                
+                <!-- 商品情報 -->
+                <div class="text-center">
+                    <h3 id="drinkModalItemName" class="text-xl sm:text-2xl font-bold text-gray-200 mb-2"></h3>
+                    <p id="drinkModalItemPrice" class="text-2xl sm:text-3xl font-bold gold-accent"></p>
+                </div>
+                
+                <!-- ドリンクサイズ選択（ドリンクカテゴリのみ） -->
+                <div id="drinkSizeSectionOrder" class="hidden">
+                    <div class="text-sm text-gray-400 mb-2">ドリンクサイズ</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="drink-size-order-label flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-black/20 border-2 border-amber-500 bg-amber-500/20 cursor-pointer">
+                            <input type="radio" name="drinkSizeOrder" value="single" checked onchange="updateDrinkSizeOrderStyle(); updateDrinkModalPrice()" class="hidden">
+                            <span class="text-white font-semibold text-xs sm:text-base">シングル</span>
+                            <span class="text-amber-400 font-bold text-sm sm:text-lg">¥1,000</span>
+                        </label>
+                        <label class="drink-size-order-label flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
+                            <input type="radio" name="drinkSizeOrder" value="double" onchange="updateDrinkSizeOrderStyle(); updateDrinkModalPrice()" class="hidden">
+                            <span class="text-white font-semibold">ダブル</span>
+                            <span class="text-amber-400 font-bold text-lg">¥2,000</span>
+                        </label>
+                        <label class="drink-size-order-label flex flex-col items-center justify-center p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
+                            <input type="radio" name="drinkSizeOrder" value="triple" onchange="updateDrinkSizeOrderStyle(); updateDrinkModalPrice()" class="hidden">
+                            <span class="text-white font-semibold">トリプル</span>
+                            <span class="text-amber-400 font-bold text-lg">¥3,000</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- 誰が飲むか選択 -->
+                <div id="drinkForSectionOrder">
+                    <div class="text-sm text-gray-400 mb-2">誰が飲む？</div>
+                    <div class="grid grid-cols-3 gap-2 mb-3">
+                        <label class="drink-for-order-label flex flex-col items-center justify-center p-3 rounded-xl bg-black/20 border-2 border-blue-500 bg-blue-500/20 cursor-pointer">
+                            <input type="radio" name="drinkForOrder" value="customer" checked onchange="onDrinkForOrderChange(); updateDrinkForOrderStyle()" class="hidden">
+                            <span class="text-2xl">👤</span>
+                            <span class="text-white text-sm">お客様</span>
+                        </label>
+                        <label class="drink-for-order-label flex flex-col items-center justify-center p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
+                            <input type="radio" name="drinkForOrder" value="staff" onchange="onDrinkForOrderChange(); updateDrinkForOrderStyle()" class="hidden">
+                            <span class="text-2xl">🧑‍💼</span>
+                            <span class="text-white text-sm">スタッフ</span>
+                        </label>
+                        <label class="drink-for-order-label flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
+                            <input type="radio" name="drinkForOrder" value="cast" onchange="onDrinkForOrderChange(); updateDrinkForOrderStyle()" class="hidden">
+                            <span class="text-xl sm:text-2xl">👩</span>
+                            <span class="text-white text-xs sm:text-sm">キャスト</span>
+                        </label>
+                    </div>
+                    
+                    <!-- キャスト/スタッフ選択 -->
+                    <div id="personSelectSectionOrder" class="hidden">
+                        <select id="selDrinkPersonOrder" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-200 text-base">
+                            <option value="">選択してください</option>
+                        </select>
+                        <div id="drinkBackInfoOrder" class="mt-2 text-sm text-purple-400 hidden">
+                            💎 ドリンクバック発生
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 数量 -->
+                <div>
+                    <div class="text-sm text-gray-400 mb-2">数量</div>
+                    <div class="flex items-center justify-center gap-3 sm:gap-4">
+                        <button onclick="changeDrinkQty(-1)" class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gray-700 text-xl sm:text-2xl font-bold text-white active:bg-gray-600">−</button>
+                        <span id="drinkModalQty" class="text-3xl sm:text-4xl font-bold text-white w-14 sm:w-16 text-center">1</span>
+                        <button onclick="changeDrinkQty(1)" class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gray-700 text-xl sm:text-2xl font-bold text-white active:bg-gray-600">+</button>
+                    </div>
+                </div>
+                
+                <!-- 追加ボタン -->
+                <button onclick="confirmDrinkOrder()" class="w-full luxury-btn py-3 sm:py-4 rounded-xl text-base sm:text-lg font-bold">
+                    カートに追加
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ドリンク注文モーダル用の状態
+        let drinkModalState = {
+            itemId: null,
+            item: null,
+            quantity: 1,
+            isDrinkCategory: false
+        };
+        
+        // キャスト・スタッフデータ（localStorageから取得）
+        const staffList = JSON.parse(localStorage.getItem('cabax_staff') || '[]');
+        let castList = [];
+        
+        // キャスト一覧を取得
+        async function loadCastsForOrder() {
+            try {
+                const res = await fetch(`${API_BASE}/casts`);
+                if (res.ok) {
+                    castList = await res.json();
+                }
+            } catch (e) {
+                console.warn('キャスト取得失敗:', e);
+            }
+        }
+        loadCastsForOrder();
+        
+        // メニュークリック時にモーダルを開く
+        function openDrinkModal(itemId) {
+            const item = appState.menuItems.find(m => m.id === itemId);
+            if (!item) return;
+            
+            const category = (item.category || '').toLowerCase();
+            const isDrinkCategory = ['drink', 'bottle', 'champagne', 'wine'].includes(category);
+            const isDrinkOnly = category === 'drink';
+            
+            // ドリンク系でない場合は直接カートに追加
+            if (!isDrinkCategory) {
+                addToCart(itemId);
+                return;
+            }
+            
+            drinkModalState = {
+                itemId: itemId,
+                item: item,
+                quantity: 1,
+                isDrinkCategory: isDrinkCategory,
+                isDrinkOnly: isDrinkOnly
+            };
+            
+            // モーダル表示
+            document.getElementById('drinkModalItemId').value = itemId;
+            document.getElementById('drinkModalTitle').textContent = isDrinkOnly ? 'ドリンク注文' : item.category + '注文';
+            document.getElementById('drinkModalItemName').textContent = item.name;
+            document.getElementById('drinkModalItemPrice').textContent = '¥' + item.price.toLocaleString();
+            document.getElementById('drinkModalQty').textContent = '1';
+            
+            // ドリンクサイズセクション
+            const sizeSection = document.getElementById('drinkSizeSectionOrder');
+            if (isDrinkOnly) {
+                sizeSection.classList.remove('hidden');
+                // シングルをデフォルト選択
+                document.querySelector('input[name="drinkSizeOrder"][value="single"]').checked = true;
+                updateDrinkSizeOrderStyle();
+                updateDrinkModalPrice();
+            } else {
+                sizeSection.classList.add('hidden');
+            }
+            
+            // 誰が飲むかをリセット
+            document.querySelector('input[name="drinkForOrder"][value="customer"]').checked = true;
+            updateDrinkForOrderStyle();
+            document.getElementById('personSelectSectionOrder').classList.add('hidden');
+            document.getElementById('drinkBackInfoOrder').classList.add('hidden');
+            
+            document.getElementById('drinkOrderModal').classList.remove('hidden');
+            document.getElementById('drinkOrderModal').classList.add('flex');
+        }
+        
+        function closeDrinkModal() {
+            document.getElementById('drinkOrderModal').classList.add('hidden');
+            document.getElementById('drinkOrderModal').classList.remove('flex');
+        }
+        
+        function changeDrinkQty(delta) {
+            drinkModalState.quantity = Math.max(1, drinkModalState.quantity + delta);
+            document.getElementById('drinkModalQty').textContent = drinkModalState.quantity;
+        }
+        
+        function updateDrinkModalPrice() {
+            if (drinkModalState.isDrinkOnly) {
+                const size = document.querySelector('input[name="drinkSizeOrder"]:checked')?.value || 'single';
+                const prices = { single: 1000, double: 2000, triple: 3000 };
+                document.getElementById('drinkModalItemPrice').textContent = '¥' + prices[size].toLocaleString();
+            }
+        }
+        
+        function updateDrinkSizeOrderStyle() {
+            document.querySelectorAll('.drink-size-order-label').forEach(label => {
+                const input = label.querySelector('input');
+                if (input?.checked) {
+                    label.classList.remove('border', 'border-white/10');
+                    label.classList.add('border-2', 'border-amber-500', 'bg-amber-500/20');
+                } else {
+                    label.classList.remove('border-2', 'border-amber-500', 'bg-amber-500/20');
+                    label.classList.add('border', 'border-white/10');
+                }
+            });
+        }
+        
+        function updateDrinkForOrderStyle() {
+            const colors = {
+                'customer': { border: 'border-blue-500', bg: 'bg-blue-500/20' },
+                'staff': { border: 'border-green-500', bg: 'bg-green-500/20' },
+                'cast': { border: 'border-purple-500', bg: 'bg-purple-500/20' }
+            };
+            
+            document.querySelectorAll('.drink-for-order-label').forEach(label => {
+                const input = label.querySelector('input');
+                const value = input?.value;
+                const color = colors[value] || colors['customer'];
+                
+                label.classList.remove('border-2', 'border-blue-500', 'border-green-500', 'border-purple-500', 
+                                       'bg-blue-500/20', 'bg-green-500/20', 'bg-purple-500/20');
+                
+                if (input?.checked) {
+                    label.classList.remove('border', 'border-white/10');
+                    label.classList.add('border-2', color.border, color.bg);
+                } else {
+                    label.classList.add('border', 'border-white/10');
+                }
+            });
+        }
+        
+        function onDrinkForOrderChange() {
+            const drinkFor = document.querySelector('input[name="drinkForOrder"]:checked')?.value || 'customer';
+            const personSection = document.getElementById('personSelectSectionOrder');
+            const personSelect = document.getElementById('selDrinkPersonOrder');
+            const drinkBackInfo = document.getElementById('drinkBackInfoOrder');
+            
+            if (drinkFor === 'customer') {
+                personSection.classList.add('hidden');
+                drinkBackInfo.classList.add('hidden');
+            } else {
+                personSection.classList.remove('hidden');
+                
+                let options = '<option value="">選択してください</option>';
+                
+                if (drinkFor === 'cast') {
+                    castList.forEach(c => {
+                        const name = c.stage_name || c.name || `Cast#${c.id}`;
+                        options += `<option value="${name}">${name}</option>`;
+                    });
+                    drinkBackInfo.classList.remove('hidden');
+                } else if (drinkFor === 'staff') {
+                    staffList.forEach(s => {
+                        const roleLabels = { waiter: 'ボーイ', kitchen: 'キッチン', manager: 'マネージャー', catch: 'キャッチ', driver: 'ドライバー', other: 'その他' };
+                        options += `<option value="${s.name}">${s.name}（${roleLabels[s.role] || s.role}）</option>`;
+                    });
+                    drinkBackInfo.classList.add('hidden');
+                }
+                
+                personSelect.innerHTML = options;
+            }
+        }
+        
+        function confirmDrinkOrder() {
+            const item = drinkModalState.item;
+            if (!item) return;
+            
+            const drinkFor = document.querySelector('input[name="drinkForOrder"]:checked')?.value || 'customer';
+            let personName = null;
+            let isDrinkBack = false;
+            
+            if (drinkFor === 'cast' || drinkFor === 'staff') {
+                personName = document.getElementById('selDrinkPersonOrder')?.value;
+                if (!personName) {
+                    showNotification('キャストまたはスタッフを選択してください', 'error');
+                    return;
+                }
+                isDrinkBack = (drinkFor === 'cast');
+            }
+            
+            // 価格決定
+            let finalPrice = item.price;
+            let itemNameSuffix = '';
+            
+            if (drinkModalState.isDrinkOnly) {
+                const size = document.querySelector('input[name="drinkSizeOrder"]:checked')?.value || 'single';
+                const prices = { single: 1000, double: 2000, triple: 3000 };
+                finalPrice = prices[size];
+                itemNameSuffix = size === 'single' ? '（シングル）' : size === 'double' ? '（ダブル）' : '（トリプル）';
+            }
+            
+            // カートに追加
+            const cartItem = {
+                id: item.id,
+                name: item.name + itemNameSuffix,
+                originalName: item.name,
+                price: finalPrice,
+                quantity: drinkModalState.quantity,
+                category: item.category,
+                drinkFor: drinkFor,
+                personName: personName,
+                isDrinkBack: isDrinkBack
+            };
+            
+            // 同じ設定のアイテムがあれば数量追加
+            const existingIndex = appState.cart.findIndex(c => 
+                c.id === cartItem.id && 
+                c.name === cartItem.name && 
+                c.drinkFor === cartItem.drinkFor && 
+                c.personName === cartItem.personName
+            );
+            
+            if (existingIndex >= 0) {
+                appState.cart[existingIndex].quantity += cartItem.quantity;
+            } else {
+                appState.cart.push(cartItem);
+            }
+            
+            renderCart();
+            closeDrinkModal();
+            
+            let msg = `${cartItem.name} をカートに追加しました`;
+            if (personName) {
+                msg += `（${personName}）`;
+            }
+            if (isDrinkBack) {
+                msg += ' 💎DB';
+            }
+            showNotification(msg, 'success');
+        }
+    </script>
+</body>
+</html>
