@@ -112,7 +112,7 @@ class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"))
-    menu_item_id = Column(Integer, ForeignKey("menu_items.id"))
+    menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
     quantity = Column(Integer)
     price = Column(Integer)
     is_drink_back = Column(Boolean, default=False)
@@ -540,6 +540,44 @@ def checkout_session(session_id: int, db: Session = Depends(get_db), ):
     db.commit()
     return {"message": "Session checked out"}
 
+@app.post("/api/sessions/{session_id}/add-charge")
+def add_charge_to_session(session_id: int, charge: dict, db: Session = Depends(get_db)):
+    """セッションに料金を追加（セット料金、指名料等）"""
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    item_name = charge.get("item_name", "料金")
+    price = charge.get("price", 0)
+    quantity = charge.get("quantity", 1)
+    
+    # 注文として記録（menu_item_idはNone）
+    db_order = Order(
+        session_id=session_id,
+        menu_item_id=None,
+        quantity=quantity,
+        price=price,
+        is_drink_back=False,
+        is_served=True,  # 料金系は即提供済み
+        cast_name=item_name  # item_nameをcast_nameに一時保存
+    )
+    db.add(db_order)
+    
+    # セッション合計を更新
+    session.current_total = (session.current_total or 0) + (price * quantity)
+    
+    db.commit()
+    db.refresh(db_order)
+    
+    return {
+        "message": "Charge added",
+        "order_id": db_order.id,
+        "item_name": item_name,
+        "price": price,
+        "quantity": quantity,
+        "session_total": session.current_total
+    }
+
 # 注文管理
 @app.get("/api/orders")
 def get_orders(db: Session = Depends(get_db)):
@@ -549,18 +587,24 @@ def get_orders(db: Session = Depends(get_db)):
     for order in orders:
         session = db.query(SessionModel).filter(SessionModel.id == order.session_id).first()
         table = db.query(Table).filter(Table.id == session.table_id).first() if session else None
-        menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
+        menu_item = None
+        if order.menu_item_id:
+            menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
+        
+        # menu_item_idがない場合はcast_nameにアイテム名が入っている（add-chargeで追加した料金）
+        item_name = menu_item.name if menu_item else (order.cast_name or "料金")
+        
         result.append({
             "id": order.id,
             "session_id": order.session_id,
             "table_id": table.id if table else None,
             "table_name": table.name if table else "?",
             "menu_item_id": order.menu_item_id,
-            "item_name": menu_item.name if menu_item else "?",
+            "item_name": item_name,
             "quantity": order.quantity,
             "price": order.price,
             "is_drink_back": order.is_drink_back,
-            "cast_name": order.cast_name,
+            "cast_name": order.cast_name if menu_item else None,
             "is_served": order.is_served,
             "created_at": order.created_at.isoformat() if order.created_at else None
         })
