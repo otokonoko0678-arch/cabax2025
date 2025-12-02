@@ -116,6 +116,7 @@ class Order(Base):
     quantity = Column(Integer)
     price = Column(Integer)
     is_drink_back = Column(Boolean, default=False)
+    is_served = Column(Boolean, default=False)
     cast_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
