@@ -27,6 +27,16 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./cabax.db")
 
+# DBリセットフラグ（環境変数で制御）
+RESET_DB = os.getenv("RESET_DB", "false").lower() == "true"
+
+# SQLiteの場合、DBファイルを削除してリセット
+if RESET_DB and "sqlite" in DATABASE_URL:
+    db_path = DATABASE_URL.replace("sqlite:///", "")
+    if os.path.exists(db_path):
+        os.remove(db_path)
+        print(f"🗑️ DB削除: {db_path}")
+
 # データベース設定
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -73,6 +83,7 @@ class MenuItem(Base):
     description = Column(Text, nullable=True)
     image_url = Column(String, nullable=True)
     stock = Column(Integer, nullable=True)
+    premium = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     orders = relationship("Order", back_populates="menu_item")
 
@@ -169,6 +180,7 @@ class MenuItemCreate(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     stock: Optional[int] = None
+    premium: Optional[bool] = False
 
 class MenuItemUpdate(BaseModel):
     name: Optional[str] = None
@@ -177,6 +189,7 @@ class MenuItemUpdate(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     stock: Optional[int] = None
+    premium: Optional[bool] = None
 
 class MenuItemResponse(BaseModel):
     id: int
@@ -186,6 +199,7 @@ class MenuItemResponse(BaseModel):
     description: Optional[str]
     image_url: Optional[str]
     stock: Optional[int]
+    premium: Optional[bool] = False
     class Config:
         from_attributes = True
 
