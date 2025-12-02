@@ -322,6 +322,64 @@ def startup_event():
         db.commit()
         print("✅ テーブル作成完了")
     
+    # メニュー
+    if db.query(MenuItem).count() == 0:
+        menu_items = [
+            # 焼酎
+            MenuItem(name="麦焼酎", price=800, category="drink", description="すっきり飲みやすい"),
+            MenuItem(name="黒糖焼酎", price=800, category="drink", description="奄美の味わい"),
+            MenuItem(name="米焼酎", price=800, category="drink", description="まろやかな口当たり"),
+            MenuItem(name="芋焼酎", price=800, category="drink", description="芳醇な香り"),
+            MenuItem(name="しそ焼酎", price=800, category="drink", description="爽やかな風味"),
+            MenuItem(name="柚子焼酎", price=800, category="drink", description="柑橘の香り"),
+            MenuItem(name="梅焼酎", price=800, category="drink", description="梅の爽やかさ"),
+            # ウイスキー
+            MenuItem(name="ジャックダニエル", price=1000, category="drink", description="テネシーウイスキー"),
+            MenuItem(name="ジムビーム", price=900, category="drink", description="バーボンの定番"),
+            MenuItem(name="メーカーズマーク", price=1200, category="drink", description="プレミアムバーボン"),
+            MenuItem(name="ワイルドターキー", price=1100, category="drink", description="力強い味わい"),
+            # ジャパニーズウイスキー
+            MenuItem(name="山崎", price=2000, category="drink", description="サントリーの至宝", premium=True),
+            MenuItem(name="白州", price=1800, category="drink", description="森薫るウイスキー", premium=True),
+            MenuItem(name="響", price=2500, category="drink", description="ブレンドの芸術", premium=True),
+            MenuItem(name="竹鶴", price=1600, category="drink", description="ニッカの傑作"),
+            # ブランデー
+            MenuItem(name="ヘネシー VS", price=1500, category="drink", description="コニャックの定番"),
+            MenuItem(name="ヘネシー XO", price=3500, category="drink", description="極上のコニャック", premium=True),
+            MenuItem(name="レミーマルタン VSOP", price=1800, category="drink", description="華やかな香り"),
+            # シャンパン
+            MenuItem(name="アルマンド ブリニャック ブリュット", price=120000, category="champagne", description="ゴールドボトル", premium=True),
+            MenuItem(name="アルマンド ロゼ", price=150000, category="champagne", description="ピンクの輝き", premium=True),
+            MenuItem(name="クリュッグ グランキュヴェ", price=50000, category="champagne", description="シャンパンの帝王", premium=True),
+            MenuItem(name="ドン ペリニヨン", price=45000, category="champagne", description="最高峰のシャンパン", premium=True),
+            MenuItem(name="ドン ペリニヨン ロゼ", price=70000, category="champagne", description="希少なロゼ", premium=True),
+            MenuItem(name="ベル エポック", price=35000, category="champagne", description="美しいボトル", premium=True),
+            MenuItem(name="サロン", price=80000, category="champagne", description="幻のシャンパン", premium=True),
+            MenuItem(name="ヴーヴ クリコ イエローラベル", price=18000, category="champagne", description="定番シャンパン"),
+            MenuItem(name="モエ エ シャンドン", price=15000, category="champagne", description="世界で愛される"),
+            MenuItem(name="ローラン ペリエ", price=20000, category="champagne", description="エレガントな味わい"),
+            # ワイン
+            MenuItem(name="赤ワイン（グラス）", price=1200, category="wine", description="本日のおすすめ"),
+            MenuItem(name="白ワイン（グラス）", price=1200, category="wine", description="本日のおすすめ"),
+            MenuItem(name="赤ワイン（ボトル）", price=8000, category="wine", description="フルボディ"),
+            MenuItem(name="白ワイン（ボトル）", price=8000, category="wine", description="辛口"),
+            # ボトル
+            MenuItem(name="黒霧島 ボトル", price=5000, category="bottle", description="芋焼酎の定番"),
+            MenuItem(name="いいちこ ボトル", price=4500, category="bottle", description="麦焼酎"),
+            MenuItem(name="ジャックダニエル ボトル", price=12000, category="bottle", description="テネシーウイスキー"),
+            MenuItem(name="山崎 ボトル", price=35000, category="bottle", description="ジャパニーズウイスキー", premium=True),
+            # フード
+            MenuItem(name="フルーツ盛り合わせ", price=3000, category="food", description="季節のフルーツ"),
+            MenuItem(name="チョコレート", price=1500, category="food", description="ベルギー産"),
+            MenuItem(name="ナッツ盛り合わせ", price=1000, category="food", description="ミックスナッツ"),
+            MenuItem(name="チーズ盛り合わせ", price=2000, category="food", description="厳選チーズ"),
+            MenuItem(name="枝豆", price=500, category="food", description="定番おつまみ"),
+            MenuItem(name="唐揚げ", price=800, category="food", description="自家製"),
+        ]
+        db.add_all(menu_items)
+        db.commit()
+        print("✅ メニュー作成完了")
+    
     db.close()
 
 # ========================
