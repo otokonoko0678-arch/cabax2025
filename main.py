@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
 import jwt
-from passlib.context import CryptContext
+import bcrypt
 import os
 from pathlib import Path
 
@@ -245,18 +245,17 @@ class ShiftCreate(BaseModel):
 # 認証
 # ========================
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # bcryptは72バイト制限
-    truncated = plain_password[:72] if plain_password else ""
-    return pwd_context.verify(truncated, hashed_password)
+    password_bytes = plain_password.encode('utf-8')[:72]
+    hashed_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 def get_password_hash(password: str) -> str:
-    # bcryptは72バイト制限
-    truncated = password[:72] if password else ""
-    return pwd_context.hash(truncated)
+    password_bytes = password.encode('utf-8')[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
 
 def create_access_token(data: dict):
     to_encode = data.copy()
