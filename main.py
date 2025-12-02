@@ -496,6 +496,37 @@ def create_session(session: SessionCreate, db: Session = Depends(get_db), ):
 def get_active_sessions(db: Session = Depends(get_db), ):
     return db.query(SessionModel).filter(SessionModel.status == "active").all()
 
+@app.get("/api/sessions/{session_id}/orders")
+def get_session_orders(session_id: int, db: Session = Depends(get_db)):
+    """特定セッションの注文を取得"""
+    orders = db.query(Order).filter(Order.session_id == session_id).all()
+    result = []
+    for order in orders:
+        menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
+        result.append({
+            "id": order.id,
+            "session_id": order.session_id,
+            "menu_item_id": order.menu_item_id,
+            "item_name": menu_item.name if menu_item else "?",
+            "quantity": order.quantity,
+            "price": order.price,
+            "is_drink_back": order.is_drink_back,
+            "cast_name": order.cast_name,
+            "is_served": order.is_served,
+            "created_at": order.created_at.isoformat() if order.created_at else None
+        })
+    return result
+
+@app.post("/api/sessions/{session_id}/call-staff")
+def call_staff(session_id: int, db: Session = Depends(get_db)):
+    """スタッフ呼び出し"""
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    # 実際のシステムでは通知を送るなどの処理を行う
+    print(f"🔔 スタッフ呼び出し: セッション {session_id}")
+    return {"message": "Staff called", "session_id": session_id}
+
 @app.put("/api/sessions/{session_id}/checkout")
 def checkout_session(session_id: int, db: Session = Depends(get_db), ):
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
@@ -509,6 +540,31 @@ def checkout_session(session_id: int, db: Session = Depends(get_db), ):
     return {"message": "Session checked out"}
 
 # 注文管理
+@app.get("/api/orders")
+def get_orders(db: Session = Depends(get_db)):
+    """全注文を取得（テーブル名、メニュー名付き）"""
+    orders = db.query(Order).all()
+    result = []
+    for order in orders:
+        session = db.query(SessionModel).filter(SessionModel.id == order.session_id).first()
+        table = db.query(Table).filter(Table.id == session.table_id).first() if session else None
+        menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
+        result.append({
+            "id": order.id,
+            "session_id": order.session_id,
+            "table_id": table.id if table else None,
+            "table_name": table.name if table else "?",
+            "menu_item_id": order.menu_item_id,
+            "item_name": menu_item.name if menu_item else "?",
+            "quantity": order.quantity,
+            "price": order.price,
+            "is_drink_back": order.is_drink_back,
+            "cast_name": order.cast_name,
+            "is_served": order.is_served,
+            "created_at": order.created_at.isoformat() if order.created_at else None
+        })
+    return result
+
 @app.post("/api/orders")
 def create_order(order: OrderCreate, db: Session = Depends(get_db), ):
     menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
@@ -529,6 +585,16 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db), ):
     db.commit()
     db.refresh(db_order)
     return db_order
+
+@app.put("/api/orders/{order_id}/serve")
+def mark_order_served(order_id: int, db: Session = Depends(get_db)):
+    """注文を提供済みにする"""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.is_served = True
+    db.commit()
+    return {"message": "Order marked as served", "id": order_id}
 
 # 勤怠管理
 @app.post("/api/attendance/clock-in")
@@ -571,6 +637,88 @@ def get_shifts(date: Optional[str] = None, db: Session = Depends(get_db), ):
     if date:
         query = query.filter(Shift.date == date)
     return query.all()
+
+# 日報
+@app.get("/api/daily-report")
+def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
+    """日報データを取得"""
+    target_date = date or datetime.utcnow().strftime("%Y-%m-%d")
+    
+    # その日のセッション
+    sessions = db.query(SessionModel).filter(
+        SessionModel.start_time >= f"{target_date} 00:00:00",
+        SessionModel.start_time <= f"{target_date} 23:59:59"
+    ).all()
+    
+    # 売上計算
+    total_sales = 0
+    total_guests = 0
+    session_count = len(sessions)
+    
+    for session in sessions:
+        total_sales += session.current_total or 0
+        total_guests += session.guests or 0
+    
+    # その日の注文
+    orders = db.query(Order).filter(
+        Order.created_at >= f"{target_date} 00:00:00",
+        Order.created_at <= f"{target_date} 23:59:59"
+    ).all()
+    
+    # ドリンクバック集計
+    drink_back_total = sum(o.price * o.quantity for o in orders if o.is_drink_back)
+    
+    # その日の勤怠
+    attendances = db.query(Attendance).filter(Attendance.date == target_date).all()
+    
+    return {
+        "date": target_date,
+        "session_count": session_count,
+        "total_guests": total_guests,
+        "total_sales": total_sales,
+        "drink_back_total": drink_back_total,
+        "order_count": len(orders),
+        "attendance_count": len(attendances),
+        "sessions": [
+            {
+                "id": s.id,
+                "table_id": s.table_id,
+                "guests": s.guests,
+                "total": s.current_total,
+                "status": s.status
+            } for s in sessions
+        ]
+    }
+
+@app.get("/api/daily-report/cast-ranking")
+def get_cast_ranking(date: Optional[str] = None, db: Session = Depends(get_db)):
+    """キャストランキングを取得"""
+    target_date = date or datetime.utcnow().strftime("%Y-%m-%d")
+    
+    # その日のドリンクバック注文を集計
+    orders = db.query(Order).filter(
+        Order.created_at >= f"{target_date} 00:00:00",
+        Order.created_at <= f"{target_date} 23:59:59",
+        Order.is_drink_back == True
+    ).all()
+    
+    # キャストごとに集計
+    cast_totals = {}
+    for order in orders:
+        if order.cast_name:
+            if order.cast_name not in cast_totals:
+                cast_totals[order.cast_name] = {"drink_back": 0, "count": 0}
+            cast_totals[order.cast_name]["drink_back"] += order.price * order.quantity
+            cast_totals[order.cast_name]["count"] += order.quantity
+    
+    # ランキング形式に変換
+    ranking = [
+        {"cast_name": name, "drink_back": data["drink_back"], "count": data["count"]}
+        for name, data in cast_totals.items()
+    ]
+    ranking.sort(key=lambda x: x["drink_back"], reverse=True)
+    
+    return {"date": target_date, "ranking": ranking}
 
 # ヘルスチェック
 @app.get("/")
