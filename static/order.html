@@ -1388,7 +1388,15 @@ async function requestCheck() {
                     <p id="drinkModalItemPrice" class="text-2xl sm:text-3xl font-bold gold-accent"></p>
                 </div>
                 
-                <!-- ドリンクサイズ選択（ドリンクカテゴリのみ） -->
+                <!-- 割り方選択（焼酎・ウイスキー・ビール用） -->
+                <div id="mixStyleSectionOrder" class="hidden">
+                    <div class="text-sm text-gray-400 mb-2">割り方を選択</div>
+                    <div id="mixStyleOptionsOrder" class="grid grid-cols-2 gap-2">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+                
+                <!-- ドリンクサイズ選択（キャスト/スタッフ用） -->
                 <div id="drinkSizeSectionOrder" class="hidden">
                     <div class="text-sm text-gray-400 mb-2">ドリンクサイズ</div>
                     <div class="grid grid-cols-3 gap-2">
@@ -1505,14 +1513,22 @@ async function requestCheck() {
         loadCastsForOrder();
         loadStaffForOrder();
         
+        // 割り方の定義
+        const mixStyles = {
+            '麦焼酎': ['ロック', '水割り', 'お湯割り', 'ソーダ割り', 'ウーロン割り', '緑茶割り', 'レモンサワー'],
+            'ウイスキー': ['ロック', 'ストレート', '水割り', 'ハイボール', 'コーク割り', 'ジンジャー割り'],
+            'ビール': ['生ビール', 'アイスビール', 'シャンディガフ', 'レッドアイ']
+        };
+        
         // メニュークリック時にモーダルを開く
         function openDrinkModal(itemId) {
             const item = appState.menuItems.find(m => m.id === itemId);
             if (!item) return;
             
             const category = (item.category || '').toLowerCase();
-            const isDrinkCategory = ['drink', 'bottle', 'champagne', 'wine'].includes(category);
-            const isDrinkOnly = category === 'drink';
+            const isDrinkCategory = ['drink', 'cocktail', 'soft', 'bottle', 'champagne', 'wine'].includes(category);
+            const isDrinkOnly = ['drink', 'cocktail', 'soft'].includes(category);
+            const hasMixStyle = mixStyles[item.name] !== undefined;
             
             // ドリンク系でない場合は直接カートに追加
             if (!isDrinkCategory) {
@@ -1525,7 +1541,9 @@ async function requestCheck() {
                 item: item,
                 quantity: 1,
                 isDrinkCategory: isDrinkCategory,
-                isDrinkOnly: isDrinkOnly
+                isDrinkOnly: isDrinkOnly,
+                hasMixStyle: hasMixStyle,
+                selectedMixStyle: null
             };
             
             // モーダル表示
@@ -1533,6 +1551,25 @@ async function requestCheck() {
             document.getElementById('drinkModalTitle').textContent = isDrinkOnly ? 'ドリンク注文' : item.category + '注文';
             document.getElementById('drinkModalItemName').textContent = item.name;
             document.getElementById('drinkModalQty').textContent = '1';
+            
+            // 割り方選択セクション
+            const mixStyleSection = document.getElementById('mixStyleSectionOrder');
+            const mixStyleOptions = document.getElementById('mixStyleOptionsOrder');
+            
+            if (hasMixStyle) {
+                mixStyleSection.classList.remove('hidden');
+                const styles = mixStyles[item.name];
+                mixStyleOptions.innerHTML = styles.map((style, index) => `
+                    <label class="mix-style-label flex items-center justify-center p-3 rounded-xl bg-black/20 ${index === 0 ? 'border-2 border-amber-500 bg-amber-500/20' : 'border border-white/10'} cursor-pointer">
+                        <input type="radio" name="mixStyleOrder" value="${style}" ${index === 0 ? 'checked' : ''} onchange="updateMixStyleOrderStyle()" class="hidden">
+                        <span class="text-white font-semibold text-sm">${style}</span>
+                    </label>
+                `).join('');
+                drinkModalState.selectedMixStyle = styles[0];
+            } else {
+                mixStyleSection.classList.add('hidden');
+                mixStyleOptions.innerHTML = '';
+            }
             
             // ドリンクサイズセクション - デフォルトはお客様なので非表示
             const sizeSection = document.getElementById('drinkSizeSectionOrder');
@@ -1554,6 +1591,20 @@ async function requestCheck() {
             
             document.getElementById('drinkOrderModal').classList.remove('hidden');
             document.getElementById('drinkOrderModal').classList.add('flex');
+        }
+        
+        function updateMixStyleOrderStyle() {
+            document.querySelectorAll('.mix-style-label').forEach(label => {
+                const input = label.querySelector('input');
+                if (input?.checked) {
+                    label.classList.remove('border', 'border-white/10');
+                    label.classList.add('border-2', 'border-amber-500', 'bg-amber-500/20');
+                    drinkModalState.selectedMixStyle = input.value;
+                } else {
+                    label.classList.remove('border-2', 'border-amber-500', 'bg-amber-500/20');
+                    label.classList.add('border', 'border-white/10');
+                }
+            });
         }
         
         function closeDrinkModal() {
@@ -1657,6 +1708,16 @@ async function requestCheck() {
             const item = drinkModalState.item;
             if (!item) return;
             
+            // 割り方が必要な場合、選択されているかチェック
+            if (drinkModalState.hasMixStyle) {
+                const mixStyle = document.querySelector('input[name="mixStyleOrder"]:checked')?.value;
+                if (!mixStyle) {
+                    showNotification('割り方を選択してください', 'error');
+                    return;
+                }
+                drinkModalState.selectedMixStyle = mixStyle;
+            }
+            
             const drinkFor = document.querySelector('input[name="drinkForOrder"]:checked')?.value || 'customer';
             let personName = null;
             let isDrinkBack = false;
@@ -1674,16 +1735,27 @@ async function requestCheck() {
             let finalPrice = 0;
             let itemNameSuffix = '';
             
+            // 割り方がある場合は名前に追加
+            if (drinkModalState.hasMixStyle && drinkModalState.selectedMixStyle) {
+                itemNameSuffix = '（' + drinkModalState.selectedMixStyle + '）';
+            }
+            
             if (drinkFor === 'customer') {
                 // お客様のドリンクはセット料金込み → 0円
                 finalPrice = 0;
-                itemNameSuffix = '（セット込）';
+                itemNameSuffix += '';  // お客様の場合はセット込み表記しない（割り方だけ）
             } else if (drinkModalState.isDrinkOnly) {
                 // キャスト/スタッフのドリンクはサイズで価格決定
                 const size = document.querySelector('input[name="drinkSizeOrder"]:checked')?.value || 'single';
                 const prices = { single: 1000, double: 2000, triple: 3000 };
                 finalPrice = prices[size];
-                itemNameSuffix = size === 'single' ? '（シングル）' : size === 'double' ? '（ダブル）' : '（トリプル）';
+                const sizeLabel = size === 'single' ? 'シングル' : size === 'double' ? 'ダブル' : 'トリプル';
+                // 割り方がある場合は「麦焼酎（ロック・シングル）」のように表示
+                if (drinkModalState.hasMixStyle) {
+                    itemNameSuffix = '（' + drinkModalState.selectedMixStyle + '・' + sizeLabel + '）';
+                } else {
+                    itemNameSuffix = '（' + sizeLabel + '）';
+                }
             } else {
                 // ボトル、シャンパン等はそのままの価格
                 finalPrice = item.price;
@@ -1699,7 +1771,8 @@ async function requestCheck() {
                 category: item.category,
                 drinkFor: drinkFor,
                 personName: personName,
-                isDrinkBack: isDrinkBack
+                isDrinkBack: isDrinkBack,
+                mixStyle: drinkModalState.selectedMixStyle || null
             };
             
             // 同じ設定のアイテムがあれば数量追加

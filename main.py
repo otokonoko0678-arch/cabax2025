@@ -376,45 +376,30 @@ def startup_event():
     # メニュー
     if db.query(MenuItem).count() == 0:
         menu_items = [
-            # === セットドリンク ===
-            # 焼酎（麦焼酎 + 割り方）
-            MenuItem(name="麦焼酎 ロック", price=1000, category="drink", description="すっきり飲みやすい"),
-            MenuItem(name="麦焼酎 水割り", price=1000, category="drink", description="すっきり飲みやすい"),
-            MenuItem(name="麦焼酎 お湯割り", price=1000, category="drink", description="すっきり飲みやすい"),
-            MenuItem(name="麦焼酎 ソーダ割り", price=1000, category="drink", description="すっきり飲みやすい"),
-            MenuItem(name="麦焼酎 ウーロン割り", price=1000, category="drink", description="すっきり飲みやすい"),
-            MenuItem(name="麦焼酎 緑茶割り", price=1000, category="drink", description="すっきり飲みやすい"),
-            MenuItem(name="レモンサワー", price=1000, category="drink", description="定番サワー"),
-            # ウイスキー（+ 割り方）
-            MenuItem(name="ウイスキー ロック", price=1000, category="drink", description="ハウスウイスキー"),
-            MenuItem(name="ウイスキー ストレート", price=1000, category="drink", description="ハウスウイスキー"),
-            MenuItem(name="ウイスキー 水割り", price=1000, category="drink", description="ハウスウイスキー"),
-            MenuItem(name="ハイボール", price=1000, category="drink", description="ソーダ割り"),
-            MenuItem(name="コークハイ", price=1000, category="drink", description="コーク割り"),
-            MenuItem(name="ジンジャーハイ", price=1000, category="drink", description="ジンジャー割り"),
-            # ビール
-            MenuItem(name="ビール", price=1000, category="drink", description="生ビール"),
-            MenuItem(name="アイスビール", price=1000, category="drink", description="フローズンビール"),
-            MenuItem(name="シャンディガフ", price=1000, category="drink", description="ビール＋ジンジャエール"),
-            MenuItem(name="レッドアイ", price=1000, category="drink", description="ビール＋トマトジュース"),
-            # カクテル
-            MenuItem(name="カシスオレンジ", price=1000, category="drink", description="定番カクテル"),
-            MenuItem(name="カシスソーダ", price=1000, category="drink", description="爽やかカクテル"),
-            MenuItem(name="カシスウーロン", price=1000, category="drink", description="さっぱりカクテル"),
-            MenuItem(name="ピーチオレンジ", price=1000, category="drink", description="フルーティー"),
-            MenuItem(name="ピーチウーロン", price=1000, category="drink", description="さっぱり"),
-            MenuItem(name="ファジーネーブル", price=1000, category="drink", description="ピーチ＋オレンジ"),
-            MenuItem(name="カルーアミルク", price=1000, category="drink", description="甘口カクテル"),
-            # ソフトドリンク
-            MenuItem(name="ウーロン茶", price=1000, category="drink", description="ソフトドリンク"),
-            MenuItem(name="緑茶", price=1000, category="drink", description="ソフトドリンク"),
-            MenuItem(name="オレンジジュース", price=1000, category="drink", description="ソフトドリンク"),
-            MenuItem(name="グレープフルーツジュース", price=1000, category="drink", description="ソフトドリンク"),
-            MenuItem(name="コーラ", price=1000, category="drink", description="ソフトドリンク"),
-            MenuItem(name="ジンジャエール", price=1000, category="drink", description="ソフトドリンク"),
-            MenuItem(name="炭酸水", price=1000, category="drink", description="ソフトドリンク"),
-            MenuItem(name="カルピス", price=1000, category="drink", description="ソフトドリンク"),
-            MenuItem(name="カルピスソーダ", price=1000, category="drink", description="ソフトドリンク"),
+            # === セットドリンク（本体のみ、割り方は注文時に選択） ===
+            MenuItem(name="麦焼酎", price=1000, category="drink", description="割り方を選んでください"),
+            MenuItem(name="ウイスキー", price=1000, category="drink", description="割り方を選んでください"),
+            MenuItem(name="ビール", price=1000, category="drink", description="種類を選んでください"),
+            
+            # カクテル（種類別）
+            MenuItem(name="カシスオレンジ", price=1000, category="cocktail", description="定番カクテル"),
+            MenuItem(name="カシスソーダ", price=1000, category="cocktail", description="爽やかカクテル"),
+            MenuItem(name="カシスウーロン", price=1000, category="cocktail", description="さっぱりカクテル"),
+            MenuItem(name="ピーチオレンジ", price=1000, category="cocktail", description="フルーティー"),
+            MenuItem(name="ピーチウーロン", price=1000, category="cocktail", description="さっぱり"),
+            MenuItem(name="ファジーネーブル", price=1000, category="cocktail", description="ピーチ＋オレンジ"),
+            MenuItem(name="カルーアミルク", price=1000, category="cocktail", description="甘口カクテル"),
+            
+            # ソフトドリンク（種類別）
+            MenuItem(name="ウーロン茶", price=1000, category="soft", description="ソフトドリンク"),
+            MenuItem(name="緑茶", price=1000, category="soft", description="ソフトドリンク"),
+            MenuItem(name="オレンジジュース", price=1000, category="soft", description="ソフトドリンク"),
+            MenuItem(name="グレープフルーツジュース", price=1000, category="soft", description="ソフトドリンク"),
+            MenuItem(name="コーラ", price=1000, category="soft", description="ソフトドリンク"),
+            MenuItem(name="ジンジャエール", price=1000, category="soft", description="ソフトドリンク"),
+            MenuItem(name="炭酸水", price=1000, category="soft", description="ソフトドリンク"),
+            MenuItem(name="カルピス", price=1000, category="soft", description="ソフトドリンク"),
+            MenuItem(name="カルピスソーダ", price=1000, category="soft", description="ソフトドリンク"),
             
             # === 有料ドリンク（ワイン系） ===
             MenuItem(name="グラスワイン（赤）", price=2000, category="wine", description="本日のおすすめ"),
