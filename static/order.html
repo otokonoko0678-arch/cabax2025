@@ -962,7 +962,6 @@ function renderMenu() {
 
         grid = document.createElement('div');
         grid.id = 'menuGrid';
-        grid.className = 'space-y-6';
 
         wrapper.appendChild(grid);
         parent.insertAdjacentElement('afterend', wrapper);
@@ -994,19 +993,20 @@ function renderMenu() {
             }
         });
         
+        grid.className = '';
         grid.innerHTML = Object.entries(subCategories)
             .filter(([key, val]) => val.items.length > 0)
             .map(([subCat, data]) => `
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold text-gray-300 mb-3 px-1">${data.label}</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-gray-300 mb-4">${data.label}</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         ${data.items.map(item => {
                             // グラスワインのみ価格表示
                             const showPrice = subCat === 'glasswine';
                             return `
-                                <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-5">
-                                    <h3 class="text-base sm:text-lg font-bold text-gray-200 mb-1 line-clamp-2">${item.name}</h3>
-                                    ${showPrice ? `<div class="text-xl sm:text-2xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>` : ''}
+                                <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-xl p-4 cursor-pointer">
+                                    <h4 class="text-sm font-bold text-gray-200 mb-1">${item.name}</h4>
+                                    ${showPrice ? `<div class="text-lg font-bold gold-accent">¥${item.price.toLocaleString()}</div>` : ''}
                                 </div>
                             `;
                         }).join('')}
@@ -1019,7 +1019,7 @@ function renderMenu() {
         grid.innerHTML = filtered
             .map(
                 (item) => `
-                    <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6">
+                    <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6 cursor-pointer">
                         ${
                             item.premium
                                 ? '<div class="mb-2 sm:mb-3"><span class="premium-badge">⭐ PREMIUM</span></div>'
