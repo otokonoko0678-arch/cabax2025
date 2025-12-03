@@ -4223,6 +4223,14 @@ async function openTableDetail(tableId) {
               Number(s.id) === Number(sessionId)
             );
             
+            // ★ 伝票用に注文を取得
+            let ordersForReceipt = [];
+            try {
+              const ordersData = await fetchJson(`/sessions/${sessionId}/orders`);
+              ordersForReceipt = Array.isArray(ordersData) ? ordersData : [];
+            } catch (e) {
+              console.warn('[checkout] orders fetch failed:', e);
+            }
             
             msg('精算中...');
             const result = await fetchJson(`/sessions/${sessionId}/checkout`, { method: 'PUT' });
@@ -4245,6 +4253,13 @@ async function openTableDetail(tableId) {
               } catch (e) {
                 console.warn('localStorage保存に失敗:', e);
               }
+              
+              // ★ 伝票を表示
+              console.log('[checkout] showReceipt呼び出し', sessionToCheckout, ordersForReceipt);
+              showReceipt(sessionToCheckout, ordersForReceipt);
+            } else {
+              // セッションが見つからなくても伝票を表示
+              showReceipt({ guests: 0, castName: '不明', tableName: '不明', currentTotal: result?.final_total || 0 }, ordersForReceipt);
             }
             
             msg('精算しました');
