@@ -1746,8 +1746,20 @@ function renderTableDetailPanel(session) {
   const btnSec = `${btnBase} bg-white/5 text-white hover:bg-white/10 border border-white/10`;
   const btnDis = `${btnBase} bg-white/5 text-white/30 border border-white/10`;
 
+  // セットドリンク（価格表示変更）
+  const setDrinkNames = ['麦焼酎', 'ウイスキー', 'ビール', 'カクテル', 'ソフトドリンク'];
+  const paidDrinkNames = ['ショット', 'グラスワイン'];
+  
   const menuOptions = menu.length
-    ? menu.map(m => `<option value="${m.id}">${m.name}（¥${yen(m.price)}）</option>`).join('')
+    ? menu.map(m => {
+        let priceLabel = `¥${yen(m.price)}`;
+        if (setDrinkNames.includes(m.name)) {
+          priceLabel = 'セット込/サイズ別';
+        } else if (paidDrinkNames.includes(m.name)) {
+          priceLabel = `¥${yen(m.price)}`;
+        }
+        return `<option value="${m.id}">${m.name}（${priceLabel}）</option>`;
+      }).join('')
     : `<option value="">（メニュー未取得）</option>`;
 
   const castOptions = (() => {
