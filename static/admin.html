@@ -2264,7 +2264,15 @@ function showReceipt(session, orders) {
     console.log('[showReceipt] 開始', session, orders);
     
     const guests = session.guests || 0;
-    const castName = session.castName || getCastName(session.castId || session.cast_id) || '未設定';
+    // キャスト名を直接取得（getCastNameが使えない場合に備える）
+    let castName = session.castName || session.cast_name || '';
+    if (!castName && (session.castId || session.cast_id)) {
+        const castId = session.castId || session.cast_id;
+        const cast = (appState.casts || []).find(c => Number(c.id) === Number(castId));
+        castName = cast ? (cast.stage_name || cast.name) : '';
+    }
+    castName = castName || '未設定';
+    
     const tableName = session.tableName || session.table_name || session.tableId || '?';
     const total = session.currentTotal || session.current_total || 0;
     const now = new Date();
