@@ -625,6 +625,10 @@
                         <span class="text-lg">👥</span>
                         <span>キャスト管理</span>
                     </button>
+                    <button onclick="showTab('checkout-history')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
+                        <span class="text-lg">🧾</span>
+                        <span>会計履歴</span>
+                    </button>
                     <button onclick="showTab('daily-report')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">📋</span>
                         <span>日報</span>
@@ -1030,6 +1034,18 @@
                                 <div id="nominationRanking" class="space-y-3"></div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 会計履歴タブ -->
+                <div id="checkout-history-tab" class="tab-content">
+                    <div class="mb-8">
+                        <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-3">会計履歴</h1>
+                        <p class="text-gray-400">本日の会計履歴を確認・修正できます</p>
+                    </div>
+                    
+                    <div id="checkoutHistoryContent" class="space-y-4">
+                        <!-- ここに会計履歴が表示される -->
                     </div>
                 </div>
 
@@ -5734,6 +5750,159 @@ function populateCastSelects() {
     return result;
     }
 
+// ★ 会計履歴機能
+function renderCheckoutHistory() {
+    const container = document.getElementById('checkoutHistoryContent');
+    if (!container) return;
+    
+    // 今日の日付
+    const today = new Date();
+    const todayStr = today.toLocaleDateString('ja-JP');
+    
+    // 今日の会計のみフィルタ
+    const todayHistory = (appState.checkoutHistory || []).filter(session => {
+        const checkoutTime = new Date(session.checkoutTime);
+        return checkoutTime.toLocaleDateString('ja-JP') === todayStr;
+    }).sort((a, b) => new Date(b.checkoutTime) - new Date(a.checkoutTime));
+    
+    if (todayHistory.length === 0) {
+        container.innerHTML = `
+            <div class="luxury-card rounded-2xl p-8 text-center text-gray-500">
+                <p class="text-lg">本日の会計履歴はありません</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = todayHistory.map((session, index) => {
+        const checkoutTime = new Date(session.checkoutTime);
+        const timeStr = checkoutTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        const tableName = session.tableName || session.table_name || session.tableId || '?';
+        const guests = session.guests || 0;
+        const castName = session.castName || session.cast_name || '未設定';
+        const total = session.totalAmount || session.currentTotal || session.current_total || 0;
+        const historyIndex = appState.checkoutHistory.indexOf(session);
+        
+        return `
+            <div class="luxury-card rounded-2xl p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-2xl font-bold text-gray-200">テーブル ${tableName}</span>
+                            <span class="text-sm text-gray-500">${timeStr}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-4 text-sm text-gray-400">
+                            <span>👥 ${guests}名</span>
+                            <span>💃 ${castName}</span>
+                            <span class="text-lg font-bold gold-accent">¥${total.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="showReceiptFromHistory(${historyIndex})" 
+                                class="bg-blue-900/20 text-blue-400 border border-blue-800/30 px-4 py-2 rounded-xl hover:bg-blue-900/30 transition text-sm">
+                            🧾 伝票
+                        </button>
+                        <button onclick="openEditCheckoutModal(${historyIndex})" 
+                                class="bg-amber-900/20 text-amber-400 border border-amber-800/30 px-4 py-2 rounded-xl hover:bg-amber-900/30 transition text-sm">
+                            ✏️ 修正
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 履歴から伝票を再表示
+function showReceiptFromHistory(historyIndex) {
+    const session = appState.checkoutHistory[historyIndex];
+    if (!session) return;
+    
+    // 注文はセッションに保存されてるものを使う
+    const orders = session.orders || [];
+    showReceipt(session, orders);
+}
+
+// 会計修正モーダルを開く
+function openEditCheckoutModal(historyIndex) {
+    const session = appState.checkoutHistory[historyIndex];
+    if (!session) return;
+    
+    const total = session.totalAmount || session.currentTotal || session.current_total || 0;
+    const guests = session.guests || 0;
+    
+    // 修正用モーダルを表示
+    const modalHtml = `
+        <div id="editCheckoutModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div class="luxury-card rounded-2xl max-w-md w-full p-6">
+                <h2 class="text-xl font-bold gold-accent mb-4">会計修正</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm text-gray-400 block mb-1">来店人数</label>
+                        <input type="number" id="editGuests" value="${guests}" min="1" 
+                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400 block mb-1">合計金額</label>
+                        <input type="number" id="editTotal" value="${total}" 
+                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white">
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-6">
+                    <button onclick="saveEditCheckout(${historyIndex})" 
+                            class="flex-1 luxury-btn py-3 rounded-xl font-bold">
+                        保存
+                    </button>
+                    <button onclick="closeEditCheckoutModal()" 
+                            class="flex-1 bg-gray-700 text-white py-3 rounded-xl font-bold">
+                        キャンセル
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 既存のモーダルがあれば削除
+    const existing = document.getElementById('editCheckoutModal');
+    if (existing) existing.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeEditCheckoutModal() {
+    const modal = document.getElementById('editCheckoutModal');
+    if (modal) modal.remove();
+}
+
+function saveEditCheckout(historyIndex) {
+    const session = appState.checkoutHistory[historyIndex];
+    if (!session) return;
+    
+    const newGuests = parseInt(document.getElementById('editGuests').value) || 0;
+    const newTotal = parseInt(document.getElementById('editTotal').value) || 0;
+    
+    // 更新
+    session.guests = newGuests;
+    session.totalAmount = newTotal;
+    session.currentTotal = newTotal;
+    session.current_total = newTotal;
+    
+    // localStorageに保存
+    try {
+        localStorage.setItem('cabax_checkoutHistory', JSON.stringify(appState.checkoutHistory));
+    } catch (e) {
+        console.warn('localStorage保存失敗:', e);
+    }
+    
+    closeEditCheckoutModal();
+    renderCheckoutHistory();
+    
+    // 日報も更新
+    if (typeof renderDailyReport === 'function') renderDailyReport();
+    
+    showNotification('会計情報を修正しました', 'success');
+}
+
 // 日報機能
 function renderDailyReport() {
     console.log('[renderDailyReport] start');
@@ -6645,6 +6814,11 @@ function setupCharts() {
             
             if (tabName === 'daily-report') {
                 renderDailyReport();
+            }
+            
+            // 会計履歴タブを開いたら履歴を読み込む
+            if (tabName === 'checkout-history') {
+                renderCheckoutHistory();
             }
             
             // オーダー管理タブを開いたらオーダーを読み込む
