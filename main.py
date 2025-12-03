@@ -382,13 +382,8 @@ def startup_event():
             MenuItem(name="ビール", price=1000, category="drink", description="beer"),
             MenuItem(name="カクテル", price=1000, category="drink", description="cocktail"),
             MenuItem(name="ソフトドリンク", price=1000, category="drink", description="soft"),
-            MenuItem(name="ショット", price=1000, category="drink", description="shot"),
-            
-            # === グラスワイン（2,000円表示） ===
-            MenuItem(name="グラスワイン（赤）", price=2000, category="drink", description="glasswine"),
-            MenuItem(name="グラスワイン（白）", price=2000, category="drink", description="glasswine"),
-            MenuItem(name="キティ", price=2000, category="drink", description="glasswine"),
-            MenuItem(name="オペレーター", price=2000, category="drink", description="glasswine"),
+            MenuItem(name="ショット", price=2000, category="drink", description="shot"),
+            MenuItem(name="グラスワイン", price=2000, category="drink", description="glasswine"),
             
             # === シャンパン ===
             MenuItem(name="アルマンド ブリニャック ブリュット", price=120000, category="champagne", description="ゴールドボトル", premium=True),

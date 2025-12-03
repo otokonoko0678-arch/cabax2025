@@ -980,10 +980,11 @@ function renderMenu() {
     grid.innerHTML = filtered
         .map(
             (item) => {
-                // ドリンクカテゴリでグラスワイン以外は価格非表示
+                // ドリンクカテゴリでグラスワイン・ショット以外は価格非表示
                 const isGlassWine = item.description === 'glasswine';
+                const isShot = item.description === 'shot';
                 const isDrinkCategory = (item.category || '').toLowerCase() === 'drink';
-                const showPrice = !isDrinkCategory || isGlassWine;
+                const showPrice = !isDrinkCategory || isGlassWine || isShot;
                 
                 return `
                     <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6 cursor-pointer">
@@ -1528,8 +1529,12 @@ async function requestCheck() {
             'ビール': ['生ビール', 'アイスビール', 'シャンディガフ', 'レッドアイ'],
             'カクテル': ['カシスオレンジ', 'カシスソーダ', 'カシスウーロン', 'ピーチオレンジ', 'ピーチウーロン', 'ファジーネーブル', 'カルーアミルク'],
             'ソフトドリンク': ['ウーロン茶', '緑茶', 'オレンジジュース', 'グレープフルーツジュース', 'コーラ', 'ジンジャエール', '炭酸水', 'カルピス', 'カルピスソーダ'],
-            'ショット': ['テキーラ', 'イェーガー', 'コカレロ', 'クライナー']
+            'ショット': ['テキーラ', 'イェーガー', 'コカレロ', 'クライナー'],
+            'グラスワイン': ['グラスワイン（赤）', 'グラスワイン（白）', 'キティ', 'オペレーター']
         };
+        
+        // 有料ドリンク（お客様もセット込みではなく課金）
+        const paidDrinks = ['ショット', 'グラスワイン'];
         
         // メニュークリック時にモーダルを開く
         function openDrinkModal(itemId) {
@@ -1751,10 +1756,15 @@ async function requestCheck() {
                 itemNameSuffix = '（' + drinkModalState.selectedMixStyle + '）';
             }
             
-            if (drinkFor === 'customer') {
+            // 有料ドリンク（ショット・グラスワイン）はお客様でも課金
+            const isPaidDrink = paidDrinks.includes(item.name);
+            
+            if (isPaidDrink) {
+                // ショット・グラスワインは誰が飲んでも2,000円
+                finalPrice = item.price;
+            } else if (drinkFor === 'customer') {
                 // お客様のドリンクはセット料金込み → 0円
                 finalPrice = 0;
-                itemNameSuffix += '';  // お客様の場合はセット込み表記しない（割り方だけ）
             } else if (drinkModalState.isDrinkOnly) {
                 // キャスト/スタッフのドリンクはサイズで価格決定
                 const size = document.querySelector('input[name="drinkSizeOrder"]:checked')?.value || 'single';
