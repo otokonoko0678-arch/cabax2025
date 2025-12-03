@@ -962,7 +962,7 @@ function renderMenu() {
 
         grid = document.createElement('div');
         grid.id = 'menuGrid';
-        grid.className = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6';
+        grid.className = 'space-y-6';
 
         wrapper.appendChild(grid);
         parent.insertAdjacentElement('afterend', wrapper);
@@ -976,26 +976,67 @@ function renderMenu() {
                   (item) => (item.category || '').toLowerCase() === appState.currentCategory.toLowerCase()
               );
 
-    grid.innerHTML = filtered
-        .map(
-            (item) => `
-                <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6">
-                    ${
-                        item.premium
-                            ? '<div class="mb-2 sm:mb-3"><span class="premium-badge">⭐ PREMIUM</span></div>'
-                            : ''
-                    }
-                    <h3 class="text-base sm:text-xl font-bold text-gray-200 mb-1 sm:mb-2 line-clamp-2">${item.name}</h3>
-                    ${
-                        item.description
-                            ? `<p class="text-xs sm:text-sm text-gray-400 mb-2 sm:mb-4 line-clamp-2">${item.description}</p>`
-                            : ''
-                    }
-                    <div class="text-xl sm:text-3xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>
+    // ドリンクカテゴリの場合はサブカテゴリ別に表示
+    if (appState.currentCategory === 'drink') {
+        const subCategories = {
+            'shochu': { label: '🍶 焼酎', items: [] },
+            'whisky': { label: '🥃 ウイスキー', items: [] },
+            'beer': { label: '🍺 ビール', items: [] },
+            'cocktail': { label: '🍸 カクテル', items: [] },
+            'soft': { label: '🥤 ソフトドリンク', items: [] },
+            'glasswine': { label: '🍷 グラスワイン', items: [] }
+        };
+        
+        filtered.forEach(item => {
+            const subCat = item.description || 'other';
+            if (subCategories[subCat]) {
+                subCategories[subCat].items.push(item);
+            }
+        });
+        
+        grid.innerHTML = Object.entries(subCategories)
+            .filter(([key, val]) => val.items.length > 0)
+            .map(([subCat, data]) => `
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold text-gray-300 mb-3 px-1">${data.label}</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                        ${data.items.map(item => {
+                            // グラスワインのみ価格表示
+                            const showPrice = subCat === 'glasswine';
+                            return `
+                                <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-5">
+                                    <h3 class="text-base sm:text-lg font-bold text-gray-200 mb-1 line-clamp-2">${item.name}</h3>
+                                    ${showPrice ? `<div class="text-xl sm:text-2xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
-            `
-        )
-        .join('');
+            `).join('');
+    } else {
+        // 他のカテゴリは従来通り
+        grid.className = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6';
+        grid.innerHTML = filtered
+            .map(
+                (item) => `
+                    <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6">
+                        ${
+                            item.premium
+                                ? '<div class="mb-2 sm:mb-3"><span class="premium-badge">⭐ PREMIUM</span></div>'
+                                : ''
+                        }
+                        <h3 class="text-base sm:text-xl font-bold text-gray-200 mb-1 sm:mb-2 line-clamp-2">${item.name}</h3>
+                        ${
+                            item.description && !['shochu','whisky','beer','cocktail','soft','glasswine'].includes(item.description)
+                                ? `<p class="text-xs sm:text-sm text-gray-400 mb-2 sm:mb-4 line-clamp-2">${item.description}</p>`
+                                : ''
+                        }
+                        <div class="text-xl sm:text-3xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>
+                    </div>
+                `
+            )
+            .join('');
+    }
 }
 
 
