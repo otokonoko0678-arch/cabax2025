@@ -1532,20 +1532,19 @@ async function requestCheck() {
             document.getElementById('drinkModalItemId').value = itemId;
             document.getElementById('drinkModalTitle').textContent = isDrinkOnly ? 'ドリンク注文' : item.category + '注文';
             document.getElementById('drinkModalItemName').textContent = item.name;
-            document.getElementById('drinkModalItemPrice').textContent = '¥' + item.price.toLocaleString();
             document.getElementById('drinkModalQty').textContent = '1';
             
-            // ドリンクサイズセクション
+            // ドリンクサイズセクション - デフォルトはお客様なので非表示
             const sizeSection = document.getElementById('drinkSizeSectionOrder');
+            sizeSection.classList.add('hidden');
             if (isDrinkOnly) {
-                sizeSection.classList.remove('hidden');
-                // シングルをデフォルト選択
+                // シングルをデフォルト選択（キャスト/スタッフ選択時に表示される）
                 document.querySelector('input[name="drinkSizeOrder"][value="single"]').checked = true;
                 updateDrinkSizeOrderStyle();
-                updateDrinkModalPrice();
-            } else {
-                sizeSection.classList.add('hidden');
             }
+            
+            // お客様のドリンクはセット料金込み
+            document.getElementById('drinkModalItemPrice').textContent = 'セット料金込';
             
             // 誰が飲むかをリセット
             document.querySelector('input[name="drinkForOrder"][value="customer"]').checked = true;
@@ -1617,12 +1616,22 @@ async function requestCheck() {
             const personSection = document.getElementById('personSelectSectionOrder');
             const personSelect = document.getElementById('selDrinkPersonOrder');
             const drinkBackInfo = document.getElementById('drinkBackInfoOrder');
+            const sizeSection = document.getElementById('drinkSizeSectionOrder');
             
             if (drinkFor === 'customer') {
+                // お客様：サイズ選択不要、人物選択不要
                 personSection.classList.add('hidden');
                 drinkBackInfo.classList.add('hidden');
+                sizeSection.classList.add('hidden');
+                // 価格を「セット料金込」に
+                document.getElementById('drinkModalItemPrice').textContent = 'セット料金込';
             } else {
+                // キャスト/スタッフ：サイズ選択必要、人物選択必要
                 personSection.classList.remove('hidden');
+                if (drinkModalState.isDrinkOnly) {
+                    sizeSection.classList.remove('hidden');
+                    updateDrinkModalPrice();
+                }
                 
                 let options = '<option value="">選択してください</option>';
                 
@@ -1662,14 +1671,22 @@ async function requestCheck() {
             }
             
             // 価格決定
-            let finalPrice = item.price;
+            let finalPrice = 0;
             let itemNameSuffix = '';
             
-            if (drinkModalState.isDrinkOnly) {
+            if (drinkFor === 'customer') {
+                // お客様のドリンクはセット料金込み → 0円
+                finalPrice = 0;
+                itemNameSuffix = '（セット込）';
+            } else if (drinkModalState.isDrinkOnly) {
+                // キャスト/スタッフのドリンクはサイズで価格決定
                 const size = document.querySelector('input[name="drinkSizeOrder"]:checked')?.value || 'single';
                 const prices = { single: 1000, double: 2000, triple: 3000 };
                 finalPrice = prices[size];
                 itemNameSuffix = size === 'single' ? '（シングル）' : size === 'double' ? '（ダブル）' : '（トリプル）';
+            } else {
+                // ボトル、シャンパン等はそのままの価格
+                finalPrice = item.price;
             }
             
             // カートに追加
