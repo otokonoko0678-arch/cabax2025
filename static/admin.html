@@ -2940,7 +2940,8 @@ async function syncWithBackend() {
             (typeof loadMenuFromApi === 'function') ? loadMenuFromApi() : Promise.resolve(),
             (typeof loadCastsFromApi === 'function') ? loadCastsFromApi() : Promise.resolve(),
             (typeof loadTablesFromApi === 'function') ? loadTablesFromApi() : Promise.resolve(),
-            (typeof loadActiveSessionsFromApi === 'function') ? loadActiveSessionsFromApi() : Promise.resolve()
+            (typeof loadActiveSessionsFromApi === 'function') ? loadActiveSessionsFromApi() : Promise.resolve(),
+            (typeof loadStaffFromApi === 'function') ? loadStaffFromApi() : Promise.resolve()
         ]);
 
         appState.apiConnected = true;
@@ -2950,6 +2951,7 @@ async function syncWithBackend() {
         if (typeof renderTables === 'function') renderTables();
         if (typeof renderMenu === 'function') renderMenu();
         if (typeof renderCasts === 'function') renderCasts();
+        if (typeof renderStaff === 'function') renderStaff();
         if (typeof populateCastSelects === 'function') populateCastSelects();
         if (typeof updateDashboard === 'function') updateDashboard();
         if (typeof renderDailyReport === 'function') renderDailyReport();
@@ -2965,6 +2967,7 @@ async function syncWithBackend() {
 
         if (typeof renderMenu === 'function') renderMenu();
         if (typeof renderCasts === 'function') renderCasts();
+        if (typeof renderStaff === 'function') renderStaff();
         if (typeof renderTables === 'function') renderTables();
         if (typeof populateCastSelects === 'function') populateCastSelects();
 
@@ -4707,9 +4710,16 @@ function cancelOneFromGroup(tableId, groupIndex) {
 
         // ========== スタッフ管理 ==========
         
-        // スタッフデータ（localStorageで保存）
-        if (!appState.staff) {
-            appState.staff = JSON.parse(localStorage.getItem('cabax_staff') || '[]');
+        // スタッフデータをAPIから取得
+        async function loadStaffFromApi() {
+            try {
+                const data = await apiRequest('/staff');
+                appState.staff = Array.isArray(data) ? data : [];
+                renderStaff();
+            } catch (e) {
+                console.error('[loadStaffFromApi] error:', e);
+                appState.staff = [];
+            }
         }
         
         function renderStaff() {
@@ -4724,7 +4734,7 @@ function cancelOneFromGroup(tableId, groupIndex) {
             grid.innerHTML = appState.staff.map(staff => {
                 const displayName = staff.name || `Staff#${staff.id || '?'}`;
                 const initial = displayName.charAt(0) || '?';
-                const hourlyRate = Number(staff.hourly_rate || 0);
+                const hourlyRate = Number(staff.hourly_rate || staff.hourlyRate || 0);
                 
                 return `
                 <div class="luxury-card rounded-2xl p-6">
@@ -4790,7 +4800,7 @@ function cancelOneFromGroup(tableId, groupIndex) {
             document.getElementById('addStaffModal').classList.add('active');
         }
         
-        function addStaff(event) {
+        async function addStaff(event) {
             event.preventDefault();
             
             const name = document.getElementById('staffName').value;
@@ -4798,27 +4808,30 @@ function cancelOneFromGroup(tableId, groupIndex) {
             const hourlyRate = parseInt(document.getElementById('staffHourlyRate').value);
             const phone = document.getElementById('staffPhone').value;
             
-            const newStaff = {
-                id: Date.now(),
-                name: name,
-                role: role,
-                hourly_rate: hourlyRate,
-                phone: phone || null,
-                created_at: new Date().toISOString()
-            };
-            
-            appState.staff.push(newStaff);
-            localStorage.setItem('cabax_staff', JSON.stringify(appState.staff));
-            
-            closeModal('addStaffModal');
-            renderStaff();
-            showNotification('スタッフを追加しました', 'success');
-            
-            // フォームリセット
-            document.getElementById('staffName').value = '';
-            document.getElementById('staffRole').value = 'waiter';
-            document.getElementById('staffHourlyRate').value = '';
-            document.getElementById('staffPhone').value = '';
+            try {
+                await apiRequest('/staff', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: name,
+                        role: role,
+                        hourly_rate: hourlyRate,
+                        phone: phone || null
+                    })
+                });
+                
+                closeModal('addStaffModal');
+                await loadStaffFromApi();
+                showNotification('スタッフを追加しました', 'success');
+                
+                // フォームリセット
+                document.getElementById('staffName').value = '';
+                document.getElementById('staffRole').value = 'waiter';
+                document.getElementById('staffHourlyRate').value = '';
+                document.getElementById('staffPhone').value = '';
+            } catch (e) {
+                console.error('[addStaff] error:', e);
+                showNotification('スタッフの追加に失敗しました', 'error');
+            }
         }
         
         function editStaff(staffId) {
@@ -4828,43 +4841,51 @@ function cancelOneFromGroup(tableId, groupIndex) {
             document.getElementById('editStaffId').value = staff.id;
             document.getElementById('editStaffName').value = staff.name;
             document.getElementById('editStaffRole').value = staff.role;
-            document.getElementById('editStaffHourlyRate').value = staff.hourly_rate;
+            document.getElementById('editStaffHourlyRate').value = staff.hourly_rate || staff.hourlyRate || 0;
             document.getElementById('editStaffPhone').value = staff.phone || '';
             
             document.getElementById('editStaffModal').classList.add('active');
         }
         
-        function updateStaff(event) {
+        async function updateStaff(event) {
             event.preventDefault();
             
             const staffId = parseInt(document.getElementById('editStaffId').value);
-            const staffIndex = appState.staff.findIndex(s => s.id === staffId);
             
-            if (staffIndex === -1) return;
-            
-            appState.staff[staffIndex] = {
-                ...appState.staff[staffIndex],
-                name: document.getElementById('editStaffName').value,
-                role: document.getElementById('editStaffRole').value,
-                hourly_rate: parseInt(document.getElementById('editStaffHourlyRate').value),
-                phone: document.getElementById('editStaffPhone').value || null
-            };
-            
-            localStorage.setItem('cabax_staff', JSON.stringify(appState.staff));
-            
-            closeModal('editStaffModal');
-            renderStaff();
-            showNotification('スタッフ情報を更新しました', 'success');
+            try {
+                await apiRequest(`/staff/${staffId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        name: document.getElementById('editStaffName').value,
+                        role: document.getElementById('editStaffRole').value,
+                        hourly_rate: parseInt(document.getElementById('editStaffHourlyRate').value),
+                        phone: document.getElementById('editStaffPhone').value || null
+                    })
+                });
+                
+                closeModal('editStaffModal');
+                await loadStaffFromApi();
+                showNotification('スタッフ情報を更新しました', 'success');
+            } catch (e) {
+                console.error('[updateStaff] error:', e);
+                showNotification('スタッフの更新に失敗しました', 'error');
+            }
         }
         
-        function deleteStaff(staffId) {
+        async function deleteStaff(staffId) {
             if (!confirm('このスタッフを削除しますか？')) return;
             
-            appState.staff = appState.staff.filter(s => s.id !== staffId);
-            localStorage.setItem('cabax_staff', JSON.stringify(appState.staff));
-            
-            renderStaff();
-            showNotification('スタッフを削除しました', 'success');
+            try {
+                await apiRequest(`/staff/${staffId}`, {
+                    method: 'DELETE'
+                });
+                
+                await loadStaffFromApi();
+                showNotification('スタッフを削除しました', 'success');
+            } catch (e) {
+                console.error('[deleteStaff] error:', e);
+                showNotification('スタッフの削除に失敗しました', 'error');
+            }
         }
 
         function openAddCastModal() {
