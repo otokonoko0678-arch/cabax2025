@@ -427,6 +427,32 @@ def startup_event():
         db.commit()
         print("✅ メニュー作成完了")
     
+    # キャスト
+    if db.query(Cast).count() == 0:
+        casts = [
+            Cast(stage_name="あいり", rank="レギュラー", hourly_rate=3000, drink_back_rate=10),
+            Cast(stage_name="みゆ", rank="レギュラー", hourly_rate=3000, drink_back_rate=10),
+            Cast(stage_name="れな", rank="エース", hourly_rate=4000, drink_back_rate=15),
+            Cast(stage_name="かな", rank="エース", hourly_rate=4000, drink_back_rate=15),
+            Cast(stage_name="りお", rank="ナンバー", hourly_rate=5000, drink_back_rate=20),
+        ]
+        db.add_all(casts)
+        db.commit()
+        print("✅ キャスト作成完了")
+    
+    # スタッフ
+    if db.query(Staff).count() == 0:
+        staff_members = [
+            Staff(name="田中", role="manager", hourly_rate=1500),
+            Staff(name="山田", role="waiter", hourly_rate=1200),
+            Staff(name="佐藤", role="waiter", hourly_rate=1200),
+            Staff(name="鈴木", role="kitchen", hourly_rate=1100),
+            Staff(name="高橋", role="catch", hourly_rate=1000),
+        ]
+        db.add_all(staff_members)
+        db.commit()
+        print("✅ スタッフ作成完了")
+    
     db.close()
 
 # ========================
