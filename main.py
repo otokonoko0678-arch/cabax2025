@@ -141,6 +141,16 @@ class Shift(Base):
     start_time = Column(String)
     end_time = Column(String)
 
+class Staff(Base):
+    __tablename__ = "staff"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    role = Column(String)  # waiter, kitchen, manager, catch, driver, other
+    hourly_rate = Column(Integer, default=1000)
+    phone = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 Base.metadata.create_all(bind=engine)
 
 # ========================
@@ -255,6 +265,28 @@ class ShiftCreate(BaseModel):
     date: str
     start_time: str
     end_time: str
+
+class StaffCreate(BaseModel):
+    name: str
+    role: str
+    hourly_rate: int = 1000
+    phone: Optional[str] = None
+
+class StaffUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    hourly_rate: Optional[int] = None
+    phone: Optional[str] = None
+
+class StaffResponse(BaseModel):
+    id: int
+    name: str
+    role: str
+    hourly_rate: int
+    phone: Optional[str]
+    is_active: bool
+    class Config:
+        from_attributes = True
 
 # ========================
 # 認証
@@ -442,6 +474,39 @@ def delete_cast(cast_id: int, db: Session = Depends(get_db), ):
     db.delete(db_cast)
     db.commit()
     return {"message": "Cast deleted"}
+
+# スタッフ管理
+@app.get("/api/staff", response_model=List[StaffResponse])
+def get_staff(db: Session = Depends(get_db)):
+    return db.query(Staff).filter(Staff.is_active == True).all()
+
+@app.post("/api/staff", response_model=StaffResponse)
+def create_staff(staff: StaffCreate, db: Session = Depends(get_db)):
+    db_staff = Staff(**staff.dict())
+    db.add(db_staff)
+    db.commit()
+    db.refresh(db_staff)
+    return db_staff
+
+@app.put("/api/staff/{staff_id}", response_model=StaffResponse)
+def update_staff(staff_id: int, staff: StaffUpdate, db: Session = Depends(get_db)):
+    db_staff = db.query(Staff).filter(Staff.id == staff_id).first()
+    if not db_staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    for key, value in staff.dict(exclude_unset=True).items():
+        setattr(db_staff, key, value)
+    db.commit()
+    db.refresh(db_staff)
+    return db_staff
+
+@app.delete("/api/staff/{staff_id}")
+def delete_staff(staff_id: int, db: Session = Depends(get_db)):
+    db_staff = db.query(Staff).filter(Staff.id == staff_id).first()
+    if not db_staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    db_staff.is_active = False  # 論理削除
+    db.commit()
+    return {"message": "Staff deleted"}
 
 # メニュー管理
 @app.get("/api/menu", response_model=List[MenuItemResponse])

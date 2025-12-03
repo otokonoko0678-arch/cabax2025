@@ -1448,8 +1448,8 @@ async function requestCheck() {
             isDrinkCategory: false
         };
         
-        // キャスト・スタッフデータ（localStorageから取得）
-        const staffList = JSON.parse(localStorage.getItem('cabax_staff') || '[]');
+        // キャスト・スタッフデータ
+        let staffList = [];
         let castList = [];
         
         // キャスト一覧を取得
@@ -1458,12 +1458,31 @@ async function requestCheck() {
                 const res = await fetch(`${API_BASE}/casts`);
                 if (res.ok) {
                     castList = await res.json();
+                    console.log('[order] キャスト取得:', castList.length, '件');
                 }
             } catch (e) {
                 console.warn('キャスト取得失敗:', e);
             }
         }
+        
+        // スタッフ一覧を取得
+        async function loadStaffForOrder() {
+            try {
+                const res = await fetch(`${API_BASE}/staff`);
+                if (res.ok) {
+                    staffList = await res.json();
+                    console.log('[order] スタッフ取得:', staffList.length, '件');
+                }
+            } catch (e) {
+                console.warn('スタッフ取得失敗:', e);
+                // フォールバック: localStorageから取得
+                staffList = JSON.parse(localStorage.getItem('cabax_staff') || '[]');
+            }
+        }
+        
+        // 初期化時に両方読み込む
         loadCastsForOrder();
+        loadStaffForOrder();
         
         // メニュークリック時にモーダルを開く
         function openDrinkModal(itemId) {
