@@ -2218,9 +2218,17 @@ async function checkoutSession(sessionId) {
             }
             
             // ★ 伝票を表示
+            console.log('[checkout] showReceipt呼び出し', sessionToCheckout, ordersForReceipt);
             showReceipt(sessionToCheckout, ordersForReceipt);
         } else {
             console.warn('[checkout] sessionToCheckout not found!');
+            // セッションが見つからなくても最低限の伝票を表示
+            showReceipt({ 
+                guests: 0, 
+                castName: '不明', 
+                tableName: '不明', 
+                currentTotal: 0 
+            }, ordersForReceipt);
         }
 
         // 2. テーブルとアクティブセッションを API から取り直す
@@ -2253,6 +2261,8 @@ async function checkoutSession(sessionId) {
 
 // ★ 伝票を表示
 function showReceipt(session, orders) {
+    console.log('[showReceipt] 開始', session, orders);
+    
     const guests = session.guests || 0;
     const castName = session.castName || getCastName(session.castId || session.cast_id) || '未設定';
     const tableName = session.tableName || session.table_name || session.tableId || '?';
