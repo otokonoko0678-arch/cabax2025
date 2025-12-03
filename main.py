@@ -69,6 +69,7 @@ class Cast(Base):
     stage_name = Column(String, unique=True, index=True)
     rank = Column(String, default="regular")
     hourly_rate = Column(Integer)
+    drink_back_rate = Column(Integer, default=10)  # ドリンクバック率(%)
     sales = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     sessions = relationship("SessionModel", back_populates="cast")
@@ -169,17 +170,20 @@ class CastCreate(BaseModel):
     stage_name: str
     rank: str
     hourly_rate: int
+    drink_back_rate: int = 10
 
 class CastUpdate(BaseModel):
     stage_name: Optional[str] = None
     rank: Optional[str] = None
     hourly_rate: Optional[int] = None
+    drink_back_rate: Optional[int] = None
 
 class CastResponse(BaseModel):
     id: int
     stage_name: str
     rank: str
     hourly_rate: int
+    drink_back_rate: int
     sales: int
     class Config:
         from_attributes = True
