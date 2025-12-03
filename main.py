@@ -376,30 +376,12 @@ def startup_event():
     # メニュー
     if db.query(MenuItem).count() == 0:
         menu_items = [
-            # === ドリンク（割り方選択あり） ===
+            # === ドリンク（選択式） ===
             MenuItem(name="麦焼酎", price=1000, category="drink", description="shochu"),
             MenuItem(name="ウイスキー", price=1000, category="drink", description="whisky"),
             MenuItem(name="ビール", price=1000, category="drink", description="beer"),
-            
-            # === カクテル ===
-            MenuItem(name="カシスオレンジ", price=1000, category="drink", description="cocktail"),
-            MenuItem(name="カシスソーダ", price=1000, category="drink", description="cocktail"),
-            MenuItem(name="カシスウーロン", price=1000, category="drink", description="cocktail"),
-            MenuItem(name="ピーチオレンジ", price=1000, category="drink", description="cocktail"),
-            MenuItem(name="ピーチウーロン", price=1000, category="drink", description="cocktail"),
-            MenuItem(name="ファジーネーブル", price=1000, category="drink", description="cocktail"),
-            MenuItem(name="カルーアミルク", price=1000, category="drink", description="cocktail"),
-            
-            # === ソフトドリンク ===
-            MenuItem(name="ウーロン茶", price=1000, category="drink", description="soft"),
-            MenuItem(name="緑茶", price=1000, category="drink", description="soft"),
-            MenuItem(name="オレンジジュース", price=1000, category="drink", description="soft"),
-            MenuItem(name="グレープフルーツジュース", price=1000, category="drink", description="soft"),
-            MenuItem(name="コーラ", price=1000, category="drink", description="soft"),
-            MenuItem(name="ジンジャエール", price=1000, category="drink", description="soft"),
-            MenuItem(name="炭酸水", price=1000, category="drink", description="soft"),
-            MenuItem(name="カルピス", price=1000, category="drink", description="soft"),
-            MenuItem(name="カルピスソーダ", price=1000, category="drink", description="soft"),
+            MenuItem(name="カクテル", price=1000, category="drink", description="cocktail"),
+            MenuItem(name="ソフトドリンク", price=1000, category="drink", description="soft"),
             
             # === グラスワイン（2,000円表示） ===
             MenuItem(name="グラスワイン（赤）", price=2000, category="drink", description="glasswine"),

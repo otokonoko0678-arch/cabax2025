@@ -962,6 +962,7 @@ function renderMenu() {
 
         grid = document.createElement('div');
         grid.id = 'menuGrid';
+        grid.className = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6';
 
         wrapper.appendChild(grid);
         parent.insertAdjacentElement('afterend', wrapper);
@@ -975,50 +976,16 @@ function renderMenu() {
                   (item) => (item.category || '').toLowerCase() === appState.currentCategory.toLowerCase()
               );
 
-    // ドリンクカテゴリの場合はサブカテゴリ別に表示
-    if (appState.currentCategory === 'drink') {
-        const subCategories = {
-            'shochu': { label: '🍶 焼酎', items: [] },
-            'whisky': { label: '🥃 ウイスキー', items: [] },
-            'beer': { label: '🍺 ビール', items: [] },
-            'cocktail': { label: '🍸 カクテル', items: [] },
-            'soft': { label: '🥤 ソフトドリンク', items: [] },
-            'glasswine': { label: '🍷 グラスワイン', items: [] }
-        };
-        
-        filtered.forEach(item => {
-            const subCat = item.description || 'other';
-            if (subCategories[subCat]) {
-                subCategories[subCat].items.push(item);
-            }
-        });
-        
-        grid.className = '';
-        grid.innerHTML = Object.entries(subCategories)
-            .filter(([key, val]) => val.items.length > 0)
-            .map(([subCat, data]) => `
-                <div class="mb-8">
-                    <h3 class="text-lg font-bold text-gray-300 mb-4">${data.label}</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        ${data.items.map(item => {
-                            // グラスワインのみ価格表示
-                            const showPrice = subCat === 'glasswine';
-                            return `
-                                <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-xl p-4 cursor-pointer">
-                                    <h4 class="text-sm font-bold text-gray-200 mb-1">${item.name}</h4>
-                                    ${showPrice ? `<div class="text-lg font-bold gold-accent">¥${item.price.toLocaleString()}</div>` : ''}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `).join('');
-    } else {
-        // 他のカテゴリは従来通り
-        grid.className = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6';
-        grid.innerHTML = filtered
-            .map(
-                (item) => `
+    grid.className = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6';
+    grid.innerHTML = filtered
+        .map(
+            (item) => {
+                // ドリンクカテゴリでグラスワイン以外は価格非表示
+                const isGlassWine = item.description === 'glasswine';
+                const isDrinkCategory = (item.category || '').toLowerCase() === 'drink';
+                const showPrice = !isDrinkCategory || isGlassWine;
+                
+                return `
                     <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6 cursor-pointer">
                         ${
                             item.premium
@@ -1031,12 +998,12 @@ function renderMenu() {
                                 ? `<p class="text-xs sm:text-sm text-gray-400 mb-2 sm:mb-4 line-clamp-2">${item.description}</p>`
                                 : ''
                         }
-                        <div class="text-xl sm:text-3xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>
+                        ${showPrice ? `<div class="text-xl sm:text-3xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>` : ''}
                     </div>
-                `
-            )
-            .join('');
-    }
+                `;
+            }
+        )
+        .join('');
 }
 
 
@@ -1554,11 +1521,13 @@ async function requestCheck() {
         loadCastsForOrder();
         loadStaffForOrder();
         
-        // 割り方の定義
+        // 割り方・種類の定義
         const mixStyles = {
             '麦焼酎': ['ロック', '水割り', 'お湯割り', 'ソーダ割り', 'ウーロン割り', '緑茶割り', 'レモンサワー'],
             'ウイスキー': ['ロック', 'ストレート', '水割り', 'ハイボール', 'コーク割り', 'ジンジャー割り'],
-            'ビール': ['生ビール', 'アイスビール', 'シャンディガフ', 'レッドアイ']
+            'ビール': ['生ビール', 'アイスビール', 'シャンディガフ', 'レッドアイ'],
+            'カクテル': ['カシスオレンジ', 'カシスソーダ', 'カシスウーロン', 'ピーチオレンジ', 'ピーチウーロン', 'ファジーネーブル', 'カルーアミルク'],
+            'ソフトドリンク': ['ウーロン茶', '緑茶', 'オレンジジュース', 'グレープフルーツジュース', 'コーラ', 'ジンジャエール', '炭酸水', 'カルピス', 'カルピスソーダ']
         };
         
         // メニュークリック時にモーダルを開く
