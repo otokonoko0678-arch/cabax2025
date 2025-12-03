@@ -1596,8 +1596,15 @@ async function requestCheck() {
                 updateDrinkSizeOrderStyle();
             }
             
-            // お客様のドリンクはセット料金込み
-            document.getElementById('drinkModalItemPrice').textContent = 'セット料金込';
+            // 初期価格設定
+            const isPaidDrink = paidDrinks.includes(item.name);
+            if (isPaidDrink) {
+                // ショット・グラスワインは誰が飲んでも2,000円
+                document.getElementById('drinkModalItemPrice').textContent = '¥' + item.price.toLocaleString();
+            } else {
+                // お客様のドリンクはセット料金込み
+                document.getElementById('drinkModalItemPrice').textContent = 'セット料金込';
+            }
             
             // 誰が飲むかをリセット
             document.querySelector('input[name="drinkForOrder"][value="customer"]').checked = true;
