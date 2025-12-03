@@ -376,29 +376,53 @@ def startup_event():
     # メニュー
     if db.query(MenuItem).count() == 0:
         menu_items = [
-            # 焼酎
-            MenuItem(name="麦焼酎", price=800, category="drink", description="すっきり飲みやすい"),
-            MenuItem(name="黒糖焼酎", price=800, category="drink", description="奄美の味わい"),
-            MenuItem(name="米焼酎", price=800, category="drink", description="まろやかな口当たり"),
-            MenuItem(name="芋焼酎", price=800, category="drink", description="芳醇な香り"),
-            MenuItem(name="しそ焼酎", price=800, category="drink", description="爽やかな風味"),
-            MenuItem(name="柚子焼酎", price=800, category="drink", description="柑橘の香り"),
-            MenuItem(name="梅焼酎", price=800, category="drink", description="梅の爽やかさ"),
-            # ウイスキー
-            MenuItem(name="ジャックダニエル", price=1000, category="drink", description="テネシーウイスキー"),
-            MenuItem(name="ジムビーム", price=900, category="drink", description="バーボンの定番"),
-            MenuItem(name="メーカーズマーク", price=1200, category="drink", description="プレミアムバーボン"),
-            MenuItem(name="ワイルドターキー", price=1100, category="drink", description="力強い味わい"),
-            # ジャパニーズウイスキー
-            MenuItem(name="山崎", price=2000, category="drink", description="サントリーの至宝", premium=True),
-            MenuItem(name="白州", price=1800, category="drink", description="森薫るウイスキー", premium=True),
-            MenuItem(name="響", price=2500, category="drink", description="ブレンドの芸術", premium=True),
-            MenuItem(name="竹鶴", price=1600, category="drink", description="ニッカの傑作"),
-            # ブランデー
-            MenuItem(name="ヘネシー VS", price=1500, category="drink", description="コニャックの定番"),
-            MenuItem(name="ヘネシー XO", price=3500, category="drink", description="極上のコニャック", premium=True),
-            MenuItem(name="レミーマルタン VSOP", price=1800, category="drink", description="華やかな香り"),
-            # シャンパン
+            # === セットドリンク ===
+            # 焼酎（麦焼酎 + 割り方）
+            MenuItem(name="麦焼酎 ロック", price=1000, category="drink", description="すっきり飲みやすい"),
+            MenuItem(name="麦焼酎 水割り", price=1000, category="drink", description="すっきり飲みやすい"),
+            MenuItem(name="麦焼酎 お湯割り", price=1000, category="drink", description="すっきり飲みやすい"),
+            MenuItem(name="麦焼酎 ソーダ割り", price=1000, category="drink", description="すっきり飲みやすい"),
+            MenuItem(name="麦焼酎 ウーロン割り", price=1000, category="drink", description="すっきり飲みやすい"),
+            MenuItem(name="麦焼酎 緑茶割り", price=1000, category="drink", description="すっきり飲みやすい"),
+            MenuItem(name="レモンサワー", price=1000, category="drink", description="定番サワー"),
+            # ウイスキー（+ 割り方）
+            MenuItem(name="ウイスキー ロック", price=1000, category="drink", description="ハウスウイスキー"),
+            MenuItem(name="ウイスキー ストレート", price=1000, category="drink", description="ハウスウイスキー"),
+            MenuItem(name="ウイスキー 水割り", price=1000, category="drink", description="ハウスウイスキー"),
+            MenuItem(name="ハイボール", price=1000, category="drink", description="ソーダ割り"),
+            MenuItem(name="コークハイ", price=1000, category="drink", description="コーク割り"),
+            MenuItem(name="ジンジャーハイ", price=1000, category="drink", description="ジンジャー割り"),
+            # ビール
+            MenuItem(name="ビール", price=1000, category="drink", description="生ビール"),
+            MenuItem(name="アイスビール", price=1000, category="drink", description="フローズンビール"),
+            MenuItem(name="シャンディガフ", price=1000, category="drink", description="ビール＋ジンジャエール"),
+            MenuItem(name="レッドアイ", price=1000, category="drink", description="ビール＋トマトジュース"),
+            # カクテル
+            MenuItem(name="カシスオレンジ", price=1000, category="drink", description="定番カクテル"),
+            MenuItem(name="カシスソーダ", price=1000, category="drink", description="爽やかカクテル"),
+            MenuItem(name="カシスウーロン", price=1000, category="drink", description="さっぱりカクテル"),
+            MenuItem(name="ピーチオレンジ", price=1000, category="drink", description="フルーティー"),
+            MenuItem(name="ピーチウーロン", price=1000, category="drink", description="さっぱり"),
+            MenuItem(name="ファジーネーブル", price=1000, category="drink", description="ピーチ＋オレンジ"),
+            MenuItem(name="カルーアミルク", price=1000, category="drink", description="甘口カクテル"),
+            # ソフトドリンク
+            MenuItem(name="ウーロン茶", price=1000, category="drink", description="ソフトドリンク"),
+            MenuItem(name="緑茶", price=1000, category="drink", description="ソフトドリンク"),
+            MenuItem(name="オレンジジュース", price=1000, category="drink", description="ソフトドリンク"),
+            MenuItem(name="グレープフルーツジュース", price=1000, category="drink", description="ソフトドリンク"),
+            MenuItem(name="コーラ", price=1000, category="drink", description="ソフトドリンク"),
+            MenuItem(name="ジンジャエール", price=1000, category="drink", description="ソフトドリンク"),
+            MenuItem(name="炭酸水", price=1000, category="drink", description="ソフトドリンク"),
+            MenuItem(name="カルピス", price=1000, category="drink", description="ソフトドリンク"),
+            MenuItem(name="カルピスソーダ", price=1000, category="drink", description="ソフトドリンク"),
+            
+            # === 有料ドリンク（ワイン系） ===
+            MenuItem(name="グラスワイン（赤）", price=2000, category="wine", description="本日のおすすめ"),
+            MenuItem(name="グラスワイン（白）", price=2000, category="wine", description="本日のおすすめ"),
+            MenuItem(name="キティ", price=2000, category="wine", description="赤ワイン＋ジンジャエール"),
+            MenuItem(name="オペレーター", price=2000, category="wine", description="白ワイン＋ジンジャエール"),
+            
+            # === シャンパン ===
             MenuItem(name="アルマンド ブリニャック ブリュット", price=120000, category="champagne", description="ゴールドボトル", premium=True),
             MenuItem(name="アルマンド ロゼ", price=150000, category="champagne", description="ピンクの輝き", premium=True),
             MenuItem(name="クリュッグ グランキュヴェ", price=50000, category="champagne", description="シャンパンの帝王", premium=True),
@@ -409,17 +433,14 @@ def startup_event():
             MenuItem(name="ヴーヴ クリコ イエローラベル", price=18000, category="champagne", description="定番シャンパン"),
             MenuItem(name="モエ エ シャンドン", price=15000, category="champagne", description="世界で愛される"),
             MenuItem(name="ローラン ペリエ", price=20000, category="champagne", description="エレガントな味わい"),
-            # ワイン
-            MenuItem(name="赤ワイン（グラス）", price=1200, category="wine", description="本日のおすすめ"),
-            MenuItem(name="白ワイン（グラス）", price=1200, category="wine", description="本日のおすすめ"),
-            MenuItem(name="赤ワイン（ボトル）", price=8000, category="wine", description="フルボディ"),
-            MenuItem(name="白ワイン（ボトル）", price=8000, category="wine", description="辛口"),
-            # ボトル
+            
+            # === ボトル ===
             MenuItem(name="黒霧島 ボトル", price=5000, category="bottle", description="芋焼酎の定番"),
             MenuItem(name="いいちこ ボトル", price=4500, category="bottle", description="麦焼酎"),
             MenuItem(name="ジャックダニエル ボトル", price=12000, category="bottle", description="テネシーウイスキー"),
             MenuItem(name="山崎 ボトル", price=35000, category="bottle", description="ジャパニーズウイスキー", premium=True),
-            # フード
+            
+            # === フード ===
             MenuItem(name="フルーツ盛り合わせ", price=3000, category="food", description="季節のフルーツ"),
             MenuItem(name="チョコレート", price=1500, category="food", description="ベルギー産"),
             MenuItem(name="ナッツ盛り合わせ", price=1000, category="food", description="ミックスナッツ"),
