@@ -774,6 +774,18 @@ async function loadTables() {
         }
 
         const grid = document.getElementById('tablesGrid');
+        
+        // アクティブセッションを取得して人数を表示
+        let activeSessions = [];
+        try {
+            const sessRes = await fetch(`${API_BASE}/sessions/active`);
+            if (sessRes.ok) {
+                activeSessions = await sessRes.json();
+            }
+        } catch (e) {
+            console.warn('[order] sessions/active fetch failed:', e);
+        }
+        
         grid.innerHTML = tables
             .filter(t => t.status === 'available' || t.status === 'occupied' || !t.status)
             .map(table => {
@@ -783,6 +795,16 @@ async function loadTables() {
                     : 'bg-red-900/20 border-red-700/40';
 
                 const statusText = status === 'available' ? '空席' : '使用中';
+                
+                // 使用中の場合はセッションから人数を取得
+                let guestsText = '';
+                if (status === 'occupied') {
+                    const session = activeSessions.find(s => 
+                        Number(s.table_id) === Number(table.id)
+                    );
+                    const guests = session ? (session.guests || 0) : 0;
+                    guestsText = guests > 0 ? `${guests}名様` : '';
+                }
 
                 return `
                     <div onclick="selectTable('${table.id}')"
@@ -792,7 +814,7 @@ async function loadTables() {
                             ${table.table_name || table.table_number || table.name || 'テーブル'}
                         </div>
                         <div class="text-lg text-gray-400">${statusText}</div>
-                        <div class="text-sm text-gray-500 mt-2">${table.capacity || 4}名様</div>
+                        ${guestsText ? `<div class="text-sm text-gray-500 mt-2">${guestsText}</div>` : ''}
                     </div>
                 `;
             }).join('');
@@ -808,7 +830,6 @@ async function loadTables() {
                     ${table.table_name}
                 </div>
                 <div class="text-lg text-gray-400">空席</div>
-                <div class="text-sm text-gray-500 mt-2">${table.capacity}名様</div>
             </div>
         `).join('');
 
