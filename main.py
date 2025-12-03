@@ -641,6 +641,23 @@ def mark_order_served(order_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Order marked as served", "id": order_id}
 
+@app.put("/api/sessions/{session_id}/orders/{order_id}/status")
+def update_order_status(session_id: int, order_id: int, status_data: dict, db: Session = Depends(get_db)):
+    """注文のステータスを更新（提供済み/未提供）"""
+    order = db.query(Order).filter(Order.id == order_id, Order.session_id == session_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    is_served = status_data.get("is_served", False)
+    order.is_served = is_served
+    db.commit()
+    
+    return {
+        "message": "Order status updated",
+        "order_id": order_id,
+        "is_served": is_served
+    }
+
 # 勤怠管理
 @app.post("/api/attendance/clock-in")
 def clock_in(attendance: AttendanceCreate, db: Session = Depends(get_db), ):
