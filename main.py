@@ -382,6 +382,7 @@ def startup_event():
             MenuItem(name="ビール", price=1000, category="drink", description="beer"),
             MenuItem(name="カクテル", price=1000, category="drink", description="cocktail"),
             MenuItem(name="ソフトドリンク", price=1000, category="drink", description="soft"),
+            MenuItem(name="ショット", price=1000, category="drink", description="shot"),
             
             # === グラスワイン（2,000円表示） ===
             MenuItem(name="グラスワイン（赤）", price=2000, category="drink", description="glasswine"),
