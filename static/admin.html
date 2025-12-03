@@ -4160,6 +4160,11 @@ async function openTableDetail(tableId) {
       const btnExtend60 = document.getElementById('btnExtend60');
       const btnAddOrder = document.getElementById('btnAddOrder');
       const btnCheckout = document.getElementById('btnCheckout');
+      
+      // ★ 追加注文のメニュー選択初期化（割り方選択を表示するため）
+      if (typeof onOrderMenuChange === 'function') {
+        onOrderMenuChange();
+      }
 
       if (btnSaveAttrs) {
         btnSaveAttrs.onclick = async () => {
