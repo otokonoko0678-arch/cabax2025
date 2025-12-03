@@ -2181,13 +2181,20 @@ async function checkoutSession(sessionId) {
             Number(s.id) === numId
         );
         
-        
+        // ★ 伝票用にセッション情報と注文を取得
+        let ordersForReceipt = [];
+        try {
+            const ordersData = await apiRequest(`/sessions/${sessionId}/orders`);
+            ordersForReceipt = Array.isArray(ordersData) ? ordersData : [];
+        } catch (e) {
+            console.warn('[checkout] orders fetch failed:', e);
+            ordersForReceipt = sessionToCheckout?.orders || [];
+        }
         
         // 1. バックエンド側で清算
         const result = await apiRequest(`${API_ENDPOINTS.sessions}/${sessionId}/checkout`, {
             method: 'PUT',
         });
-        
         
 
         // ★ checkoutHistoryに追加（精算済みセッションを保持）
@@ -2209,6 +2216,9 @@ async function checkoutSession(sessionId) {
             } catch (e) {
                 console.warn('localStorage保存に失敗:', e);
             }
+            
+            // ★ 伝票を表示
+            showReceipt(sessionToCheckout, ordersForReceipt);
         } else {
             console.warn('[checkout] sessionToCheckout not found!');
         }
@@ -2234,13 +2244,89 @@ async function checkoutSession(sessionId) {
         if (typeof renderDailyReport === 'function') renderDailyReport();
         if (typeof renderReports === 'function') renderReports();
         
-        
 
-        alert('清算が完了しました');
     } catch (e) {
         console.error('[admin] checkoutSession error', e);
         alert('清算に失敗しました。APIやネットワークを確認してください。');
     }
+}
+
+// ★ 伝票を表示
+function showReceipt(session, orders) {
+    const guests = session.guests || 0;
+    const castName = session.castName || getCastName(session.castId || session.cast_id) || '未設定';
+    const tableName = session.tableName || session.table_name || session.tableId || '?';
+    const total = session.currentTotal || session.current_total || 0;
+    const now = new Date();
+    
+    // 注文を整形
+    const orderItems = orders.map(o => {
+        const itemName = o.item_name || o.itemName || '商品';
+        const qty = o.quantity || 1;
+        const price = o.price || 0;
+        const subtotal = price * qty;
+        return { name: itemName, qty, price, subtotal };
+    });
+    
+    // 伝票HTML生成
+    const receiptHtml = `
+        <div class="text-center border-b-2 border-dashed border-gray-400 pb-4 mb-4">
+            <h1 class="text-2xl font-bold">Cabax</h1>
+            <p class="text-sm text-gray-600">${now.toLocaleDateString('ja-JP')} ${now.toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'})}</p>
+        </div>
+        
+        <div class="mb-4 text-sm">
+            <div class="flex justify-between py-1">
+                <span>テーブル</span>
+                <span class="font-bold">${tableName}</span>
+            </div>
+            <div class="flex justify-between py-1">
+                <span>来店人数</span>
+                <span class="font-bold">${guests}名</span>
+            </div>
+            <div class="flex justify-between py-1">
+                <span>担当</span>
+                <span class="font-bold">${castName}</span>
+            </div>
+        </div>
+        
+        <div class="border-t-2 border-dashed border-gray-400 pt-4 mb-4">
+            <h2 class="font-bold mb-2">ご注文明細</h2>
+            <div class="text-sm space-y-1">
+                ${orderItems.length > 0 ? orderItems.map(item => `
+                    <div class="flex justify-between">
+                        <span>${item.name} × ${item.qty}</span>
+                        <span>¥${item.subtotal.toLocaleString()}</span>
+                    </div>
+                `).join('') : '<p class="text-gray-500">注文なし</p>'}
+            </div>
+        </div>
+        
+        <div class="border-t-2 border-gray-800 pt-4">
+            <div class="flex justify-between text-xl font-bold">
+                <span>合計</span>
+                <span>¥${total.toLocaleString()}</span>
+            </div>
+        </div>
+        
+        <div class="text-center mt-6 text-sm text-gray-500">
+            <p>ありがとうございました</p>
+            <p>またのご来店をお待ちしております</p>
+        </div>
+    `;
+    
+    document.getElementById('receiptContent').innerHTML = receiptHtml;
+    document.getElementById('receiptModal').classList.remove('hidden');
+    document.getElementById('receiptModal').classList.add('flex');
+}
+
+function closeReceiptModal() {
+    document.getElementById('receiptModal').classList.add('hidden');
+    document.getElementById('receiptModal').classList.remove('flex');
+}
+
+function printReceipt() {
+    window.print();
 }
 
 async function createSessionForTable(tableId) {
@@ -6569,5 +6655,46 @@ function setupCharts() {
             }
         });
     </script>
+
+    <!-- 伝票モーダル -->
+    <div id="receiptModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-auto">
+            <div id="receiptContent" class="p-6 text-black">
+                <!-- 伝票内容がここに入る -->
+            </div>
+            <div class="flex gap-2 p-4 border-t bg-gray-100 no-print">
+                <button onclick="printReceipt()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">
+                    🖨️ 印刷
+                </button>
+                <button onclick="closeReceiptModal()" class="flex-1 bg-gray-600 text-white py-3 rounded-xl font-bold">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #receiptModal, #receiptModal * {
+                visibility: visible;
+            }
+            #receiptModal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white !important;
+            }
+            #receiptModal .no-print {
+                display: none !important;
+            }
+            #receiptContent {
+                padding: 10mm;
+            }
+        }
+    </style>
 </body>
 </html>
