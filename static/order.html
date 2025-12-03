@@ -1685,17 +1685,33 @@ async function requestCheck() {
             const drinkBackInfo = document.getElementById('drinkBackInfoOrder');
             const sizeSection = document.getElementById('drinkSizeSectionOrder');
             
+            // 現在のアイテム取得
+            const item = appState.menuItems.find(m => m.id === drinkModalState.itemId);
+            const isPaidDrink = item && paidDrinks.includes(item.name);
+            
             if (drinkFor === 'customer') {
-                // お客様：サイズ選択不要、人物選択不要
+                // お客様：人物選択不要
                 personSection.classList.add('hidden');
                 drinkBackInfo.classList.add('hidden');
                 sizeSection.classList.add('hidden');
-                // 価格を「セット料金込」に
-                document.getElementById('drinkModalItemPrice').textContent = 'セット料金込';
+                
+                if (isPaidDrink) {
+                    // ショット・グラスワインは2,000円
+                    document.getElementById('drinkModalItemPrice').textContent = '¥' + item.price.toLocaleString();
+                } else {
+                    // 他のドリンクはセット料金込み
+                    document.getElementById('drinkModalItemPrice').textContent = 'セット料金込';
+                }
             } else {
-                // キャスト/スタッフ：サイズ選択必要、人物選択必要
+                // キャスト/スタッフ：人物選択必要
                 personSection.classList.remove('hidden');
-                if (drinkModalState.isDrinkOnly) {
+                
+                if (isPaidDrink) {
+                    // ショット・グラスワインはサイズ選択なし、統一価格
+                    sizeSection.classList.add('hidden');
+                    document.getElementById('drinkModalItemPrice').textContent = '¥' + item.price.toLocaleString();
+                } else if (drinkModalState.isDrinkOnly) {
+                    // 他のドリンクはサイズ選択あり
                     sizeSection.classList.remove('hidden');
                     updateDrinkModalPrice();
                 }
@@ -1760,8 +1776,9 @@ async function requestCheck() {
             const isPaidDrink = paidDrinks.includes(item.name);
             
             if (isPaidDrink) {
-                // ショット・グラスワインは誰が飲んでも2,000円
+                // ショット・グラスワインは誰が飲んでも統一価格、サイズなし
                 finalPrice = item.price;
+                // 種類だけ表示（サイズ表記なし）
             } else if (drinkFor === 'customer') {
                 // お客様のドリンクはセット料金込み → 0円
                 finalPrice = 0;
