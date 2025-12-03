@@ -3772,8 +3772,11 @@ function onOrderMenuChange() {
     
     // ドリンクサイズ選択（drinkカテゴリのみ、ショット・グラスワイン以外）
     if (drinkSizeSection) {
-        const showSize = isDrinkOnly && !isPaidDrink;
-        drinkSizeSection.classList.toggle('hidden', !showSize);
+    // ドリンクサイズ選択（drinkカテゴリのみ、ショット・グラスワイン以外）
+    // ただしお客様がデフォルト選択なので初期は非表示
+    if (drinkSizeSection) {
+        // 初期表示はお客様なのでサイズ選択は非表示
+        drinkSizeSection.classList.add('hidden');
     }
     
     // 誰が飲むか選択（drink/bottle/champagne/wine）
@@ -3811,14 +3814,31 @@ function onDrinkForChange() {
     const personSection = document.getElementById('personSelectSection');
     const personSelect = document.getElementById('selDrinkPerson');
     const drinkBackInfo = document.getElementById('drinkBackInfo');
+    const drinkSizeSection = document.getElementById('drinkSizeSection');
+    
+    // 現在選択中のメニューを取得
+    const select = document.getElementById('selAddOrderItem');
+    const itemId = Number(select?.value);
+    const menuItem = (appState.menuItems || []).find(m => m.id === itemId);
+    const itemName = menuItem?.name || '';
+    const category = (menuItem?.category || '').toLowerCase();
+    const isPaidDrink = paidDrinksAdmin.includes(itemName);
+    const isDrinkOnly = category === 'drink';
     
     if (drinkFor === 'customer') {
         // お客様の場合は選択不要
         personSection?.classList.add('hidden');
         drinkBackInfo?.classList.add('hidden');
+        // お客様はサイズ選択不要（セット料金込み or 有料ドリンク統一価格）
+        drinkSizeSection?.classList.add('hidden');
     } else {
         // キャストまたはスタッフの場合
         personSection?.classList.remove('hidden');
+        
+        // サイズ選択表示（有料ドリンク以外のドリンクカテゴリ）
+        if (drinkSizeSection && isDrinkOnly && !isPaidDrink) {
+            drinkSizeSection.classList.remove('hidden');
+        }
         
         // オプションを更新
         if (personSelect) {
