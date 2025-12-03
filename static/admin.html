@@ -2042,6 +2042,14 @@ function renderTableDetailPanel(session) {
                 </div>
               </div>
               
+              <!-- 割り方・種類選択（麦焼酎、ウイスキー、ビール、カクテル、ソフトドリンク、ショット、グラスワイン時のみ表示） -->
+              <div id="mixStyleSection" class="sm:col-span-2 hidden">
+                <div class="text-[11px] text-white/50 mb-1">種類を選択</div>
+                <div id="mixStyleOptions" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <!-- JSで動的に生成 -->
+                </div>
+              </div>
+              
               <!-- 誰が飲むか選択（ドリンク/ボトル/シャンパン時のみ表示） -->
               <div id="drinkForSection" class="sm:col-span-2 hidden">
                 <div class="text-[11px] text-white/50 mb-1">誰が飲む？</div>
@@ -3705,6 +3713,23 @@ async function toggleOrderStatusFromList(sessionId, orderId, setServed) {
 
 // ========== ドリンク注文関連 ==========
 
+// 割り方・種類の定義
+const mixStylesAdmin = {
+    '麦焼酎': ['ロック', '水割り', 'お湯割り', 'ソーダ割り', 'ウーロン割り', '緑茶割り', 'レモンサワー'],
+    'ウイスキー': ['ロック', 'ストレート', '水割り', 'ハイボール', 'コーク割り', 'ジンジャー割り'],
+    'ビール': ['生ビール', 'アイスビール', 'シャンディガフ', 'レッドアイ'],
+    'カクテル': ['カシスオレンジ', 'カシスソーダ', 'カシスウーロン', 'ピーチオレンジ', 'ピーチウーロン', 'ファジーネーブル', 'カルーアミルク'],
+    'ソフトドリンク': ['ウーロン茶', '緑茶', 'オレンジジュース', 'グレープフルーツジュース', 'コーラ', 'ジンジャエール', '炭酸水', 'カルピス', 'カルピスソーダ'],
+    'ショット': ['テキーラ', 'イェーガー', 'コカレロ', 'クライナー'],
+    'グラスワイン': ['グラスワイン（赤）', 'グラスワイン（白）', 'キティ', 'オペレーター']
+};
+
+// 有料ドリンク（お客様もセット込みではなく課金）
+const paidDrinksAdmin = ['ショット', 'グラスワイン'];
+
+// 現在選択中の割り方
+let selectedMixStyleAdmin = null;
+
 // メニュー選択が変わった時
 function onOrderMenuChange() {
     const select = document.getElementById('selAddOrderItem');
@@ -3713,17 +3738,42 @@ function onOrderMenuChange() {
     const itemId = Number(select.value);
     const menuItem = (appState.menuItems || []).find(m => m.id === itemId);
     const category = (menuItem?.category || '').toLowerCase();
+    const itemName = menuItem?.name || '';
     
     const drinkSizeSection = document.getElementById('drinkSizeSection');
     const drinkForSection = document.getElementById('drinkForSection');
+    const mixStyleSection = document.getElementById('mixStyleSection');
+    const mixStyleOptions = document.getElementById('mixStyleOptions');
     
     // ドリンクカテゴリかどうか
     const isDrinkCategory = ['drink', 'bottle', 'champagne', 'wine'].includes(category);
     const isDrinkOnly = category === 'drink';
+    const hasMixStyle = mixStylesAdmin[itemName] !== undefined;
+    const isPaidDrink = paidDrinksAdmin.includes(itemName);
     
-    // ドリンクサイズ選択（drinkカテゴリのみ）
+    // 割り方選択セクション
+    if (mixStyleSection && mixStyleOptions) {
+        if (hasMixStyle) {
+            mixStyleSection.classList.remove('hidden');
+            const styles = mixStylesAdmin[itemName];
+            mixStyleOptions.innerHTML = styles.map((style, index) => `
+                <label class="mix-style-admin-label flex items-center justify-center p-2 rounded-xl bg-black/20 ${index === 0 ? 'border-2 border-amber-500 bg-amber-500/20' : 'border border-white/10'} cursor-pointer hover:bg-black/30">
+                    <input type="radio" name="mixStyleAdmin" value="${style}" ${index === 0 ? 'checked' : ''} onchange="updateMixStyleAdminStyle()" class="hidden">
+                    <span class="text-sm text-white/90">${style}</span>
+                </label>
+            `).join('');
+            selectedMixStyleAdmin = styles[0];
+        } else {
+            mixStyleSection.classList.add('hidden');
+            mixStyleOptions.innerHTML = '';
+            selectedMixStyleAdmin = null;
+        }
+    }
+    
+    // ドリンクサイズ選択（drinkカテゴリのみ、ショット・グラスワイン以外）
     if (drinkSizeSection) {
-        drinkSizeSection.classList.toggle('hidden', !isDrinkOnly);
+        const showSize = isDrinkOnly && !isPaidDrink;
+        drinkSizeSection.classList.toggle('hidden', !showSize);
     }
     
     // 誰が飲むか選択（drink/bottle/champagne/wine）
@@ -3737,6 +3787,22 @@ function onOrderMenuChange() {
     
     const customerRadio = document.querySelector('input[name="drinkFor"][value="customer"]');
     if (customerRadio) customerRadio.checked = true;
+    updateDrinkForStyle();
+}
+
+// 割り方選択スタイル更新
+function updateMixStyleAdminStyle() {
+    document.querySelectorAll('.mix-style-admin-label').forEach(label => {
+        const input = label.querySelector('input');
+        if (input?.checked) {
+            label.classList.remove('border', 'border-white/10');
+            label.classList.add('border-2', 'border-amber-500', 'bg-amber-500/20');
+            selectedMixStyleAdmin = input.value;
+        } else {
+            label.classList.remove('border-2', 'border-amber-500', 'bg-amber-500/20');
+            label.classList.add('border', 'border-white/10');
+        }
+    });
 }
 
 // 誰が飲むか選択が変わった時
@@ -4186,17 +4252,45 @@ async function openTableDetail(tableId) {
             // メニュー情報を取得
             const menuItem = menu.find(m => m.id === itemId);
             const category = menuItem?.category?.toLowerCase() || '';
+            const itemName = menuItem?.name || '';
             const isDrinkCategory = ['drink', 'bottle', 'champagne', 'wine'].includes(category);
+            
+            // 有料ドリンク（ショット・グラスワイン）
+            const isPaidDrink = paidDrinksAdmin.includes(itemName);
+            
+            // 割り方があるかチェック
+            const hasMixStyle = mixStylesAdmin[itemName] !== undefined;
             
             // ドリンクサイズによる価格調整
             let finalPrice = menuItem?.price || 0;
             let itemNameSuffix = '';
             
-            if (category === 'drink') {
-              const drinkSize = document.querySelector('input[name="drinkSize"]:checked')?.value || 'single';
-              const drinkPrices = { single: 1000, double: 2000, triple: 3000 };
-              finalPrice = drinkPrices[drinkSize];
-              itemNameSuffix = drinkSize === 'single' ? '（シングル）' : drinkSize === 'double' ? '（ダブル）' : '（トリプル）';
+            // 割り方がある場合は名前に追加
+            if (hasMixStyle && selectedMixStyleAdmin) {
+              itemNameSuffix = '（' + selectedMixStyleAdmin + '）';
+            }
+            
+            if (isPaidDrink) {
+              // ショット・グラスワインは統一価格、サイズなし
+              finalPrice = menuItem?.price || 2000;
+            } else if (category === 'drink') {
+              const drinkFor = document.querySelector('input[name="drinkFor"]:checked')?.value || 'customer';
+              if (drinkFor === 'customer') {
+                // お客様のセットドリンクは0円
+                finalPrice = 0;
+              } else {
+                // キャスト/スタッフはサイズで価格決定
+                const drinkSize = document.querySelector('input[name="drinkSize"]:checked')?.value || 'single';
+                const drinkPrices = { single: 1000, double: 2000, triple: 3000 };
+                finalPrice = drinkPrices[drinkSize];
+                const sizeLabel = drinkSize === 'single' ? 'シングル' : drinkSize === 'double' ? 'ダブル' : 'トリプル';
+                // 割り方がある場合は「麦焼酎（ロック・シングル）」のように表示
+                if (hasMixStyle && selectedMixStyleAdmin) {
+                  itemNameSuffix = '（' + selectedMixStyleAdmin + '・' + sizeLabel + '）';
+                } else {
+                  itemNameSuffix = '（' + sizeLabel + '）';
+                }
+              }
             }
             
             // 誰が飲むか
