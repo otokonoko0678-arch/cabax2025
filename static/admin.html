@@ -2191,6 +2191,64 @@ function renderTableDetailPanel(session) {
             </div>
           </div>
 
+          <!-- 会計シミュレーション -->
+          ${(() => {
+            const taxRate = Number(s.tax_rate ?? 20);
+            const currentSubtotal = Number(s.current_total ?? 0);
+            const guests = Number(s.guests ?? 1);
+            
+            // 指名キャスト数を取得
+            const shimeiCastsStr = s.shimei_casts || '';
+            const shimeiCount = shimeiCastsStr ? shimeiCastsStr.split(',').filter(n => n.trim()).length : 0;
+            
+            // 30分延長料金（ハーフ）= 人数×3000 + 指名数×2000
+            const halfExtension = (guests * 3000) + (shimeiCount * 2000);
+            // 60分延長料金（1セット）= 人数×5000 + 指名数×2000
+            const fullExtension = (guests * 5000) + (shimeiCount * 2000);
+            
+            // 現在の会計
+            const currentTax = Math.floor(currentSubtotal * (taxRate / 100));
+            const currentTotal = currentSubtotal + currentTax;
+            
+            // 30分延長時
+            const subtotal30 = currentSubtotal + halfExtension;
+            const tax30 = Math.floor(subtotal30 * (taxRate / 100));
+            const total30 = subtotal30 + tax30;
+            
+            // 60分延長時
+            const subtotal60 = currentSubtotal + fullExtension;
+            const tax60 = Math.floor(subtotal60 * (taxRate / 100));
+            const total60 = subtotal60 + tax60;
+            
+            return `
+          <div class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5">
+            <div class="font-bold text-white mb-3">💰 会計シミュレーション <span class="text-white/40 text-xs">（TAX ${taxRate}%込）</span></div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="p-3 rounded-xl bg-black/30 border border-white/10">
+                <div class="text-[11px] text-white/50 mb-1">今すぐ会計</div>
+                <div class="text-xs text-white/60">小計: ¥${yen(currentSubtotal)}</div>
+                <div class="text-xs text-white/60">TAX: ¥${yen(currentTax)}</div>
+                <div class="font-extrabold text-xl ${gold}">¥${yen(currentTotal)}</div>
+              </div>
+              <div class="p-3 rounded-xl bg-black/30 border border-blue-500/30">
+                <div class="text-[11px] text-blue-400 mb-1">+30分延長後</div>
+                <div class="text-xs text-white/60">+¥${yen(halfExtension)}（${guests}名×3000${shimeiCount > 0 ? ` + 指名${shimeiCount}×2000` : ''}）</div>
+                <div class="text-xs text-white/60">小計: ¥${yen(subtotal30)} / TAX: ¥${yen(tax30)}</div>
+                <div class="font-extrabold text-xl text-blue-300">¥${yen(total30)}</div>
+                <div class="text-[10px] text-white/40 mt-1">（+¥${yen(total30 - currentTotal)}）</div>
+              </div>
+              <div class="p-3 rounded-xl bg-black/30 border border-purple-500/30">
+                <div class="text-[11px] text-purple-400 mb-1">+60分延長後</div>
+                <div class="text-xs text-white/60">+¥${yen(fullExtension)}（${guests}名×5000${shimeiCount > 0 ? ` + 指名${shimeiCount}×2000` : ''}）</div>
+                <div class="text-xs text-white/60">小計: ¥${yen(subtotal60)} / TAX: ¥${yen(tax60)}</div>
+                <div class="font-extrabold text-xl text-purple-300">¥${yen(total60)}</div>
+                <div class="text-[10px] text-white/40 mt-1">（+¥${yen(total60 - currentTotal)}）</div>
+              </div>
+            </div>
+          </div>
+            `;
+          })()}
+
           <!-- 延長計算入力 -->
           <div class="p-4 rounded-2xl border border-white/10 bg-white/3">
             <div class="font-bold text-white mb-3">延長計算の入力 <span class="text-white/40 text-xs">（次回延長から反映）</span></div>
