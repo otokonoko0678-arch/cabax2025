@@ -994,7 +994,7 @@ function renderMenu() {
                 const showPrice = !(isDrinkCategory || isCastDrink || isTableSet) || isGlassWine || isShot;
                 
                 return `
-                    <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6 cursor-pointer">
+                    <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6 cursor-pointer flex flex-col min-h-[100px] sm:min-h-[140px]">
                         ${
                             item.premium
                                 ? '<div class="mb-2 sm:mb-3"><span class="premium-badge">⭐ PREMIUM</span></div>'
@@ -1006,7 +1006,9 @@ function renderMenu() {
                                 ? `<p class="text-xs sm:text-sm text-gray-400 mb-2 sm:mb-4 line-clamp-2">${item.description}</p>`
                                 : ''
                         }
-                        ${showPrice ? `<div class="text-xl sm:text-3xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>` : ''}
+                        <div class="mt-auto">
+                            ${showPrice ? `<div class="text-xl sm:text-3xl font-bold gold-accent">¥${item.price.toLocaleString()}</div>` : ''}
+                        </div>
                     </div>
                 `;
             }
