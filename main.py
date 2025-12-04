@@ -81,6 +81,7 @@ class MenuItem(Base):
     name = Column(String, index=True)
     category = Column(String, index=True)
     price = Column(Integer)
+    cost = Column(Integer, default=0)  # 原価
     description = Column(Text, nullable=True)
     image_url = Column(String, nullable=True)
     stock = Column(Integer, nullable=True)
@@ -194,6 +195,7 @@ class MenuItemCreate(BaseModel):
     name: str
     category: str
     price: int
+    cost: Optional[int] = 0  # 原価
     description: Optional[str] = None
     image_url: Optional[str] = None
     stock: Optional[int] = None
@@ -203,6 +205,7 @@ class MenuItemUpdate(BaseModel):
     name: Optional[str] = None
     category: Optional[str] = None
     price: Optional[int] = None
+    cost: Optional[int] = None  # 原価
     description: Optional[str] = None
     image_url: Optional[str] = None
     stock: Optional[int] = None
@@ -213,6 +216,7 @@ class MenuItemResponse(BaseModel):
     name: str
     category: str
     price: int
+    cost: Optional[int] = 0  # 原価
     description: Optional[str]
     image_url: Optional[str]
     stock: Optional[int]

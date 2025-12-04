@@ -1365,7 +1365,16 @@
                             <option value="food">フード</option>
                         </select>
                     </div>
-                    <input type="number" id="menuPrice" placeholder="価格" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">売価</label>
+                            <input type="number" id="menuPrice" placeholder="売価" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">原価</label>
+                            <input type="number" id="menuCost" placeholder="原価（任意）" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm">
+                        </div>
+                    </div>
                     <textarea id="menuDescription" placeholder="説明（任意）" rows="3" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm"></textarea>
                     <div class="flex gap-3 pt-4">
                         <button type="submit" class="flex-1 luxury-btn py-3 md:py-4 rounded-xl font-semibold text-sm">追加</button>
@@ -1408,7 +1417,16 @@
                             <option value="food">フード</option>
                         </select>
                     </div>
-                    <input type="number" id="editMenuPrice" placeholder="価格" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">売価</label>
+                            <input type="number" id="editMenuPrice" placeholder="売価" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">原価</label>
+                            <input type="number" id="editMenuCost" placeholder="原価（任意）" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm">
+                        </div>
+                    </div>
                     <textarea id="editMenuDescription" placeholder="説明（任意）" rows="3" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm"></textarea>
                     <div class="flex gap-3 pt-4">
                         <button type="submit" class="flex-1 luxury-btn py-3 md:py-4 rounded-xl font-semibold text-sm">更新</button>
@@ -3933,6 +3951,7 @@ async function addMenuItem(event) {
         name: document.getElementById('menuName').value,
         category: document.getElementById('menuCategory').value,
         price: parseInt(document.getElementById('menuPrice').value),
+        cost: parseInt(document.getElementById('menuCost').value) || 0,
         description: document.getElementById('menuDescription').value,
         image_url: appState.currentMenuImage,  // APIはimage_urlを期待
         stock: ['bottle', 'drink', 'food'].includes(document.getElementById('menuCategory').value) ? 100 : null
@@ -3967,6 +3986,7 @@ async function addMenuItem(event) {
         // フォームリセット
         document.getElementById('menuName').value = '';
         document.getElementById('menuPrice').value = '';
+        document.getElementById('menuCost').value = '';
         document.getElementById('menuDescription').value = '';
     } catch (error) {
         console.error(error);
@@ -4004,6 +4024,7 @@ async function addMenuItem(event) {
             document.getElementById('editMenuName').value = item.name;
             document.getElementById('editMenuCategory').value = normalizeCategory(item.category);
             document.getElementById('editMenuPrice').value = item.price;
+            document.getElementById('editMenuCost').value = item.cost || 0;
             document.getElementById('editMenuDescription').value = item.description || '';
             
             if (item.image) {
@@ -4030,6 +4051,7 @@ async function updateMenuItem(event) {
         name: document.getElementById('editMenuName').value,
         category: document.getElementById('editMenuCategory').value,
         price: parseInt(document.getElementById('editMenuPrice').value),
+        cost: parseInt(document.getElementById('editMenuCost').value) || 0,
         description: document.getElementById('editMenuDescription').value,
         image_url: appState.currentMenuImage,  // APIはimage_urlを期待
         image: appState.currentMenuImage       // フロント表示用
@@ -4044,6 +4066,7 @@ async function updateMenuItem(event) {
                     name: updatedItem.name,
                     category: updatedItem.category,
                     price: updatedItem.price,
+                    cost: updatedItem.cost,
                     description: updatedItem.description,
                     image_url: updatedItem.image_url
                 })
@@ -7105,9 +7128,37 @@ function renderDailyReport() {
         }, 0);
         console.log('[renderDailyReport] totalOrdersAmount =', totalOrdersAmount);
 
-        // 原価率40%で計算
-        const totalCost   = Math.floor(totalSales * 0.4);
+        // ===== 酒類原価計算（メニューの原価から計算）=====
+        const menuItems = Array.isArray(app.menuItems) ? app.menuItems : [];
+        let totalCost = 0;
+        let totalGuestCount = 0;
+        
+        allSessions.forEach(session => {
+            // 来客数を集計
+            totalGuestCount += Number(session.guests) || 0;
+            
+            if (Array.isArray(session.orders)) {
+                session.orders.forEach(order => {
+                    // メニューアイテムを探す
+                    const menuItem = menuItems.find(m => 
+                        m.name === order.item_name || 
+                        m.id === order.menu_item_id
+                    );
+                    
+                    if (menuItem && menuItem.cost > 0) {
+                        // 原価が設定されている場合
+                        totalCost += (menuItem.cost || 0) * (order.quantity || 1);
+                    }
+                });
+            }
+        });
+        
         const grossProfit = totalSales - totalCost;
+        
+        // 客単価 = 売上合計 ÷ 来客数（人数の合計）
+        const avgSpendPerPerson = totalGuestCount > 0 
+            ? Math.floor(totalSales / totalGuestCount) 
+            : 0;
 
         // ===== 指名・同伴・延長集計 =====
         const companionCount = allSessions.filter(s => s && s.hasCompanion).length;
@@ -7229,13 +7280,14 @@ function renderDailyReport() {
                             <p class="text-2xl font-bold text-green-400">
                                 ¥${Number(grossProfit).toLocaleString()}
                             </p>
-                            <p class="text-xs text-gray-500">原価率: 40%</p>
+                            <p class="text-xs text-gray-500">酒類原価: ¥${Number(totalCost).toLocaleString()}</p>
                         </div>
                         <div class="bg-gray-800/50 rounded-xl p-4">
-                            <p class="text-sm text-gray-400 mb-1">客単価</p>
+                            <p class="text-sm text-gray-400 mb-1">客単価（人）</p>
                             <p class="text-2xl font-bold text-blue-300">
-                                ¥${Number(averageSpend).toLocaleString()}
+                                ¥${Number(avgSpendPerPerson).toLocaleString()}
                             </p>
+                            <p class="text-xs text-gray-500">来客数: ${totalGuestCount}名</p>
                         </div>
                         <div class="bg-gray-800/50 rounded-xl p-4">
                             <p class="text-sm text-gray-400 mb-1">来店組数</p>
