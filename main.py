@@ -82,6 +82,9 @@ class Cast(Base):
     rank = Column(String, default="regular")
     hourly_rate = Column(Integer)
     drink_back_rate = Column(Integer, default=10)  # ドリンクバック率(%)
+    companion_back = Column(Integer, default=3000)  # 同伴バック（円）
+    nomination_back = Column(Integer, default=1000)  # 指名バック（円）
+    sales_back_rate = Column(Integer, default=0)  # 売上バック率（%）
     sales = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     sessions = relationship("SessionModel", back_populates="cast")
@@ -187,12 +190,18 @@ class CastCreate(BaseModel):
     rank: str
     hourly_rate: int
     drink_back_rate: int = 10
+    companion_back: int = 3000
+    nomination_back: int = 1000
+    sales_back_rate: int = 0
 
 class CastUpdate(BaseModel):
     stage_name: Optional[str] = None
     rank: Optional[str] = None
     hourly_rate: Optional[int] = None
     drink_back_rate: Optional[int] = None
+    companion_back: Optional[int] = None
+    nomination_back: Optional[int] = None
+    sales_back_rate: Optional[int] = None
 
 class CastResponse(BaseModel):
     id: int
@@ -200,6 +209,9 @@ class CastResponse(BaseModel):
     rank: str
     hourly_rate: int
     drink_back_rate: int
+    companion_back: int
+    nomination_back: int
+    sales_back_rate: int
     sales: int
     class Config:
         from_attributes = True
@@ -489,11 +501,11 @@ def startup_event():
     # キャスト
     if db.query(Cast).count() == 0:
         casts = [
-            Cast(stage_name="あいり", rank="レギュラー", hourly_rate=3000, drink_back_rate=10),
-            Cast(stage_name="みゆ", rank="レギュラー", hourly_rate=3000, drink_back_rate=10),
-            Cast(stage_name="れな", rank="エース", hourly_rate=4000, drink_back_rate=15),
-            Cast(stage_name="かな", rank="エース", hourly_rate=4000, drink_back_rate=15),
-            Cast(stage_name="りお", rank="ナンバー", hourly_rate=5000, drink_back_rate=20),
+            Cast(stage_name="あいり", rank="レギュラー", hourly_rate=3000, drink_back_rate=10, companion_back=3000, nomination_back=1000, sales_back_rate=0),
+            Cast(stage_name="みゆ", rank="レギュラー", hourly_rate=3000, drink_back_rate=10, companion_back=3000, nomination_back=1000, sales_back_rate=0),
+            Cast(stage_name="れな", rank="エース", hourly_rate=4000, drink_back_rate=15, companion_back=4000, nomination_back=1500, sales_back_rate=3),
+            Cast(stage_name="かな", rank="エース", hourly_rate=4000, drink_back_rate=15, companion_back=4000, nomination_back=1500, sales_back_rate=3),
+            Cast(stage_name="りお", rank="ナンバー", hourly_rate=5000, drink_back_rate=20, companion_back=5000, nomination_back=2000, sales_back_rate=5),
         ]
         db.add_all(casts)
         db.commit()
@@ -502,11 +514,11 @@ def startup_event():
     # スタッフ
     if db.query(Staff).count() == 0:
         staff_members = [
-            Staff(name="田中", role="manager", salary_amount=1500),
-            Staff(name="山田", role="waiter", salary_amount=1200),
-            Staff(name="佐藤", role="waiter", salary_amount=1200),
-            Staff(name="鈴木", role="kitchen", salary_amount=1100),
-            Staff(name="高橋", role="catch", salary_amount=1000),
+            Staff(name="田中", role="manager", salary_type="monthly", salary_amount=300000),
+            Staff(name="山田", role="waiter", salary_type="hourly", salary_amount=1200),
+            Staff(name="佐藤", role="waiter", salary_type="hourly", salary_amount=1200),
+            Staff(name="鈴木", role="kitchen", salary_type="daily", salary_amount=10000),
+            Staff(name="高橋", role="catch", salary_type="hourly", salary_amount=1000),
         ]
         db.add_all(staff_members)
         db.commit()
@@ -1032,7 +1044,7 @@ def get_shifts(date: Optional[str] = None, db: Session = Depends(get_db), ):
 # 日報
 @app.get("/api/daily-report")
 def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
-    """日報データを取得"""
+    """日報データを取得（粗利計算含む）"""
     target_date = date or datetime.utcnow().strftime("%Y-%m-%d")
     
     # その日のセッション
@@ -1056,8 +1068,69 @@ def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
         Order.created_at <= f"{target_date} 23:59:59"
     ).all()
     
-    # ドリンクバック集計
-    drink_back_total = sum(o.price * o.quantity for o in orders if o.is_drink_back)
+    # 原価計算
+    total_cost = 0
+    for order in orders:
+        if order.menu_item and order.menu_item.cost:
+            total_cost += order.menu_item.cost * order.quantity
+    
+    # キャスト情報を取得
+    casts = db.query(Cast).all()
+    cast_dict = {c.stage_name: c for c in casts}
+    
+    # ===== キャストバック計算 =====
+    # 1. 同伴バック
+    companion_back_total = 0
+    for session in sessions:
+        if session.has_companion and session.companion_name:
+            cast = cast_dict.get(session.companion_name)
+            if cast:
+                companion_back_total += cast.companion_back or 0
+    
+    # 2. 指名バック
+    nomination_back_total = 0
+    for session in sessions:
+        if session.nomination_type and session.shimei_casts:
+            cast_names = session.shimei_casts.split(',')
+            for cast_name in cast_names:
+                cast_name = cast_name.strip()
+                cast = cast_dict.get(cast_name)
+                if cast:
+                    nomination_back_total += cast.nomination_back or 0
+    
+    # 3. ドリンクバック（ドリンク売上 × キャストのドリンクバック率）
+    drink_back_total = 0
+    for order in orders:
+        if order.is_drink_back and order.cast_name:
+            cast = cast_dict.get(order.cast_name)
+            if cast:
+                drink_back_rate = cast.drink_back_rate or 10
+                drink_back_total += int(order.price * order.quantity * drink_back_rate / 100)
+    
+    # 4. 売上バック（キャストの売上 × 売上バック率）
+    sales_back_total = 0
+    cast_sales = {}  # キャストごとの売上を集計
+    for session in sessions:
+        if session.cast:
+            cast_name = session.cast.stage_name
+            if cast_name not in cast_sales:
+                cast_sales[cast_name] = 0
+            cast_sales[cast_name] += session.current_total or 0
+    
+    for cast_name, sales in cast_sales.items():
+        cast = cast_dict.get(cast_name)
+        if cast and cast.sales_back_rate:
+            sales_back_total += int(sales * cast.sales_back_rate / 100)
+    
+    # キャストバック合計
+    cast_payroll_total = companion_back_total + nomination_back_total + drink_back_total + sales_back_total
+    
+    # スタッフ人件費
+    staff_attendances = db.query(StaffAttendance).filter(StaffAttendance.date == target_date).all()
+    staff_cost_total = sum(att.daily_wage or 0 for att in staff_attendances)
+    
+    # 粗利 = 売上 - 原価 - キャストバック - スタッフ人件費
+    gross_profit = total_sales - total_cost - cast_payroll_total - staff_cost_total
     
     # その日の勤怠
     attendances = db.query(Attendance).filter(Attendance.date == target_date).all()
@@ -1067,15 +1140,31 @@ def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
         "session_count": session_count,
         "total_guests": total_guests,
         "total_sales": total_sales,
-        "drink_back_total": drink_back_total,
+        "total_cost": total_cost,
+        "cast_payroll": {
+            "companion_back": companion_back_total,
+            "nomination_back": nomination_back_total,
+            "drink_back": drink_back_total,
+            "sales_back": sales_back_total,
+            "total": cast_payroll_total
+        },
+        "staff_cost": staff_cost_total,
+        "gross_profit": gross_profit,
+        "drink_back_total": drink_back_total,  # 後方互換性
         "order_count": len(orders),
         "attendance_count": len(attendances),
         "sessions": [
             {
                 "id": s.id,
                 "table_id": s.table_id,
+                "cast_id": s.cast_id,
+                "cast_name": s.cast.stage_name if s.cast else None,
                 "guests": s.guests,
                 "total": s.current_total,
+                "has_companion": s.has_companion,
+                "companion_name": s.companion_name,
+                "nomination_type": s.nomination_type,
+                "shimei_casts": s.shimei_casts,
                 "status": s.status
             } for s in sessions
         ]
