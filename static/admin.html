@@ -2454,6 +2454,21 @@ async function checkoutSession(sessionId) {
             ordersForReceipt = sessionToCheckout?.orders || [];
         }
         
+        // ★ 会計時にTAXを計算
+        const taxRate = sessionToCheckout?.taxRate || sessionToCheckout?.tax_rate || 20;
+        const subtotalAmount = ordersForReceipt.reduce((sum, o) => sum + (o.price * o.quantity), 0);
+        const taxAmount = Math.floor(subtotalAmount * (taxRate / 100));
+        const totalWithTax = subtotalAmount + taxAmount;
+        
+        // TAXを注文リストに追加（レシート表示用）
+        if (taxAmount > 0) {
+            ordersForReceipt.push({
+                item_name: `TAX/サービス（${taxRate}%）`,
+                quantity: 1,
+                price: taxAmount
+            });
+        }
+        
         // 1. バックエンド側で清算
         const result = await apiRequest(`${API_ENDPOINTS.sessions}/${sessionId}/checkout`, {
             method: 'PUT',
@@ -2465,7 +2480,7 @@ async function checkoutSession(sessionId) {
             const checkoutRecord = {
                 ...sessionToCheckout,
                 checkoutTime: new Date().toISOString(),
-                totalAmount: result?.final_total || sessionToCheckout.currentTotal || sessionToCheckout.current_total || 0,
+                totalAmount: totalWithTax,
                 status: 'completed'
             };
             appState.checkoutHistory.push(checkoutRecord);
@@ -2537,7 +2552,6 @@ function showReceipt(session, orders) {
     castName = castName || '未設定';
     
     const tableName = session.tableName || session.table_name || session.tableId || '?';
-    const total = session.currentTotal || session.current_total || 0;
     const now = new Date();
     
     // 注文を整形
@@ -2548,6 +2562,15 @@ function showReceipt(session, orders) {
         const subtotal = price * qty;
         return { name: itemName, qty, price, subtotal };
     });
+    
+    // TAX/サービス料を分離して計算
+    const taxItem = orderItems.find(item => item.name.includes('TAX') || item.name.includes('サービス'));
+    const itemsWithoutTax = orderItems.filter(item => !item.name.includes('TAX') && !item.name.includes('サービス'));
+    const subtotalAmount = itemsWithoutTax.reduce((sum, item) => sum + item.subtotal, 0);
+    const taxAmount = taxItem ? taxItem.subtotal : 0;
+    
+    // 合計はTAX込みで計算
+    const total = subtotalAmount + taxAmount;
     
     // 伝票HTML生成
     const receiptHtml = `
@@ -2574,13 +2597,26 @@ function showReceipt(session, orders) {
         <div class="border-t-2 border-dashed border-gray-400 pt-4 mb-4">
             <h2 class="font-bold mb-2">ご注文明細</h2>
             <div class="text-sm space-y-1">
-                ${orderItems.length > 0 ? orderItems.map(item => `
+                ${itemsWithoutTax.length > 0 ? itemsWithoutTax.map(item => `
                     <div class="flex justify-between">
                         <span>${item.name} × ${item.qty}</span>
                         <span>¥${item.subtotal.toLocaleString()}</span>
                     </div>
                 `).join('') : '<p class="text-gray-500">注文なし</p>'}
             </div>
+        </div>
+        
+        <div class="border-t-2 border-dashed border-gray-400 pt-4 mb-2">
+            <div class="flex justify-between text-sm">
+                <span>小計</span>
+                <span>¥${subtotalAmount.toLocaleString()}</span>
+            </div>
+            ${taxAmount > 0 ? `
+            <div class="flex justify-between text-sm">
+                <span>TAX/サービス料</span>
+                <span>¥${taxAmount.toLocaleString()}</span>
+            </div>
+            ` : ''}
         </div>
         
         <div class="border-t-2 border-gray-800 pt-4">
@@ -4084,16 +4120,21 @@ function renderOrders() {
             ? createdAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
             : '--:--';
         
-        // 経過時間
+        // 経過時間（UTCで保存されている場合を考慮）
         let elapsedStr = '';
         if (createdAt && !isServed) {
-            const elapsed = Math.floor((Date.now() - createdAt.getTime()) / 60000);
-            if (elapsed >= 10) {
-                elapsedStr = `<span class="text-red-400 font-bold">${elapsed}分経過</span>`;
-            } else if (elapsed >= 5) {
-                elapsedStr = `<span class="text-amber-400">${elapsed}分経過</span>`;
-            } else {
-                elapsedStr = `<span class="text-gray-400">${elapsed}分経過</span>`;
+            const now = new Date();
+            // 分単位の差分を計算
+            const elapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
+            // 負の値や異常な値は表示しない
+            if (elapsed >= 0 && elapsed < 1440) { // 24時間以内
+                if (elapsed >= 10) {
+                    elapsedStr = `<span class="text-red-400 font-bold">${elapsed}分経過</span>`;
+                } else if (elapsed >= 5) {
+                    elapsedStr = `<span class="text-amber-400">${elapsed}分経過</span>`;
+                } else {
+                    elapsedStr = `<span class="text-gray-400">${elapsed}分経過</span>`;
+                }
             }
         }
         
@@ -4631,6 +4672,9 @@ async function openTableDetail(tableId) {
               
               // 最初の指名キャストをcast_idとして使用（指名なしなら0=フリー）
               const castId = hasShimei ? shimeiCasts[0].id : 0;
+              
+              // TAX率を取得
+              const taxRate = Number(document.getElementById('selTaxRate')?.value ?? 20);
 
               if (!guests || guests <= 0) throw new Error('客人数を入力してください');
 
@@ -4646,7 +4690,8 @@ async function openTableDetail(tableId) {
                   companion_name: null,
                   nomination_type: hasShimei ? 'shimei' : (hasDouhan ? 'douhan' : null),
                   nomination_fee: shimeiCasts.length * 2000,
-                  shimei_casts: shimeiCasts.map(c => c.name).join(', ')
+                  shimei_casts: shimeiCasts.map(c => c.name).join(', '),
+                  tax_rate: taxRate
                 })
               });
               
@@ -4663,7 +4708,7 @@ async function openTableDetail(tableId) {
                     await addInitialCharge(newSessionId, `指名料（${cast.name}）`, 2000, 1);
                   }
                 }
-                if (charges.tax > 0) await addInitialCharge(newSessionId, 'TAX/サービス', charges.tax, 1);
+                // TAXは会計時に全体の小計に対して計算（税率はセッションに保存済み）
               }
 
               msg('開始しました');
@@ -4887,6 +4932,21 @@ async function openTableDetail(tableId) {
               console.warn('[checkout] orders fetch failed:', e);
             }
             
+            // ★ 会計時にTAXを計算
+            const taxRate = sessionToCheckout?.taxRate || sessionToCheckout?.tax_rate || 20;
+            const subtotalAmount = ordersForReceipt.reduce((sum, o) => sum + (o.price * o.quantity), 0);
+            const taxAmount = Math.floor(subtotalAmount * (taxRate / 100));
+            const totalWithTax = subtotalAmount + taxAmount;
+            
+            // TAXを注文リストに追加（レシート表示用）
+            if (taxAmount > 0) {
+              ordersForReceipt.push({
+                item_name: `TAX/サービス（${taxRate}%）`,
+                quantity: 1,
+                price: taxAmount
+              });
+            }
+            
             msg('精算中...');
             const result = await fetchJson(`/sessions/${sessionId}/checkout`, { method: 'PUT' });
             
@@ -4896,7 +4956,7 @@ async function openTableDetail(tableId) {
               const checkoutRecord = {
                 ...sessionToCheckout,
                 checkoutTime: new Date().toISOString(),
-                totalAmount: result?.final_total || sessionToCheckout.currentTotal || sessionToCheckout.current_total || 0,
+                totalAmount: totalWithTax,
                 status: 'completed'
               };
               appState.checkoutHistory.push(checkoutRecord);

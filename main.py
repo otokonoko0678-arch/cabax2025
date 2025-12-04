@@ -104,6 +104,7 @@ class SessionModel(Base):
     nomination_type = Column(String, nullable=True)
     nomination_fee = Column(Integer, default=0)
     shimei_casts = Column(String, nullable=True)  # 指名キャスト名（カンマ区切り）
+    tax_rate = Column(Integer, default=20)  # TAX/サービス料率（%）
     status = Column(String, default="active")
     
     table = relationship("Table", back_populates="sessions")
@@ -241,6 +242,7 @@ class SessionCreate(BaseModel):
     nomination_type: Optional[str] = None
     nomination_fee: int = 0
     shimei_casts: Optional[str] = None  # 指名キャスト名（カンマ区切り）
+    tax_rate: int = 20  # TAX/サービス料率（%）
 
 class SessionResponse(BaseModel):
     id: int
@@ -251,6 +253,7 @@ class SessionResponse(BaseModel):
     start_time: datetime
     end_time: Optional[datetime]
     current_total: int
+    tax_rate: int = 20
     status: str
     class Config:
         from_attributes = True
@@ -661,16 +664,18 @@ def get_session_orders(session_id: int, db: Session = Depends(get_db)):
     orders = db.query(Order).filter(Order.session_id == session_id).all()
     result = []
     for order in orders:
-        menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
+        menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first() if order.menu_item_id else None
+        # menu_item_idがない場合はcast_nameにitem_nameが入っている（add-chargeで追加した料金）
+        item_name = menu_item.name if menu_item else (order.cast_name or "料金")
         result.append({
             "id": order.id,
             "session_id": order.session_id,
             "menu_item_id": order.menu_item_id,
-            "item_name": menu_item.name if menu_item else "?",
+            "item_name": item_name,
             "quantity": order.quantity,
             "price": order.price,
             "is_drink_back": order.is_drink_back,
-            "cast_name": order.cast_name,
+            "cast_name": order.cast_name if menu_item else None,
             "is_served": order.is_served,
             "created_at": order.created_at.isoformat() if order.created_at else None
         })
