@@ -1209,6 +1209,36 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- スタッフ管理 -->
+                    <div class="glass-effect rounded-2xl p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-white">スタッフ管理</h2>
+                            <button onclick="openAddStaffModal()" class="luxury-btn px-4 py-2 rounded-xl text-sm">
+                                ＋ スタッフ追加
+                            </button>
+                        </div>
+                        
+                        <div id="staffList" class="space-y-3">
+                            <!-- スタッフリストがここに表示される -->
+                        </div>
+                    </div>
+                    
+                    <!-- 本日のスタッフ勤怠 -->
+                    <div class="glass-effect rounded-2xl p-6 mb-6">
+                        <h2 class="text-xl font-bold text-white mb-4">本日のスタッフ勤怠</h2>
+                        
+                        <div id="staffAttendanceList" class="space-y-3">
+                            <!-- 勤怠リストがここに表示される -->
+                        </div>
+                        
+                        <div class="mt-4 p-4 bg-amber-900/20 rounded-xl border border-amber-800/30">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-300">本日のスタッフ人件費</span>
+                                <span id="todayStaffCost" class="text-2xl font-bold gold-accent">¥0</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 売上レポート -->
@@ -1331,6 +1361,55 @@
                 </div>
 
             </main>
+        </div>
+    </div>
+
+    <!-- モーダル: スタッフ追加 -->
+    <div id="addStaffModal" class="modal fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-70 p-4">
+        <div class="w-full max-w-lg modal-content glass-effect rounded-2xl shadow-2xl">
+            <div class="border-b border-gray-700 px-6 py-5 flex items-center justify-between">
+                <h2 class="text-xl font-bold gold-accent">スタッフ追加</h2>
+                <button onclick="closeModal('addStaffModal')" class="text-gray-400 hover:text-gray-200 text-2xl">✕</button>
+            </div>
+            <div class="p-6">
+                <form onsubmit="addStaff(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">名前</label>
+                        <input type="text" id="staffName" placeholder="名前" class="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">役割</label>
+                        <select id="staffRole" class="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white">
+                            <option value="waiter">ウェイター</option>
+                            <option value="kitchen">キッチン</option>
+                            <option value="manager">マネージャー</option>
+                            <option value="catch">キャッチ</option>
+                            <option value="driver">ドライバー</option>
+                            <option value="other">その他</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">給与タイプ</label>
+                        <select id="staffSalaryType" onchange="updateSalaryLabel()" class="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white">
+                            <option value="hourly">時給</option>
+                            <option value="daily">日給</option>
+                            <option value="monthly">月給</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2" id="salaryAmountLabel">時給</label>
+                        <input type="number" id="staffSalaryAmount" placeholder="1000" value="1000" class="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">電話番号（任意）</label>
+                        <input type="tel" id="staffPhone" placeholder="090-1234-5678" class="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white">
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="flex-1 luxury-btn py-3 rounded-xl font-semibold text-sm">追加</button>
+                        <button type="button" onclick="closeModal('addStaffModal')" class="flex-1 bg-gray-800 text-gray-300 py-3 rounded-xl hover:bg-gray-700 transition text-sm">キャンセル</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -3665,6 +3744,214 @@ async function syncWithBackend() {
         // appStateにバック設定を追加
         if (!appState.backSettings) {
             appState.backSettings = { ...defaultBackSettings };
+        }
+        
+        // ========== スタッフ管理 ==========
+        
+        appState.staffList = [];
+        appState.staffAttendances = [];
+        
+        async function loadStaffList() {
+            try {
+                const staff = await apiRequest('/api/staff');
+                appState.staffList = staff || [];
+                renderStaffList();
+            } catch (e) {
+                console.error('スタッフ一覧取得失敗:', e);
+            }
+        }
+        
+        async function loadStaffAttendances() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const attendances = await apiRequest(`/api/staff-attendance?date=${today}`);
+                appState.staffAttendances = attendances || [];
+                renderStaffAttendanceList();
+                updateTodayStaffCost();
+            } catch (e) {
+                console.error('スタッフ勤怠取得失敗:', e);
+            }
+        }
+        
+        function renderStaffList() {
+            const container = document.getElementById('staffList');
+            if (!container) return;
+            
+            if (appState.staffList.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">スタッフが登録されていません</p>';
+                return;
+            }
+            
+            const roleLabels = {
+                waiter: 'ウェイター',
+                kitchen: 'キッチン',
+                manager: 'マネージャー',
+                catch: 'キャッチ',
+                driver: 'ドライバー',
+                other: 'その他'
+            };
+            
+            const salaryTypeLabels = {
+                hourly: '時給',
+                daily: '日給',
+                monthly: '月給'
+            };
+            
+            container.innerHTML = appState.staffList.map(staff => `
+                <div class="p-4 bg-black/20 rounded-xl border border-white/10 flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-white font-semibold">${staff.name}</span>
+                            <span class="text-xs px-2 py-1 bg-gray-700 rounded">${roleLabels[staff.role] || staff.role}</span>
+                        </div>
+                        <div class="text-sm text-gray-400 mt-1">
+                            ${salaryTypeLabels[staff.salary_type] || '時給'}: ¥${(staff.salary_amount || 0).toLocaleString()}
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="staffClockIn(${staff.id})" class="px-3 py-1 bg-green-900/30 text-green-400 border border-green-800/30 rounded-lg text-sm hover:bg-green-900/50">
+                            出勤
+                        </button>
+                        <button onclick="deleteStaff(${staff.id})" class="px-3 py-1 bg-red-900/30 text-red-400 border border-red-800/30 rounded-lg text-sm hover:bg-red-900/50">
+                            削除
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderStaffAttendanceList() {
+            const container = document.getElementById('staffAttendanceList');
+            if (!container) return;
+            
+            if (appState.staffAttendances.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">本日の出勤記録はありません</p>';
+                return;
+            }
+            
+            container.innerHTML = appState.staffAttendances.map(att => `
+                <div class="p-4 bg-black/20 rounded-xl border border-white/10 flex items-center justify-between">
+                    <div>
+                        <div class="text-white font-semibold">${att.staff_name}</div>
+                        <div class="text-sm text-gray-400">
+                            ${att.clock_in} ${att.clock_out ? '〜 ' + att.clock_out : '〜 勤務中'}
+                            ${att.hours_worked > 0 ? `（${att.hours_worked.toFixed(1)}h）` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        ${att.daily_wage > 0 ? `<span class="text-amber-400 font-bold">¥${att.daily_wage.toLocaleString()}</span>` : ''}
+                        ${!att.clock_out ? `
+                            <button onclick="staffClockOut(${att.id})" class="px-3 py-1 bg-amber-900/30 text-amber-400 border border-amber-800/30 rounded-lg text-sm hover:bg-amber-900/50">
+                                退勤
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function updateTodayStaffCost() {
+            const total = appState.staffAttendances.reduce((sum, att) => sum + (att.daily_wage || 0), 0);
+            const el = document.getElementById('todayStaffCost');
+            if (el) el.textContent = `¥${total.toLocaleString()}`;
+        }
+        
+        function openAddStaffModal() {
+            document.getElementById('staffName').value = '';
+            document.getElementById('staffRole').value = 'waiter';
+            document.getElementById('staffSalaryType').value = 'hourly';
+            document.getElementById('staffSalaryAmount').value = '1000';
+            document.getElementById('staffPhone').value = '';
+            updateSalaryLabel();
+            document.getElementById('addStaffModal').classList.add('active');
+        }
+        
+        function updateSalaryLabel() {
+            const type = document.getElementById('staffSalaryType').value;
+            const label = document.getElementById('salaryAmountLabel');
+            const labels = { hourly: '時給', daily: '日給', monthly: '月給' };
+            if (label) label.textContent = labels[type] || '金額';
+        }
+        
+        async function addStaff(event) {
+            event.preventDefault();
+            
+            const payload = {
+                name: document.getElementById('staffName').value,
+                role: document.getElementById('staffRole').value,
+                salary_type: document.getElementById('staffSalaryType').value,
+                salary_amount: parseInt(document.getElementById('staffSalaryAmount').value) || 1000,
+                phone: document.getElementById('staffPhone').value || null
+            };
+            
+            try {
+                await apiRequest('/api/staff', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                closeModal('addStaffModal');
+                showNotification('スタッフを追加しました', 'success');
+                await loadStaffList();
+            } catch (e) {
+                console.error(e);
+                showNotification('スタッフの追加に失敗しました', 'error');
+            }
+        }
+        
+        async function deleteStaff(staffId) {
+            if (!confirm('このスタッフを削除しますか？')) return;
+            
+            try {
+                await apiRequest(`/api/staff/${staffId}`, { method: 'DELETE' });
+                showNotification('スタッフを削除しました', 'success');
+                await loadStaffList();
+            } catch (e) {
+                console.error(e);
+                showNotification('削除に失敗しました', 'error');
+            }
+        }
+        
+        async function staffClockIn(staffId) {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            const clockIn = now.toTimeString().slice(0, 5);
+            
+            try {
+                await apiRequest('/api/staff-attendance', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        staff_id: staffId,
+                        date: today,
+                        clock_in: clockIn
+                    })
+                });
+                showNotification('出勤しました', 'success');
+                await loadStaffAttendances();
+            } catch (e) {
+                console.error(e);
+                if (e.message.includes('400')) {
+                    showNotification('既に出勤しています', 'error');
+                } else {
+                    showNotification('出勤処理に失敗しました', 'error');
+                }
+            }
+        }
+        
+        async function staffClockOut(attendanceId) {
+            const now = new Date();
+            const clockOut = now.toTimeString().slice(0, 5);
+            
+            try {
+                await apiRequest(`/api/staff-attendance/${attendanceId}/clock-out`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ clock_out: clockOut })
+                });
+                showNotification('退勤しました', 'success');
+                await loadStaffAttendances();
+            } catch (e) {
+                console.error(e);
+                showNotification('退勤処理に失敗しました', 'error');
+            }
         }
 
         // ========== テーブル設定 ==========
@@ -7153,7 +7440,13 @@ function renderDailyReport() {
             }
         });
         
-        const grossProfit = totalSales - totalCost;
+        // スタッフ人件費を取得
+        const staffAttendances = Array.isArray(app.staffAttendances) ? app.staffAttendances : [];
+        const todayStaffCost = staffAttendances.reduce((sum, att) => sum + (att.daily_wage || 0), 0);
+        
+        // 粗利 = 売上 - 酒類原価 - スタッフ人件費
+        // ※キャスト給与は別途計算（Phase 3で追加予定）
+        const grossProfit = totalSales - totalCost - todayStaffCost;
         
         // 客単価 = 売上合計 ÷ 来客数（人数の合計）
         const avgSpendPerPerson = totalGuestCount > 0 
@@ -7280,7 +7573,7 @@ function renderDailyReport() {
                             <p class="text-2xl font-bold text-green-400">
                                 ¥${Number(grossProfit).toLocaleString()}
                             </p>
-                            <p class="text-xs text-gray-500">酒類原価: ¥${Number(totalCost).toLocaleString()}</p>
+                            <p class="text-xs text-gray-500">酒原価: ¥${Number(totalCost).toLocaleString()} / 人件費: ¥${Number(todayStaffCost).toLocaleString()}</p>
                         </div>
                         <div class="bg-gray-800/50 rounded-xl p-4">
                             <p class="text-sm text-gray-400 mb-1">客単価（人）</p>
@@ -7997,6 +8290,12 @@ function setupCharts() {
             // オーダー管理タブを開いたらオーダーを読み込む
             if (tabName === 'orders') {
                 loadOrdersFromApi();
+            }
+            
+            // 店舗設定タブを開いたらスタッフリストを読み込む
+            if (tabName === 'store-settings') {
+                loadStaffList();
+                loadStaffAttendances();
             }
         }
 

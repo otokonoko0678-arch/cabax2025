@@ -62,6 +62,18 @@ class Table(Base):
     is_vip = Column(Boolean, default=False)
     sessions = relationship("SessionModel", back_populates="table")
 
+class StaffAttendance(Base):
+    """スタッフの出勤記録"""
+    __tablename__ = "staff_attendances"
+    id = Column(Integer, primary_key=True, index=True)
+    staff_id = Column(Integer, ForeignKey("staff.id"))
+    date = Column(String)  # YYYY-MM-DD
+    clock_in = Column(String)  # HH:MM
+    clock_out = Column(String, nullable=True)  # HH:MM
+    hours_worked = Column(Float, default=0)  # 勤務時間（時間単位）
+    daily_wage = Column(Integer, default=0)  # その日の給与（計算済み）
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Cast(Base):
     # 源氏名を使用
     __tablename__ = "casts"
@@ -150,7 +162,8 @@ class Staff(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     role = Column(String)  # waiter, kitchen, manager, catch, driver, other
-    hourly_rate = Column(Integer, default=1000)
+    salary_type = Column(String, default="hourly")  # hourly, daily, monthly
+    salary_amount = Column(Integer, default=1000)  # 時給/日給/月給の金額
     phone = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -286,22 +299,46 @@ class ShiftCreate(BaseModel):
 class StaffCreate(BaseModel):
     name: str
     role: str
-    hourly_rate: int = 1000
+    salary_type: str = "hourly"  # hourly, daily, monthly
+    salary_amount: int = 1000
     phone: Optional[str] = None
 
 class StaffUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
-    hourly_rate: Optional[int] = None
+    salary_type: Optional[str] = None
+    salary_amount: Optional[int] = None
     phone: Optional[str] = None
+
+class StaffAttendanceCreate(BaseModel):
+    staff_id: int
+    date: str
+    clock_in: str
+
+class StaffAttendanceClockOut(BaseModel):
+    clock_out: str
+    hours_worked: Optional[float] = None
+    daily_wage: Optional[int] = None
 
 class StaffResponse(BaseModel):
     id: int
     name: str
     role: str
-    hourly_rate: int
+    salary_type: str = "hourly"
+    salary_amount: int = 1000
     phone: Optional[str]
     is_active: bool
+    class Config:
+        from_attributes = True
+
+class StaffAttendanceResponse(BaseModel):
+    id: int
+    staff_id: int
+    date: str
+    clock_in: str
+    clock_out: Optional[str]
+    hours_worked: float = 0
+    daily_wage: int = 0
     class Config:
         from_attributes = True
 
@@ -555,6 +592,113 @@ def delete_staff(staff_id: int, db: Session = Depends(get_db)):
     db_staff.is_active = False  # 論理削除
     db.commit()
     return {"message": "Staff deleted"}
+
+# スタッフ勤怠管理
+@app.get("/api/staff-attendance")
+def get_staff_attendance(date: Optional[str] = None, db: Session = Depends(get_db)):
+    """スタッフ勤怠一覧を取得"""
+    query = db.query(StaffAttendance)
+    if date:
+        query = query.filter(StaffAttendance.date == date)
+    attendances = query.all()
+    
+    # スタッフ情報を付加
+    result = []
+    for att in attendances:
+        staff = db.query(Staff).filter(Staff.id == att.staff_id).first()
+        result.append({
+            "id": att.id,
+            "staff_id": att.staff_id,
+            "staff_name": staff.name if staff else "不明",
+            "role": staff.role if staff else "",
+            "salary_type": staff.salary_type if staff else "hourly",
+            "salary_amount": staff.salary_amount if staff else 0,
+            "date": att.date,
+            "clock_in": att.clock_in,
+            "clock_out": att.clock_out,
+            "hours_worked": att.hours_worked,
+            "daily_wage": att.daily_wage
+        })
+    return result
+
+@app.post("/api/staff-attendance")
+def create_staff_attendance(data: StaffAttendanceCreate, db: Session = Depends(get_db)):
+    """スタッフ出勤記録を作成"""
+    # 既に同日の出勤があるかチェック
+    existing = db.query(StaffAttendance).filter(
+        StaffAttendance.staff_id == data.staff_id,
+        StaffAttendance.date == data.date
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Already clocked in today")
+    
+    attendance = StaffAttendance(
+        staff_id=data.staff_id,
+        date=data.date,
+        clock_in=data.clock_in
+    )
+    db.add(attendance)
+    db.commit()
+    db.refresh(attendance)
+    return attendance
+
+@app.put("/api/staff-attendance/{attendance_id}/clock-out")
+def staff_clock_out(attendance_id: int, data: StaffAttendanceClockOut, db: Session = Depends(get_db)):
+    """スタッフ退勤処理"""
+    attendance = db.query(StaffAttendance).filter(StaffAttendance.id == attendance_id).first()
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    
+    # スタッフ情報を取得
+    staff = db.query(Staff).filter(Staff.id == attendance.staff_id).first()
+    
+    attendance.clock_out = data.clock_out
+    
+    # 勤務時間を計算
+    if attendance.clock_in and data.clock_out:
+        try:
+            clock_in_parts = attendance.clock_in.split(":")
+            clock_out_parts = data.clock_out.split(":")
+            in_minutes = int(clock_in_parts[0]) * 60 + int(clock_in_parts[1])
+            out_minutes = int(clock_out_parts[0]) * 60 + int(clock_out_parts[1])
+            
+            # 日をまたぐ場合
+            if out_minutes < in_minutes:
+                out_minutes += 24 * 60
+            
+            hours_worked = (out_minutes - in_minutes) / 60
+            attendance.hours_worked = round(hours_worked, 2)
+            
+            # 日給を計算
+            if staff:
+                if staff.salary_type == "hourly":
+                    attendance.daily_wage = int(staff.salary_amount * hours_worked)
+                elif staff.salary_type == "daily":
+                    attendance.daily_wage = staff.salary_amount
+                elif staff.salary_type == "monthly":
+                    # 月給の場合、1日あたり = 月給 / 25日
+                    attendance.daily_wage = int(staff.salary_amount / 25)
+        except:
+            pass
+    
+    db.commit()
+    db.refresh(attendance)
+    return attendance
+
+@app.get("/api/staff-attendance/today-total")
+def get_today_staff_cost(db: Session = Depends(get_db)):
+    """今日のスタッフ人件費合計を取得"""
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    attendances = db.query(StaffAttendance).filter(StaffAttendance.date == today).all()
+    total_cost = sum(att.daily_wage or 0 for att in attendances)
+    
+    return {
+        "date": today,
+        "total_staff_cost": total_cost,
+        "staff_count": len(attendances)
+    }
 
 # メニュー管理
 @app.get("/api/menu", response_model=List[MenuItemResponse])
