@@ -603,7 +603,7 @@
                     </button>
                     <button onclick="showTab('tables')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">🪑</span>
-                        <span>テーブル設定</span>
+                        <span>テーブル</span>
                     </button>
                     <button onclick="showTab('orders')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">🍽️</span>
@@ -620,10 +620,6 @@
                     <button onclick="showTab('menu')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">📜</span>
                         <span>メニュー管理</span>
-                    </button>
-                    <button onclick="showTab('table-settings')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
-                        <span class="text-lg">🪑</span>
-                        <span>テーブル設定</span>
                     </button>
                     <button onclick="showTab('casts')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">👥</span>
@@ -731,9 +727,14 @@
                     </div>
                 </div>
 
-                <!-- テーブル設定 -->
+                <!-- テーブル -->
                 <div id="tables-tab" class="tab-content">
-                    <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-8 md:mb-10">テーブル設定</h1>
+                    <div class="flex items-center justify-between mb-8 md:mb-10">
+                        <h1 class="text-4xl md:text-5xl font-bold gold-accent">テーブル</h1>
+                        <button onclick="openTableSettingsModal()" class="luxury-btn px-4 py-2 rounded-xl text-sm flex items-center gap-2">
+                            ⚙️ 設定
+                        </button>
+                    </div>
 
                     <div id="tablesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
                     </div>
@@ -881,22 +882,6 @@
                         </button>
                     </div>
                     <div id="menuGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"></div>
-                </div>
-
-                <!-- テーブル設定 -->
-                <div id="table-settings-tab" class="tab-content">
-                    <div class="mb-6 md:mb-8">
-                        <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-4">テーブル設定</h1>
-                        <p class="text-gray-400">テーブルの追加・編集・削除ができます</p>
-                    </div>
-                    
-                    <div class="mb-6 flex justify-end">
-                        <button onclick="openAddTableModal()" class="luxury-btn px-6 md:px-8 py-3 rounded-xl text-sm">
-                            ➕ テーブル追加
-                        </button>
-                    </div>
-                    
-                    <div id="tableSettingsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"></div>
                 </div>
 
                 <!-- キャスト管理 -->
@@ -1288,6 +1273,26 @@
                         <button type="button" onclick="closeModal('editMenuModal')" class="flex-1 bg-gray-800 text-gray-300 py-3 md:py-4 rounded-xl hover:bg-gray-700 transition text-sm">キャンセル</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル: テーブル設定（一覧） -->
+    <div id="tableSettingsModal" class="modal fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-70 p-4">
+        <div class="w-full max-w-2xl glass-effect rounded-2xl shadow-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="border-b border-gray-700 px-6 md:px-8 py-5 md:py-6 flex items-center justify-between">
+                <h2 class="text-xl md:text-2xl font-bold gold-accent">テーブル設定</h2>
+                <button onclick="closeModal('tableSettingsModal')" class="text-gray-400 hover:text-gray-200 text-2xl">✕</button>
+            </div>
+            <div class="p-6 md:p-8 overflow-y-auto flex-1">
+                <div class="mb-4 flex justify-end">
+                    <button onclick="closeModal('tableSettingsModal'); openAddTableModal();" class="luxury-btn px-4 py-2 rounded-xl text-sm">
+                        ➕ テーブル追加
+                    </button>
+                </div>
+                <div id="tableSettingsList" class="space-y-3">
+                    <!-- テーブル一覧がここに入る -->
+                </div>
             </div>
         </div>
     </div>
@@ -3279,27 +3284,30 @@ async function syncWithBackend() {
 
         // ========== テーブル設定 ==========
         
-        function renderTableSettings() {
-            const grid = document.getElementById('tableSettingsGrid');
-            if (!grid) return;
+        function openTableSettingsModal() {
+            renderTableSettingsList();
+            document.getElementById('tableSettingsModal').classList.add('active');
+        }
+        
+        function renderTableSettingsList() {
+            const list = document.getElementById('tableSettingsList');
+            if (!list) return;
             
             if (appState.tables.length === 0) {
-                grid.innerHTML = '<p class="text-gray-500 text-center col-span-full py-8">テーブルがまだありません</p>';
+                list.innerHTML = '<p class="text-gray-500 text-center py-8">テーブルがまだありません</p>';
                 return;
             }
             
-            grid.innerHTML = appState.tables.map(table => `
-                <div class="glass-effect rounded-xl p-5 border border-white/10 hover:border-amber-500/30 transition cursor-pointer" onclick="openEditTableModal(${table.id})">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-xl font-bold text-white">${table.name}</h3>
+            list.innerHTML = appState.tables.map(table => `
+                <div class="glass-effect rounded-xl p-4 border border-white/10 hover:border-amber-500/30 transition flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg font-bold text-white">${table.name}</span>
                         ${table.is_vip ? '<span class="px-2 py-1 bg-amber-500/20 text-amber-300 text-xs rounded-full">VIP</span>' : ''}
+                        <span class="text-sm ${table.status === 'available' ? 'text-green-400' : 'text-amber-400'}">${table.status === 'available' ? '空席' : '使用中'}</span>
                     </div>
-                    <div class="text-sm text-gray-400">
-                        ステータス: <span class="${table.status === 'available' ? 'text-green-400' : 'text-amber-400'}">${table.status === 'available' ? '空席' : '使用中'}</span>
-                    </div>
-                    <div class="mt-3 text-xs text-gray-500">
-                        クリックして編集
-                    </div>
+                    <button onclick="closeModal('tableSettingsModal'); openEditTableModal(${table.id});" class="px-3 py-1 bg-gray-700 text-gray-300 rounded-lg text-sm hover:bg-gray-600">
+                        編集
+                    </button>
                 </div>
             `).join('');
         }
@@ -3331,7 +3339,7 @@ async function syncWithBackend() {
                 if (res.ok) {
                     const newTable = await res.json();
                     appState.tables.push(newTable);
-                    renderTableSettings();
+                    renderTableSettingsList();
                     renderTables();
                     closeModal('addTableModal');
                     showNotification('テーブルを追加しました');
@@ -3380,7 +3388,7 @@ async function syncWithBackend() {
                     if (idx !== -1) {
                         appState.tables[idx] = updated;
                     }
-                    renderTableSettings();
+                    renderTableSettingsList();
                     renderTables();
                     closeModal('editTableModal');
                     showNotification('テーブルを更新しました');
@@ -3409,7 +3417,7 @@ async function syncWithBackend() {
                 
                 if (res.ok) {
                     appState.tables = appState.tables.filter(t => t.id != tableId);
-                    renderTableSettings();
+                    renderTableSettingsList();
                     renderTables();
                     closeModal('editTableModal');
                     showNotification('テーブルを削除しました');
@@ -7224,11 +7232,6 @@ function setupCharts() {
             // オーダー管理タブを開いたらオーダーを読み込む
             if (tabName === 'orders') {
                 loadOrdersFromApi();
-            }
-            
-            // テーブル設定タブを開いたらテーブル一覧を描画
-            if (tabName === 'table-settings') {
-                renderTableSettings();
             }
         }
 
