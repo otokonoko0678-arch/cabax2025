@@ -854,8 +854,14 @@
                         <button onclick="filterMenuCategory('all')" class="menu-filter-btn active px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-amber-500/20 text-amber-300 border border-amber-500/30" data-category="all">
                             すべて
                         </button>
-                        <button onclick="filterMenuCategory('set')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="set">
-                            🎫 セット
+                        <button onclick="filterMenuCategory('drink')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="drink">
+                            🍹 ドリンク
+                        </button>
+                        <button onclick="filterMenuCategory('castdrink')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="castdrink">
+                            👩 キャスト/スタッフ
+                        </button>
+                        <button onclick="filterMenuCategory('tableset')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="tableset">
+                            🧊 卓セット
                         </button>
                         <button onclick="filterMenuCategory('bottle')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="bottle">
                             🍾 ボトル
@@ -865,9 +871,6 @@
                         </button>
                         <button onclick="filterMenuCategory('wine')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="wine">
                             🍷 ワイン
-                        </button>
-                        <button onclick="filterMenuCategory('drink')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="drink">
-                            🥃 ドリンク
                         </button>
                         <button onclick="filterMenuCategory('food')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="food">
                             🍽 フード
@@ -1206,11 +1209,12 @@
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">カテゴリ</label>
                         <select id="menuCategory" style="width:100%; padding:12px 16px; border-radius:12px; background:#2a2a2a; color:#f5f5f5; border:1px solid #444; font-size:14px; cursor:pointer;">
-                            <option value="set">セット</option>
+                            <option value="drink">ドリンク</option>
+                            <option value="castdrink">キャスト/スタッフドリンク</option>
+                            <option value="tableset">卓セット</option>
                             <option value="bottle" selected>ボトル</option>
                             <option value="champagne">シャンパン</option>
                             <option value="wine">ワイン</option>
-                            <option value="drink">ドリンク</option>
                             <option value="food">フード</option>
                         </select>
                     </div>
@@ -1248,11 +1252,12 @@
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">カテゴリ</label>
                         <select id="editMenuCategory" style="width:100%; padding:12px 16px; border-radius:12px; background:#2a2a2a; color:#f5f5f5; border:1px solid #444; font-size:14px; cursor:pointer;">
-                            <option value="set">セット</option>
+                            <option value="drink">ドリンク</option>
+                            <option value="castdrink">キャスト/スタッフドリンク</option>
+                            <option value="tableset">卓セット</option>
                             <option value="bottle">ボトル</option>
                             <option value="champagne">シャンパン</option>
                             <option value="wine">ワイン</option>
-                            <option value="drink">ドリンク</option>
                             <option value="food">フード</option>
                         </select>
                     </div>
@@ -1746,15 +1751,21 @@ function renderTableDetailPanel(session) {
   const btnSec = `${btnBase} bg-white/5 text-white hover:bg-white/10 border border-white/10`;
   const btnDis = `${btnBase} bg-white/5 text-white/30 border border-white/10`;
 
-  // セットドリンク（価格表示変更）
-  const setDrinkNames = ['麦焼酎', 'ウイスキー', 'ビール', 'カクテル', 'ソフトドリンク'];
+  // ドリンク価格表示
+  const customerDrinkNames = ['レモンサワー', 'コークハイ', 'ジンジャーハイ', 'ビール', 'カクテル', 'ソフトドリンク'];
+  const castDrinkNames = ['麦焼酎', 'ウイスキー'];
   const paidDrinkNames = ['ショット', 'グラスワイン'];
+  const tableSetNames = ['アイスセット', 'アイス（追加）', 'グラス（追加）', 'ウーロン茶ピッチャー', '緑茶ピッチャー', 'ソーダピッチャー', '紅茶ピッチャー', 'ジャスミン茶ピッチャー', 'コーヒーピッチャー', '水ピッチャー'];
   
   const menuOptions = menu.length
     ? menu.map(m => {
         let priceLabel = `¥${yen(m.price)}`;
-        if (setDrinkNames.includes(m.name)) {
-          priceLabel = 'セット込/サイズ別';
+        if (customerDrinkNames.includes(m.name)) {
+          priceLabel = 'セット込';
+        } else if (castDrinkNames.includes(m.name)) {
+          priceLabel = 'サイズ別';
+        } else if (tableSetNames.includes(m.name)) {
+          priceLabel = 'セット込';
         } else if (paidDrinkNames.includes(m.name)) {
           priceLabel = `¥${yen(m.price)}`;
         }
@@ -3725,10 +3736,8 @@ async function toggleOrderStatusFromList(sessionId, orderId, setServed) {
 
 // ========== ドリンク注文関連 ==========
 
-// 割り方・種類の定義
+// 割り方・種類の定義（お客様用ドリンク）
 const mixStylesAdmin = {
-    '麦焼酎': ['ロック', '水割り', 'お湯割り', 'ソーダ割り', 'ウーロン割り', '緑茶割り', 'レモンサワー'],
-    'ウイスキー': ['ロック', 'ストレート', '水割り', 'ハイボール', 'コーク割り', 'ジンジャー割り'],
     'ビール': ['生ビール', 'アイスビール', 'シャンディガフ', 'レッドアイ'],
     'カクテル': ['カシスオレンジ', 'カシスソーダ', 'カシスウーロン', 'ピーチオレンジ', 'ピーチウーロン', 'ファジーネーブル', 'カルーアミルク'],
     'ソフトドリンク': ['ウーロン茶', '緑茶', 'オレンジジュース', 'グレープフルーツジュース', 'コーラ', 'ジンジャエール', '炭酸水', 'カルピス', 'カルピスソーダ'],
@@ -3736,8 +3745,17 @@ const mixStylesAdmin = {
     'グラスワイン': ['グラスワイン（赤）', 'グラスワイン（白）', 'キティ', 'オペレーター']
 };
 
+// キャスト・スタッフドリンク用の割り方
+const castDrinkMixStylesAdmin = {
+    '麦焼酎': ['ロック', '水割り', 'ソーダ割り', '緑茶割り', '紅茶割り', 'ウーロン茶割り', 'ジャスミン割り', 'コーヒー割り', 'お湯割り', 'レモンサワー'],
+    'ウイスキー': ['ロック', 'ストレート', '水割り', 'ハイボール', 'コーク割り', 'ジンジャー割り']
+};
+
 // 有料ドリンク（お客様もセット込みではなく課金）
 const paidDrinksAdmin = ['ショット', 'グラスワイン'];
+
+// キャスト・スタッフ専用ドリンク
+const castOnlyDrinksAdmin = ['麦焼酎', 'ウイスキー'];
 
 // 現在選択中の割り方
 let selectedMixStyleAdmin = null;
@@ -3757,17 +3775,25 @@ function onOrderMenuChange() {
     const mixStyleSection = document.getElementById('mixStyleSection');
     const mixStyleOptions = document.getElementById('mixStyleOptions');
     
-    // ドリンクカテゴリかどうか
-    const isDrinkCategory = ['drink', 'bottle', 'champagne', 'wine'].includes(category);
-    const isDrinkOnly = category === 'drink';
-    const hasMixStyle = mixStylesAdmin[itemName] !== undefined;
+    // カテゴリ判定
+    const isCastDrink = category === 'castdrink';
+    const isTableSet = category === 'tableset';
+    const isDrinkCategory = ['drink', 'castdrink', 'bottle', 'champagne', 'wine'].includes(category);
+    const isDrinkOnly = ['drink', 'castdrink'].includes(category);
     const isPaidDrink = paidDrinksAdmin.includes(itemName);
+    const isCastOnlyDrink = castOnlyDrinksAdmin.includes(itemName);
+    
+    // 割り方スタイルを取得
+    const hasMixStyle = isCastDrink 
+        ? castDrinkMixStylesAdmin[itemName] !== undefined 
+        : mixStylesAdmin[itemName] !== undefined;
+    const currentMixStyles = isCastDrink ? castDrinkMixStylesAdmin : mixStylesAdmin;
     
     // 割り方選択セクション
     if (mixStyleSection && mixStyleOptions) {
         if (hasMixStyle) {
             mixStyleSection.classList.remove('hidden');
-            const styles = mixStylesAdmin[itemName];
+            const styles = currentMixStyles[itemName];
             mixStyleOptions.innerHTML = styles.map((style, index) => `
                 <label class="mix-style-admin-label flex items-center justify-center p-2 rounded-xl bg-black/20 ${index === 0 ? 'border-2 border-amber-500 bg-amber-500/20' : 'border border-white/10'} cursor-pointer hover:bg-black/30">
                     <input type="radio" name="mixStyleAdmin" value="${style}" ${index === 0 ? 'checked' : ''} onchange="updateMixStyleAdminStyle()" class="hidden">
@@ -3782,25 +3808,40 @@ function onOrderMenuChange() {
         }
     }
     
-    // ドリンクサイズ選択（drinkカテゴリのみ、ショット・グラスワイン以外）
-    // ただしお客様がデフォルト選択なので初期は非表示
-    if (drinkSizeSection) {
+    // 誰が飲むか選択セクション
+    const customerLabel = document.querySelector('.drink-for-label input[value="customer"]')?.parentElement;
+    
+    if (isCastDrink) {
+        // キャスト・スタッフドリンクはお客様選択なし
+        if (customerLabel) customerLabel.classList.add('hidden');
+        if (drinkForSection) drinkForSection.classList.remove('hidden');
+        // デフォルトでキャストを選択
+        const castRadio = document.querySelector('input[name="drinkFor"][value="cast"]');
+        if (castRadio) castRadio.checked = true;
+        updateDrinkForStyle();
+        // サイズ選択を表示
+        if (drinkSizeSection) drinkSizeSection.classList.remove('hidden');
+        // 人物選択を表示
+        onDrinkForChange();
+    } else if (isTableSet) {
+        // 卓セットは誰が飲むか不要
+        if (drinkForSection) drinkForSection.classList.add('hidden');
+        if (drinkSizeSection) drinkSizeSection.classList.add('hidden');
+    } else {
+        // 通常ドリンクはお客様選択あり
+        if (customerLabel) customerLabel.classList.remove('hidden');
+        if (drinkForSection) drinkForSection.classList.toggle('hidden', !isDrinkCategory);
         // 初期表示はお客様なのでサイズ選択は非表示
-        drinkSizeSection.classList.add('hidden');
+        if (drinkSizeSection) drinkSizeSection.classList.add('hidden');
+        // リセット
+        const customerRadio = document.querySelector('input[name="drinkFor"][value="customer"]');
+        if (customerRadio) customerRadio.checked = true;
+        updateDrinkForStyle();
     }
     
-    // 誰が飲むか選択（drink/bottle/champagne/wine）
-    if (drinkForSection) {
-        drinkForSection.classList.toggle('hidden', !isDrinkCategory);
-    }
-    
-    // リセット
+    // 人物選択リセット
     const personSection = document.getElementById('personSelectSection');
-    if (personSection) personSection.classList.add('hidden');
-    
-    const customerRadio = document.querySelector('input[name="drinkFor"][value="customer"]');
-    if (customerRadio) customerRadio.checked = true;
-    updateDrinkForStyle();
+    if (personSection && !isCastDrink) personSection.classList.add('hidden');
 }
 
 // 割り方選択スタイル更新

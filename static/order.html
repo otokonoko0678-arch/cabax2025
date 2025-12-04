@@ -333,6 +333,15 @@
               <button onclick="filterCategory('all')" class="category-tab active" data-category="all">
     すべて
 </button>
+<button onclick="filterCategory('drink')" class="category-tab" data-category="drink">
+    🍹 ドリンク
+</button>
+<button onclick="filterCategory('castdrink')" class="category-tab" data-category="castdrink">
+    👩 キャスト/スタッフ
+</button>
+<button onclick="filterCategory('tableset')" class="category-tab" data-category="tableset">
+    🧊 卓セット
+</button>
 <button onclick="filterCategory('bottle')" class="category-tab" data-category="bottle">
     🍾 ボトル
 </button>
@@ -342,14 +351,8 @@
 <button onclick="filterCategory('wine')" class="category-tab" data-category="wine">
     🍷 ワイン
 </button>
-<button onclick="filterCategory('drink')" class="category-tab" data-category="drink">
-    🥃 ドリンク
-</button>
 <button onclick="filterCategory('food')" class="category-tab" data-category="food">
     🍽️ フード
-</button>
-<button onclick="filterCategory('set')" class="category-tab" data-category="set">
-    🎫 セット
 </button>
             </div>
         </div>
@@ -1523,9 +1526,8 @@ async function requestCheck() {
         loadStaffForOrder();
         
         // 割り方・種類の定義
+        // ドリンクタブ用（お客様用）
         const mixStyles = {
-            '麦焼酎': ['ロック', '水割り', 'お湯割り', 'ソーダ割り', 'ウーロン割り', '緑茶割り', 'レモンサワー'],
-            'ウイスキー': ['ロック', 'ストレート', '水割り', 'ハイボール', 'コーク割り', 'ジンジャー割り'],
             'ビール': ['生ビール', 'アイスビール', 'シャンディガフ', 'レッドアイ'],
             'カクテル': ['カシスオレンジ', 'カシスソーダ', 'カシスウーロン', 'ピーチオレンジ', 'ピーチウーロン', 'ファジーネーブル', 'カルーアミルク'],
             'ソフトドリンク': ['ウーロン茶', '緑茶', 'オレンジジュース', 'グレープフルーツジュース', 'コーラ', 'ジンジャエール', '炭酸水', 'カルピス', 'カルピスソーダ'],
@@ -1533,8 +1535,17 @@ async function requestCheck() {
             'グラスワイン': ['グラスワイン（赤）', 'グラスワイン（白）', 'キティ', 'オペレーター']
         };
         
+        // キャスト・スタッフドリンク用（バック記録用）
+        const castDrinkMixStyles = {
+            '麦焼酎': ['ロック', '水割り', 'ソーダ割り', '緑茶割り', '紅茶割り', 'ウーロン茶割り', 'ジャスミン割り', 'コーヒー割り', 'お湯割り', 'レモンサワー'],
+            'ウイスキー': ['ロック', 'ストレート', '水割り', 'ハイボール', 'コーク割り', 'ジンジャー割り']
+        };
+        
         // 有料ドリンク（お客様もセット込みではなく課金）
         const paidDrinks = ['ショット', 'グラスワイン'];
+        
+        // キャスト・スタッフ専用ドリンク（お客様選択なし）
+        const castOnlyDrinks = ['麦焼酎', 'ウイスキー'];
         
         // メニュークリック時にモーダルを開く
         function openDrinkModal(itemId) {
@@ -1542,9 +1553,22 @@ async function requestCheck() {
             if (!item) return;
             
             const category = (item.category || '').toLowerCase();
-            const isDrinkCategory = ['drink', 'cocktail', 'soft', 'bottle', 'champagne', 'wine'].includes(category);
-            const isDrinkOnly = ['drink', 'cocktail', 'soft'].includes(category);
-            const hasMixStyle = mixStyles[item.name] !== undefined;
+            const isCastDrink = category === 'castdrink';
+            const isTableSet = category === 'tableset';
+            const isDrinkCategory = ['drink', 'castdrink', 'bottle', 'champagne', 'wine'].includes(category);
+            const isDrinkOnly = ['drink', 'castdrink'].includes(category);
+            
+            // 割り方スタイルを取得（通常ドリンク or キャストドリンク）
+            const hasMixStyle = isCastDrink 
+                ? castDrinkMixStyles[item.name] !== undefined 
+                : mixStyles[item.name] !== undefined;
+            const currentMixStyles = isCastDrink ? castDrinkMixStyles : mixStyles;
+            
+            // 卓セットは直接カートに追加
+            if (isTableSet) {
+                addToCart(itemId);
+                return;
+            }
             
             // ドリンク系でない場合は直接カートに追加
             if (!isDrinkCategory) {
@@ -1558,13 +1582,14 @@ async function requestCheck() {
                 quantity: 1,
                 isDrinkCategory: isDrinkCategory,
                 isDrinkOnly: isDrinkOnly,
+                isCastDrink: isCastDrink,
                 hasMixStyle: hasMixStyle,
                 selectedMixStyle: null
             };
             
             // モーダル表示
             document.getElementById('drinkModalItemId').value = itemId;
-            document.getElementById('drinkModalTitle').textContent = isDrinkOnly ? 'ドリンク注文' : item.category + '注文';
+            document.getElementById('drinkModalTitle').textContent = isCastDrink ? 'キャスト/スタッフドリンク' : (isDrinkOnly ? 'ドリンク注文' : item.category + '注文');
             document.getElementById('drinkModalItemName').textContent = item.name;
             document.getElementById('drinkModalQty').textContent = '1';
             
@@ -1574,7 +1599,7 @@ async function requestCheck() {
             
             if (hasMixStyle) {
                 mixStyleSection.classList.remove('hidden');
-                const styles = mixStyles[item.name];
+                const styles = currentMixStyles[item.name];
                 mixStyleOptions.innerHTML = styles.map((style, index) => `
                     <label class="mix-style-label flex items-center justify-center p-3 rounded-xl bg-black/20 ${index === 0 ? 'border-2 border-amber-500 bg-amber-500/20' : 'border border-white/10'} cursor-pointer">
                         <input type="radio" name="mixStyleOrder" value="${style}" ${index === 0 ? 'checked' : ''} onchange="updateMixStyleOrderStyle()" class="hidden">
@@ -1587,13 +1612,32 @@ async function requestCheck() {
                 mixStyleOptions.innerHTML = '';
             }
             
-            // ドリンクサイズセクション - デフォルトはお客様なので非表示
-            const sizeSection = document.getElementById('drinkSizeSectionOrder');
-            sizeSection.classList.add('hidden');
-            if (isDrinkOnly) {
-                // シングルをデフォルト選択（キャスト/スタッフ選択時に表示される）
+            // 誰が飲むかセクション
+            const drinkForSection = document.getElementById('drinkForSectionOrder');
+            const customerLabel = document.querySelector('.drink-for-order-label input[value="customer"]')?.parentElement;
+            
+            if (isCastDrink) {
+                // キャスト・スタッフドリンクはお客様選択なし
+                if (customerLabel) customerLabel.classList.add('hidden');
+                // デフォルトでキャストを選択
+                document.querySelector('input[name="drinkForOrder"][value="cast"]').checked = true;
+                updateDrinkForOrderStyle();
+                // サイズ選択を表示
+                document.getElementById('drinkSizeSectionOrder').classList.remove('hidden');
                 document.querySelector('input[name="drinkSizeOrder"][value="single"]').checked = true;
                 updateDrinkSizeOrderStyle();
+                updateDrinkModalPrice();
+                // 人物選択を表示
+                onDrinkForOrderChange();
+            } else {
+                // 通常ドリンクはお客様選択あり
+                if (customerLabel) customerLabel.classList.remove('hidden');
+                document.querySelector('input[name="drinkForOrder"][value="customer"]').checked = true;
+                updateDrinkForOrderStyle();
+                // サイズ選択は非表示（お客様デフォルト）
+                document.getElementById('drinkSizeSectionOrder').classList.add('hidden');
+                document.getElementById('personSelectSectionOrder').classList.add('hidden');
+                document.getElementById('drinkBackInfoOrder').classList.add('hidden');
             }
             
             // 初期価格設定
@@ -1601,16 +1645,13 @@ async function requestCheck() {
             if (isPaidDrink) {
                 // ショット・グラスワインは誰が飲んでも2,000円
                 document.getElementById('drinkModalItemPrice').textContent = '¥' + item.price.toLocaleString();
+            } else if (isCastDrink) {
+                // キャストドリンクはサイズ別価格
+                updateDrinkModalPrice();
             } else {
                 // お客様のドリンクはセット料金込み
                 document.getElementById('drinkModalItemPrice').textContent = 'セット料金込';
             }
-            
-            // 誰が飲むかをリセット
-            document.querySelector('input[name="drinkForOrder"][value="customer"]').checked = true;
-            updateDrinkForOrderStyle();
-            document.getElementById('personSelectSectionOrder').classList.add('hidden');
-            document.getElementById('drinkBackInfoOrder').classList.add('hidden');
             
             document.getElementById('drinkOrderModal').classList.remove('hidden');
             document.getElementById('drinkOrderModal').classList.add('flex');

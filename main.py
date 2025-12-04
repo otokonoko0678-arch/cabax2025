@@ -376,14 +376,31 @@ def startup_event():
     # メニュー
     if db.query(MenuItem).count() == 0:
         menu_items = [
-            # === ドリンク（選択式） ===
-            MenuItem(name="麦焼酎", price=1000, category="drink", description="shochu"),
-            MenuItem(name="ウイスキー", price=1000, category="drink", description="whisky"),
-            MenuItem(name="ビール", price=1000, category="drink", description="beer"),
-            MenuItem(name="カクテル", price=1000, category="drink", description="cocktail"),
-            MenuItem(name="ソフトドリンク", price=1000, category="drink", description="soft"),
+            # === ドリンク（お客様用・セット込み） ===
+            MenuItem(name="レモンサワー", price=0, category="drink", description="お客様用"),
+            MenuItem(name="コークハイ", price=0, category="drink", description="お客様用"),
+            MenuItem(name="ジンジャーハイ", price=0, category="drink", description="お客様用"),
+            MenuItem(name="ビール", price=0, category="drink", description="beer"),
+            MenuItem(name="カクテル", price=0, category="drink", description="cocktail"),
+            MenuItem(name="ソフトドリンク", price=0, category="drink", description="soft"),
             MenuItem(name="ショット", price=2000, category="drink", description="shot"),
             MenuItem(name="グラスワイン", price=2000, category="drink", description="glasswine"),
+            
+            # === キャスト・スタッフドリンク（バック記録用） ===
+            MenuItem(name="麦焼酎", price=1000, category="castdrink", description="shochu"),
+            MenuItem(name="ウイスキー", price=1000, category="castdrink", description="whisky"),
+            
+            # === 卓セット ===
+            MenuItem(name="アイスセット", price=0, category="tableset", description="グラス・アイスペール・氷"),
+            MenuItem(name="アイス（追加）", price=0, category="tableset", description="氷の追加"),
+            MenuItem(name="グラス（追加）", price=0, category="tableset", description="グラスの追加"),
+            MenuItem(name="ウーロン茶ピッチャー", price=0, category="tableset", description="割り物"),
+            MenuItem(name="緑茶ピッチャー", price=0, category="tableset", description="割り物"),
+            MenuItem(name="ソーダピッチャー", price=0, category="tableset", description="割り物"),
+            MenuItem(name="紅茶ピッチャー", price=0, category="tableset", description="割り物"),
+            MenuItem(name="ジャスミン茶ピッチャー", price=0, category="tableset", description="割り物"),
+            MenuItem(name="コーヒーピッチャー", price=0, category="tableset", description="割り物"),
+            MenuItem(name="水ピッチャー", price=0, category="tableset", description="割り物"),
             
             # === シャンパン ===
             MenuItem(name="アルマンド ブリニャック ブリュット", price=120000, category="champagne", description="ゴールドボトル", premium=True),
