@@ -4873,11 +4873,49 @@ async function openTableDetail(tableId) {
         btnExtend30.onclick = async () => {
           try {
             msg('30分延長（自動注文追加）中...');
+            
+            // セッション情報を取得
+            const sessionData = appState.activeSessions.find(s => Number(s.id) === Number(sessionId));
+            const guests = Number(sessionData?.guests ?? 1);
+            const shimeiCastsStr = sessionData?.shimei_casts || '';
+            const shimeiCount = shimeiCastsStr ? shimeiCastsStr.split(',').filter(n => n.trim()).length : 0;
+            
+            // 延長料金計算: 人数×3000 + 指名数×2000
+            const setExtension = guests * 3000;
+            const shimeiExtension = shimeiCount * 2000;
+            
+            // 延長APIを呼ぶ
             await fetchJson(`/sessions/${sessionId}/extend`, {
               method: 'POST'
             });
+            
+            // 延長セット料金を注文に追加
+            if (setExtension > 0) {
+              await fetchJson(`/sessions/${sessionId}/add-charge`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  item_name: `延長30分（${guests}名×3000）`,
+                  price: setExtension,
+                  quantity: 1
+                })
+              });
+            }
+            
+            // 延長指名料を注文に追加
+            if (shimeiExtension > 0) {
+              await fetchJson(`/sessions/${sessionId}/add-charge`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  item_name: `延長指名料（${shimeiCount}名×2000）`,
+                  price: shimeiExtension,
+                  quantity: 1
+                })
+              });
+            }
+            
             msg('30分延長しました');
             await refreshPanel();
+            if (typeof syncWithBackend === 'function') await syncWithBackend();
           } catch (e) {
             console.error(e);
             msg(`延長失敗: ${e.message}`, true);
@@ -4889,11 +4927,49 @@ async function openTableDetail(tableId) {
         btnExtend60.onclick = async () => {
           try {
             msg('60分延長（自動注文追加）中...');
+            
+            // セッション情報を取得
+            const sessionData = appState.activeSessions.find(s => Number(s.id) === Number(sessionId));
+            const guests = Number(sessionData?.guests ?? 1);
+            const shimeiCastsStr = sessionData?.shimei_casts || '';
+            const shimeiCount = shimeiCastsStr ? shimeiCastsStr.split(',').filter(n => n.trim()).length : 0;
+            
+            // 延長料金計算: 人数×5000 + 指名数×2000
+            const setExtension = guests * 5000;
+            const shimeiExtension = shimeiCount * 2000;
+            
+            // 延長APIを呼ぶ
             await fetchJson(`/sessions/${sessionId}/extend`, {
               method: 'POST'
             });
+            
+            // 延長セット料金を注文に追加
+            if (setExtension > 0) {
+              await fetchJson(`/sessions/${sessionId}/add-charge`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  item_name: `延長60分（${guests}名×5000）`,
+                  price: setExtension,
+                  quantity: 1
+                })
+              });
+            }
+            
+            // 延長指名料を注文に追加
+            if (shimeiExtension > 0) {
+              await fetchJson(`/sessions/${sessionId}/add-charge`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  item_name: `延長指名料（${shimeiCount}名×2000）`,
+                  price: shimeiExtension,
+                  quantity: 1
+                })
+              });
+            }
+            
             msg('60分延長しました');
             await refreshPanel();
+            if (typeof syncWithBackend === 'function') await syncWithBackend();
           } catch (e) {
             console.error(e);
             msg(`延長失敗: ${e.message}`, true);
