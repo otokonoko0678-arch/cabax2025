@@ -1948,20 +1948,14 @@ function renderTableDetailPanel(session) {
             <div class="font-bold text-white mb-3">セッション開始（管理）</div>
             
             <!-- 基本情報 -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-              <label class="block sm:col-span-2">
-                <div class="text-[11px] text-white/50 mb-1">担当キャスト（着席時）</div>
-                <select id="selStartCast" class="rounded-xl px-3 py-2 w-full bg-black/40 border border-white/10 text-white outline-none focus:border-[#d6b36a]/60">
-                  ${castOptions}
-                </select>
-              </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <label class="block">
                 <div class="text-[11px] text-white/50 mb-1">客人数</div>
                 <input id="inpStartGuests" type="number" min="1" value="1"
                        onchange="updateStartCharges()"
                        class="w-full rounded-xl px-3 py-2 bg-black/40 border border-white/10 text-white outline-none focus:border-[#d6b36a]/60">
               </label>
-              <label class="block sm:col-span-3">
+              <label class="block">
                 <div class="text-[11px] text-white/50 mb-1">キャッチ（任意）</div>
                 <input id="inpStartCatch" type="text" placeholder="例）山田"
                        class="w-full rounded-xl px-3 py-2 bg-black/40 border border-white/10 text-white outline-none focus:border-[#d6b36a]/60">
@@ -1971,9 +1965,10 @@ function renderTableDetailPanel(session) {
             <!-- 指名キャスト（複数選択可） -->
             <div class="border-t border-white/10 pt-4 mt-4">
               <div class="font-bold text-white mb-3 flex items-center gap-2">
-                👑 指名キャスト
-                <span class="text-xs text-white/40">（複数選択可・指名料は1人あたり¥2,000）</span>
+                👑 指名
+                <span class="text-xs text-white/40">（複数可・バックは人数で等分）</span>
               </div>
+              <div class="text-xs text-white/50 mb-2">※ 指名なしの場合は「フリー」扱い</div>
               <div id="shimeiCastList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-32 overflow-y-auto">
                 ${castCheckboxes}
               </div>
@@ -2581,6 +2576,7 @@ async function startSessionForTable(tableId, options = {}) {
         companionName = "",
         nominationType = null,
         nominationFee = 0,
+        shimeiCasts = "",
     } = options;
 
     const payload = {
@@ -2592,6 +2588,7 @@ async function startSessionForTable(tableId, options = {}) {
         companion_name: companionName || null,
         nomination_type: nominationType,
         nomination_fee: nominationFee,
+        shimei_casts: shimeiCasts || null,
     };
 
     try {
@@ -4442,8 +4439,6 @@ async function openTableDetail(tableId) {
           btnStart.onclick = async () => {
             try {
               msg('セッション開始中...');
-              const castVal = (document.getElementById('selStartCast')?.value ?? '').toString();
-              const castId = castVal === 'free' ? 0 : Number(castVal);
               const guests = Number(document.getElementById('inpStartGuests')?.value ?? 1);
               const catchStaff = (document.getElementById('inpStartCatch')?.value ?? '').trim();
               
@@ -4456,9 +4451,10 @@ async function openTableDetail(tableId) {
                 name: c.dataset.name
               }));
               const hasShimei = shimeiCasts.length > 0;
+              
+              // 最初の指名キャストをcast_idとして使用（指名なしなら0=フリー）
+              const castId = hasShimei ? shimeiCasts[0].id : 0;
 
-              if (castVal === '') throw new Error('担当キャストを選ぶか「フリー」を選択してください');
-              if (castVal !== 'free' && (!castId || castId < 0)) throw new Error('担当キャストの値が不正です');
               if (!guests || guests <= 0) throw new Error('客人数を入力してください');
 
               // セッション作成
@@ -5995,27 +5991,51 @@ function populateCastSelects() {
                 const hourlyWage = (cast.hourlyRate || 2500) * totalHours;
                 
                 let totalDb = 0;
+                let nominationFees = 0;
+                let companionBack = 0;
+                let salesBack = 0;  // 指名時の会計10%バック
+                
                 const allSessions = [
                     ...(appState.activeSessions || []),
                     ...(appState.checkoutHistory || [])
                 ];
                 
                 allSessions.forEach(session => {
+                    // ドリンクバック計算
                     if (session.castName === cast.name && session.orders) {
                         session.orders.filter(o => o.isDrinkBack && o.castName === cast.name).forEach(order => {
                             totalDb += Math.floor(order.price * order.quantity * 0.6);
                         });
                     }
-                });
-                
-                let nominationFees = 0;
-                allSessions.forEach(session => {
-                    if (session.nomination && session.nomination.castName === cast.name) {
-                        nominationFees += session.nomination.fee;
+                    
+                    // 指名関連のバック計算
+                    if (session.shimei_casts) {
+                        const shimeiNames = session.shimei_casts.split(',').map(n => n.trim());
+                        if (shimeiNames.includes(cast.name) || shimeiNames.includes(cast.stage_name)) {
+                            // 指名料を人数で等分（バック率60%）
+                            const perCast = Math.floor(session.nomination_fee / shimeiNames.length * 0.6);
+                            nominationFees += perCast;
+                            
+                            // 会計の10%バック（人数で等分）
+                            const sessionTotal = session.current_total || session.total || 0;
+                            const salesBackPerCast = Math.floor(sessionTotal * 0.1 / shimeiNames.length);
+                            salesBack += salesBackPerCast;
+                        }
+                    } else if (session.nomination && session.nomination.castName === cast.name) {
+                        // 従来方式（後方互換）
+                        nominationFees += Math.floor(session.nomination.fee * 0.6);
+                        // 会計10%バック
+                        const sessionTotal = session.current_total || session.total || 0;
+                        salesBack += Math.floor(sessionTotal * 0.1);
+                    }
+                    
+                    // 同伴バック（フルバック）
+                    if (session.has_companion && session.castName === cast.name) {
+                        companionBack += 3000;  // 同伴料フルバック
                     }
                 });
                 
-                const totalSalary = hourlyWage + totalDb + nominationFees;
+                const totalSalary = hourlyWage + totalDb + nominationFees + companionBack + salesBack;
                 
                 return {
                     cast: cast,
@@ -6024,6 +6044,8 @@ function populateCastSelects() {
                     hourlyWage: hourlyWage,
                     totalDb: totalDb,
                     nominationFees: nominationFees,
+                    companionBack: companionBack,
+                    salesBack: salesBack,
                     totalSalary: totalSalary
                 };
             });
@@ -6076,8 +6098,16 @@ function populateCastSelects() {
                             <span class="font-semibold text-pink-300">¥${data.totalDb.toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-400">⭐ 指名料合計</span>
+                            <span class="text-gray-400">⭐ 指名料バック</span>
                             <span class="font-semibold text-purple-300">¥${data.nominationFees.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">💰 売上バック（10%）</span>
+                            <span class="font-semibold text-green-300">¥${data.salesBack.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">🚗 同伴バック</span>
+                            <span class="font-semibold text-amber-300">¥${data.companionBack.toLocaleString()}</span>
                         </div>
                     </div>
                     
