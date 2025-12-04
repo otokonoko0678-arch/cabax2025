@@ -2631,7 +2631,37 @@ function showReceipt(session, orders) {
     // TAX/サービス料を分離して計算
     const taxItem = orderItems.find(item => item.name.includes('TAX') || item.name.includes('サービス'));
     const itemsWithoutTax = orderItems.filter(item => !item.name.includes('TAX') && !item.name.includes('サービス'));
-    const subtotalAmount = itemsWithoutTax.reduce((sum, item) => sum + item.subtotal, 0);
+    
+    // シングルチャージをまとめる
+    const singleChargeItems = itemsWithoutTax.filter(item => item.name.includes('シングルチャージ'));
+    const otherItems = itemsWithoutTax.filter(item => !item.name.includes('シングルチャージ'));
+    
+    // シングルチャージを1行にまとめる
+    let consolidatedItems = [...otherItems];
+    if (singleChargeItems.length > 0) {
+        const totalSingleQty = singleChargeItems.reduce((sum, item) => sum + item.qty, 0);
+        const totalSingleAmount = singleChargeItems.reduce((sum, item) => sum + item.subtotal, 0);
+        consolidatedItems.push({
+            name: 'シングルチャージ',
+            qty: totalSingleQty,
+            price: 2000,
+            subtotal: totalSingleAmount
+        });
+    }
+    
+    // 並び順: セット料金 → 指名料 → 同伴料 → 延長料金 → ドリンク等 → シングルチャージ
+    const sortOrder = (name) => {
+        if (name.includes('セット料金')) return 1;
+        if (name.includes('指名料') && !name.includes('延長')) return 2;
+        if (name.includes('同伴')) return 3;
+        if (name.includes('延長')) return 4;
+        if (name.includes('シングルチャージ')) return 99; // 最後
+        return 50; // その他（ドリンク等）
+    };
+    
+    consolidatedItems.sort((a, b) => sortOrder(a.name) - sortOrder(b.name));
+    
+    const subtotalAmount = consolidatedItems.reduce((sum, item) => sum + item.subtotal, 0);
     const taxAmount = taxItem ? taxItem.subtotal : 0;
     
     // 合計はTAX込みで計算
@@ -2662,7 +2692,7 @@ function showReceipt(session, orders) {
         <div class="border-t-2 border-dashed border-gray-400 pt-4 mb-4">
             <h2 class="font-bold mb-2">ご注文明細</h2>
             <div class="text-sm space-y-1">
-                ${itemsWithoutTax.length > 0 ? itemsWithoutTax.map(item => `
+                ${consolidatedItems.length > 0 ? consolidatedItems.map(item => `
                     <div class="flex justify-between">
                         <span>${item.name} × ${item.qty}</span>
                         <span>¥${item.subtotal.toLocaleString()}</span>
