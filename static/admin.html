@@ -619,7 +619,7 @@
                     </button>
                     <button onclick="showTab('tables')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">🪑</span>
-                        <span>テーブル</span>
+                        <span>テーブル管理</span>
                     </button>
                     <button onclick="showTab('orders')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">🍽️</span>
@@ -2639,7 +2639,7 @@ function showReceipt(session, orders) {
         
         <div class="mb-4 text-sm">
             <div class="flex justify-between py-1">
-                <span>テーブル</span>
+                <span>テーブル管理</span>
                 <span class="font-bold">${tableName}</span>
             </div>
             <div class="flex justify-between py-1">
@@ -3465,12 +3465,24 @@ async function syncWithBackend() {
         }
 
         // カテゴリ正規化（API値 → 統一キー）
-        function normalizeCategory(category) {
+        function normalizeCategory(category, itemName = '') {
+            // item_nameからカテゴリを推定
+            if (itemName) {
+                const name = String(itemName).toLowerCase();
+                if (name.includes('セット料金') || name.includes('指名料') || name.includes('シングルチャージ') || name.includes('同伴料') || name.includes('延長')) {
+                    return 'set';
+                }
+                if (name.includes('tax') || name.includes('サービス')) {
+                    return 'set'; // TAXもセットに含める
+                }
+            }
+            
             if (!category) return 'other';
             const c = String(category).toLowerCase().trim();
             const map = {
                 'set': 'set',
                 'セット': 'set',
+                'tableset': 'set',
                 'fee_set': 'set',
                 'fee_inhouse': 'set',
                 'fee_hon': 'set',
@@ -3482,6 +3494,7 @@ async function syncWithBackend() {
                 'ワイン': 'wine',
                 'drink': 'drink',
                 'ドリンク': 'drink',
+                'castdrink': 'drink',
                 'food': 'food',
                 'フード': 'food'
             };
@@ -4173,12 +4186,21 @@ function renderOrders() {
             ? '<span class="px-2 py-1 text-xs font-bold rounded-full bg-green-500/20 text-green-400 border border-green-500/30">✓ 提供済</span>'
             : '<span class="px-2 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">⏳ 未提供</span>';
         
-        const createdAt = order.created_at ? new Date(order.created_at) : null;
+        // created_atをパース（UTCとして解釈されるのでJSTに変換）
+        let createdAt = null;
+        if (order.created_at) {
+            // ISO文字列にZがなければUTCとして扱う
+            const isoStr = order.created_at.includes('Z') || order.created_at.includes('+') 
+                ? order.created_at 
+                : order.created_at + 'Z';
+            createdAt = new Date(isoStr);
+        }
+        
         const timeStr = createdAt 
             ? createdAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
             : '--:--';
         
-        // 経過時間（UTCで保存されている場合を考慮）
+        // 経過時間
         let elapsedStr = '';
         if (createdAt && !isServed) {
             const now = new Date();
@@ -4889,8 +4911,9 @@ async function openTableDetail(tableId) {
             let qty = Number(document.getElementById('inpAddOrderQty')?.value ?? 1);
             if (!itemId || qty <= 0) throw new Error('メニュー/数量を確認してください');
             
-            // メニュー情報を取得
-            const menuItem = menu.find(m => m.id === itemId);
+            // メニュー情報を取得（APIから）
+            const menuData = await fetchJson('/menu', { method: 'GET' }).catch(() => []);
+            const menuItem = menuData.find(m => m.id === itemId);
             const category = menuItem?.category?.toLowerCase() || '';
             const itemName = menuItem?.name || '';
             const isDrinkCategory = ['drink', 'bottle', 'champagne', 'wine'].includes(category);
@@ -7238,7 +7261,8 @@ function renderDailyReport() {
             sessions.forEach(session => {
                 if (session.orders) {
                     session.orders.forEach(order => {
-                        const cat = normalizeCategory(order.category);
+                        const itemName = order.item_name || order.itemName || '';
+                        const cat = normalizeCategory(order.category, itemName);
                         if (categoryTotals.hasOwnProperty(cat)) {
                             categoryTotals[cat] += (order.price || 0) * (order.quantity || 1);
                         }
