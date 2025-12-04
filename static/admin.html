@@ -633,6 +633,10 @@
                         <span class="text-lg">📋</span>
                         <span>日報</span>
                     </button>
+                    <button onclick="showTab('store-settings')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
+                        <span class="text-lg">⚙️</span>
+                        <span>店舗設定</span>
+                    </button>
                     <button onclick="showTab('reports')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">📈</span>
                         <span>売上レポート</span>
@@ -1067,6 +1071,99 @@
                     </div>
                     
                     <div id="dailyReportContent"></div>
+                </div>
+
+                <!-- 店舗設定 -->
+                <div id="store-settings-tab" class="tab-content">
+                    <div class="mb-6 md:mb-8">
+                        <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-4">店舗設定</h1>
+                        <p class="text-gray-400">バック率など店舗固有の設定を管理します</p>
+                    </div>
+                    
+                    <!-- バック設定 -->
+                    <div class="glass-effect rounded-2xl p-6 mb-6">
+                        <h2 class="text-xl font-bold text-white mb-4">バック設定</h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- ドリンクバック -->
+                            <div class="p-4 bg-black/20 rounded-xl border border-white/10">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-white font-semibold">ドリンクバック（DB）</span>
+                                    <span class="text-amber-400 font-bold" id="displayDbRate">60%</span>
+                                </div>
+                                <input type="range" id="settingDbRate" min="0" max="100" value="60" 
+                                       onchange="updateBackSetting('db', this.value)"
+                                       class="w-full accent-amber-500">
+                                <p class="text-xs text-gray-500 mt-1">キャストドリンクのバック率</p>
+                            </div>
+                            
+                            <!-- 指名料バック -->
+                            <div class="p-4 bg-black/20 rounded-xl border border-white/10">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-white font-semibold">指名料バック</span>
+                                    <span class="text-amber-400 font-bold" id="displayNominationRate">60%</span>
+                                </div>
+                                <input type="range" id="settingNominationRate" min="0" max="100" value="60" 
+                                       onchange="updateBackSetting('nomination', this.value)"
+                                       class="w-full accent-amber-500">
+                                <p class="text-xs text-gray-500 mt-1">指名料のバック率（複数指名時は等分後に適用）</p>
+                            </div>
+                            
+                            <!-- 売上バック（指名時） -->
+                            <div class="p-4 bg-black/20 rounded-xl border border-white/10">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-white font-semibold">売上バック（指名時）</span>
+                                    <span class="text-amber-400 font-bold" id="displaySalesRate">10%</span>
+                                </div>
+                                <input type="range" id="settingSalesRate" min="0" max="50" value="10" 
+                                       onchange="updateBackSetting('sales', this.value)"
+                                       class="w-full accent-amber-500">
+                                <p class="text-xs text-gray-500 mt-1">指名客の会計に対するバック率</p>
+                            </div>
+                            
+                            <!-- 同伴バック -->
+                            <div class="p-4 bg-black/20 rounded-xl border border-white/10">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-white font-semibold">同伴バック</span>
+                                    <span class="text-amber-400 font-bold" id="displayCompanionRate">100%</span>
+                                </div>
+                                <input type="range" id="settingCompanionRate" min="0" max="100" value="100" 
+                                       onchange="updateBackSetting('companion', this.value)"
+                                       class="w-full accent-amber-500">
+                                <p class="text-xs text-gray-500 mt-1">同伴料のバック率</p>
+                            </div>
+                            
+                            <!-- シャンパンバック -->
+                            <div class="p-4 bg-black/20 rounded-xl border border-white/10">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-white font-semibold">シャンパンバック</span>
+                                    <span class="text-amber-400 font-bold" id="displayChampagneRate">10%</span>
+                                </div>
+                                <input type="range" id="settingChampagneRate" min="0" max="50" value="10" 
+                                       onchange="updateBackSetting('champagne', this.value)"
+                                       class="w-full accent-amber-500">
+                                <p class="text-xs text-gray-500 mt-1">シャンパン売上に対するバック率</p>
+                            </div>
+                            
+                            <!-- ボトルバック -->
+                            <div class="p-4 bg-black/20 rounded-xl border border-white/10">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-white font-semibold">ボトルバック</span>
+                                    <span class="text-amber-400 font-bold" id="displayBottleRate">10%</span>
+                                </div>
+                                <input type="range" id="settingBottleRate" min="0" max="50" value="10" 
+                                       onchange="updateBackSetting('bottle', this.value)"
+                                       class="w-full accent-amber-500">
+                                <p class="text-xs text-gray-500 mt-1">ボトル売上に対するバック率</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 flex justify-end">
+                            <button onclick="saveStoreSettings()" class="luxury-btn px-6 py-3 rounded-xl">
+                                設定を保存
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 売上レポート -->
@@ -3203,6 +3300,9 @@ async function syncWithBackend() {
         appState.apiConnected = true;
         // showNotification('メニュー・キャスト・テーブル・セッションをAPIと同期しました', 'success'); // 通知不要
 
+        // 店舗設定を読み込み
+        if (typeof loadStoreSettings === 'function') loadStoreSettings();
+
         // ★ 同期後の再描画
         if (typeof renderTables === 'function') renderTables();
         if (typeof renderMenu === 'function') renderMenu();
@@ -3296,6 +3396,67 @@ async function syncWithBackend() {
             });
             
             renderMenu();
+        }
+
+        // ========== 店舗設定 ==========
+        
+        // デフォルトのバック設定
+        const defaultBackSettings = {
+            db: 60,           // ドリンクバック
+            nomination: 60,   // 指名料バック
+            sales: 10,        // 売上バック（指名時）
+            companion: 100,   // 同伴バック
+            champagne: 10,    // シャンパンバック
+            bottle: 10        // ボトルバック
+        };
+        
+        // 店舗設定を読み込み
+        function loadStoreSettings() {
+            const saved = localStorage.getItem('cabax_store_settings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    Object.assign(appState.backSettings, settings);
+                } catch (e) {
+                    console.error('Failed to load store settings:', e);
+                }
+            }
+            
+            // UIに反映
+            updateBackSettingsUI();
+        }
+        
+        // UIに設定を反映
+        function updateBackSettingsUI() {
+            const settings = appState.backSettings || defaultBackSettings;
+            
+            const fields = ['db', 'nomination', 'sales', 'companion', 'champagne', 'bottle'];
+            fields.forEach(field => {
+                const input = document.getElementById(`setting${field.charAt(0).toUpperCase() + field.slice(1)}Rate`);
+                const display = document.getElementById(`display${field.charAt(0).toUpperCase() + field.slice(1)}Rate`);
+                if (input) input.value = settings[field] ?? defaultBackSettings[field];
+                if (display) display.textContent = `${settings[field] ?? defaultBackSettings[field]}%`;
+            });
+        }
+        
+        // バック設定を更新
+        function updateBackSetting(type, value) {
+            if (!appState.backSettings) appState.backSettings = { ...defaultBackSettings };
+            appState.backSettings[type] = Number(value);
+            
+            const display = document.getElementById(`display${type.charAt(0).toUpperCase() + type.slice(1)}Rate`);
+            if (display) display.textContent = `${value}%`;
+        }
+        
+        // 店舗設定を保存
+        function saveStoreSettings() {
+            localStorage.setItem('cabax_store_settings', JSON.stringify(appState.backSettings));
+            showNotification('店舗設定を保存しました', 'success');
+        }
+        
+        // appStateにバック設定を追加
+        if (!appState.backSettings) {
+            appState.backSettings = { ...defaultBackSettings };
         }
 
         // ========== テーブル設定 ==========
@@ -5984,6 +6145,11 @@ function populateCastSelects() {
         function renderSalaryCalculation() {
             const month = document.getElementById('salaryMonth')?.value || '2024-11';
             
+            // バック設定を取得
+            const backSettings = appState.backSettings || {
+                db: 60, nomination: 60, sales: 10, companion: 100, champagne: 10, bottle: 10
+            };
+            
             const salaryData = appState.casts.map(cast => {
                 const workDays = 20;
                 const hoursPerDay = 8;
@@ -5993,7 +6159,9 @@ function populateCastSelects() {
                 let totalDb = 0;
                 let nominationFees = 0;
                 let companionBack = 0;
-                let salesBack = 0;  // 指名時の会計10%バック
+                let salesBack = 0;
+                let champagneBack = 0;
+                let bottleBack = 0;
                 
                 const allSessions = [
                     ...(appState.activeSessions || []),
@@ -6004,7 +6172,7 @@ function populateCastSelects() {
                     // ドリンクバック計算
                     if (session.castName === cast.name && session.orders) {
                         session.orders.filter(o => o.isDrinkBack && o.castName === cast.name).forEach(order => {
-                            totalDb += Math.floor(order.price * order.quantity * 0.6);
+                            totalDb += Math.floor(order.price * order.quantity * (backSettings.db / 100));
                         });
                     }
                     
@@ -6012,30 +6180,42 @@ function populateCastSelects() {
                     if (session.shimei_casts) {
                         const shimeiNames = session.shimei_casts.split(',').map(n => n.trim());
                         if (shimeiNames.includes(cast.name) || shimeiNames.includes(cast.stage_name)) {
-                            // 指名料を人数で等分（バック率60%）
-                            const perCast = Math.floor(session.nomination_fee / shimeiNames.length * 0.6);
+                            // 指名料を人数で等分
+                            const perCast = Math.floor(session.nomination_fee / shimeiNames.length * (backSettings.nomination / 100));
                             nominationFees += perCast;
                             
-                            // 会計の10%バック（人数で等分）
+                            // 売上バック（人数で等分）
                             const sessionTotal = session.current_total || session.total || 0;
-                            const salesBackPerCast = Math.floor(sessionTotal * 0.1 / shimeiNames.length);
+                            const salesBackPerCast = Math.floor(sessionTotal * (backSettings.sales / 100) / shimeiNames.length);
                             salesBack += salesBackPerCast;
                         }
                     } else if (session.nomination && session.nomination.castName === cast.name) {
                         // 従来方式（後方互換）
-                        nominationFees += Math.floor(session.nomination.fee * 0.6);
-                        // 会計10%バック
+                        nominationFees += Math.floor(session.nomination.fee * (backSettings.nomination / 100));
                         const sessionTotal = session.current_total || session.total || 0;
-                        salesBack += Math.floor(sessionTotal * 0.1);
+                        salesBack += Math.floor(sessionTotal * (backSettings.sales / 100));
                     }
                     
-                    // 同伴バック（フルバック）
+                    // 同伴バック
                     if (session.has_companion && session.castName === cast.name) {
-                        companionBack += 3000;  // 同伴料フルバック
+                        companionBack += Math.floor(3000 * (backSettings.companion / 100));
+                    }
+                    
+                    // シャンパン・ボトルバック計算（ordersから）
+                    if (session.orders) {
+                        session.orders.forEach(order => {
+                            const cat = (order.category || '').toLowerCase();
+                            if (cat === 'champagne' && session.castName === cast.name) {
+                                champagneBack += Math.floor(order.price * order.quantity * (backSettings.champagne / 100));
+                            }
+                            if (cat === 'bottle' && session.castName === cast.name) {
+                                bottleBack += Math.floor(order.price * order.quantity * (backSettings.bottle / 100));
+                            }
+                        });
                     }
                 });
                 
-                const totalSalary = hourlyWage + totalDb + nominationFees + companionBack + salesBack;
+                const totalSalary = hourlyWage + totalDb + nominationFees + companionBack + salesBack + champagneBack + bottleBack;
                 
                 return {
                     cast: cast,
@@ -6046,6 +6226,8 @@ function populateCastSelects() {
                     nominationFees: nominationFees,
                     companionBack: companionBack,
                     salesBack: salesBack,
+                    champagneBack: champagneBack,
+                    bottleBack: bottleBack,
                     totalSalary: totalSalary
                 };
             });
@@ -6102,12 +6284,20 @@ function populateCastSelects() {
                             <span class="font-semibold text-purple-300">¥${data.nominationFees.toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-400">💰 売上バック（10%）</span>
+                            <span class="text-gray-400">💰 売上バック</span>
                             <span class="font-semibold text-green-300">¥${data.salesBack.toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-400">🚗 同伴バック</span>
                             <span class="font-semibold text-amber-300">¥${data.companionBack.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">🍾 シャンパンバック</span>
+                            <span class="font-semibold text-yellow-300">¥${data.champagneBack.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">🥃 ボトルバック</span>
+                            <span class="font-semibold text-orange-300">¥${data.bottleBack.toLocaleString()}</span>
                         </div>
                     </div>
                     

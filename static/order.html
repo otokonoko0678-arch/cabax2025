@@ -1080,7 +1080,7 @@ function renderMenu() {
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex-1">
                             <h4 class="font-bold text-gray-200 mb-1">${item.name}</h4>
-                            ${item.personName ? `<p class="text-sm text-gray-400 mb-1">→ ${item.personName}${item.isDrinkBack ? ' <span class="text-purple-400">💎DB</span>' : ''}</p>` : ''}
+                            ${item.personName ? `<p class="text-sm text-gray-400 mb-1">→ ${item.personName}</p>` : ''}
                             <p class="text-lg gold-accent font-semibold">¥${item.price.toLocaleString()}</p>
                         </div>
                         <button onclick="removeFromCartByIndex(${idx})" class="text-red-400 text-xl ml-2">✕</button>
@@ -2004,9 +2004,6 @@ async function requestCheck() {
             let msg = `${cartItem.name} をカートに追加しました`;
             if (personName) {
                 msg += `（${personName}）`;
-            }
-            if (isDrinkBack) {
-                msg += ' 💎DB';
             }
             showNotification(msg, 'success');
         }
