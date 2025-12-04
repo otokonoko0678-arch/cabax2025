@@ -983,11 +983,15 @@ function renderMenu() {
     grid.innerHTML = filtered
         .map(
             (item) => {
-                // ドリンクカテゴリでグラスワイン・ショット以外は価格非表示
+                const category = (item.category || '').toLowerCase();
+                // ショット・グラスワインのみ価格表示
                 const isGlassWine = item.description === 'glasswine';
                 const isShot = item.description === 'shot';
-                const isDrinkCategory = (item.category || '').toLowerCase() === 'drink';
-                const showPrice = !isDrinkCategory || isGlassWine || isShot;
+                const isDrinkCategory = category === 'drink';
+                const isCastDrink = category === 'castdrink';
+                const isTableSet = category === 'tableset';
+                // ドリンク・キャストドリンク・卓セットは価格非表示（ショット・グラスワイン以外）
+                const showPrice = !(isDrinkCategory || isCastDrink || isTableSet) || isGlassWine || isShot;
                 
                 return `
                     <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6 cursor-pointer">
@@ -998,7 +1002,7 @@ function renderMenu() {
                         }
                         <h3 class="text-base sm:text-xl font-bold text-gray-200 mb-1 sm:mb-2 line-clamp-2">${item.name}</h3>
                         ${
-                            item.description && !['shochu','whisky','beer','cocktail','soft','glasswine'].includes(item.description)
+                            item.description && !['shochu','whisky','beer','cocktail','soft','glasswine','shot','お客様用','割り物','グラス・アイスペール・氷','グラスの追加','氷の追加'].includes(item.description)
                                 ? `<p class="text-xs sm:text-sm text-gray-400 mb-2 sm:mb-4 line-clamp-2">${item.description}</p>`
                                 : ''
                         }
@@ -1480,6 +1484,44 @@ async function requestCheck() {
         </div>
     </div>
     
+    <!-- アイスセットモーダル -->
+    <div id="iceSetModal" class="fixed inset-0 z-50 items-center justify-center bg-black/80 p-2 sm:p-4 hidden">
+        <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl">
+            <div class="border-b border-gray-700 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between">
+                <h2 class="text-lg sm:text-xl font-bold gold-accent">🧊 アイスセット</h2>
+                <button onclick="closeIceSetModal()" class="text-gray-400 hover:text-gray-200 text-2xl p-2">✕</button>
+            </div>
+            <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <p class="text-gray-400 text-sm text-center">グラス・アイスペール・氷をセットでお届けします</p>
+                
+                <!-- グラス個数 -->
+                <div>
+                    <div class="text-sm text-gray-400 mb-2">🥃 グラス数</div>
+                    <div class="flex items-center justify-center gap-4">
+                        <button onclick="adjustIceSetQty('glass', -1)" class="w-12 h-12 rounded-full bg-gray-700 text-white text-2xl font-bold hover:bg-gray-600">-</button>
+                        <span id="iceSetGlassQty" class="text-3xl font-bold text-white w-16 text-center">2</span>
+                        <button onclick="adjustIceSetQty('glass', 1)" class="w-12 h-12 rounded-full bg-gray-700 text-white text-2xl font-bold hover:bg-gray-600">+</button>
+                    </div>
+                </div>
+                
+                <!-- アイス個数 -->
+                <div>
+                    <div class="text-sm text-gray-400 mb-2">🧊 アイスペール数</div>
+                    <div class="flex items-center justify-center gap-4">
+                        <button onclick="adjustIceSetQty('ice', -1)" class="w-12 h-12 rounded-full bg-gray-700 text-white text-2xl font-bold hover:bg-gray-600">-</button>
+                        <span id="iceSetIceQty" class="text-3xl font-bold text-white w-16 text-center">1</span>
+                        <button onclick="adjustIceSetQty('ice', 1)" class="w-12 h-12 rounded-full bg-gray-700 text-white text-2xl font-bold hover:bg-gray-600">+</button>
+                    </div>
+                </div>
+                
+                <!-- 追加ボタン -->
+                <button onclick="confirmIceSet()" class="w-full luxury-btn py-3 sm:py-4 rounded-xl text-base sm:text-lg font-bold">
+                    カートに追加
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // ドリンク注文モーダル用の状態
         let drinkModalState = {
@@ -1487,6 +1529,12 @@ async function requestCheck() {
             item: null,
             quantity: 1,
             isDrinkCategory: false
+        };
+        
+        // アイスセット用の状態
+        let iceSetState = {
+            glassQty: 2,
+            iceQty: 1
         };
         
         // キャスト・スタッフデータ
@@ -1564,9 +1612,15 @@ async function requestCheck() {
                 : mixStyles[item.name] !== undefined;
             const currentMixStyles = isCastDrink ? castDrinkMixStyles : mixStyles;
             
-            // 卓セットは直接カートに追加
+            // 卓セットの場合
             if (isTableSet) {
-                addToCart(itemId);
+                if (item.name === 'アイスセット') {
+                    // アイスセットは個数選択モーダルを開く
+                    openIceSetModal(itemId);
+                } else {
+                    // 他の卓セットは直接カートに追加
+                    addToCart(itemId);
+                }
                 return;
             }
             
@@ -1674,6 +1728,73 @@ async function requestCheck() {
         function closeDrinkModal() {
             document.getElementById('drinkOrderModal').classList.add('hidden');
             document.getElementById('drinkOrderModal').classList.remove('flex');
+        }
+        
+        // アイスセットモーダル関連
+        function openIceSetModal(itemId) {
+            iceSetState.glassQty = 2;
+            iceSetState.iceQty = 1;
+            document.getElementById('iceSetGlassQty').textContent = iceSetState.glassQty;
+            document.getElementById('iceSetIceQty').textContent = iceSetState.iceQty;
+            document.getElementById('iceSetModal').classList.remove('hidden');
+            document.getElementById('iceSetModal').classList.add('flex');
+        }
+        
+        function closeIceSetModal() {
+            document.getElementById('iceSetModal').classList.add('hidden');
+            document.getElementById('iceSetModal').classList.remove('flex');
+        }
+        
+        function adjustIceSetQty(type, delta) {
+            if (type === 'glass') {
+                iceSetState.glassQty = Math.max(1, iceSetState.glassQty + delta);
+                document.getElementById('iceSetGlassQty').textContent = iceSetState.glassQty;
+            } else if (type === 'ice') {
+                iceSetState.iceQty = Math.max(1, iceSetState.iceQty + delta);
+                document.getElementById('iceSetIceQty').textContent = iceSetState.iceQty;
+            }
+        }
+        
+        function confirmIceSet() {
+            // アイスセットをカートに追加（グラス数・アイス数を名前に含める）
+            const glassItem = appState.menuItems.find(m => m.name === 'グラス（追加）');
+            const iceItem = appState.menuItems.find(m => m.name === 'アイス（追加）');
+            
+            // グラスを追加
+            if (glassItem && iceSetState.glassQty > 0) {
+                const existingGlass = appState.cart.find(c => c.id === glassItem.id);
+                if (existingGlass) {
+                    existingGlass.quantity += iceSetState.glassQty;
+                } else {
+                    appState.cart.push({
+                        id: glassItem.id,
+                        name: glassItem.name,
+                        price: glassItem.price,
+                        quantity: iceSetState.glassQty,
+                        category: glassItem.category
+                    });
+                }
+            }
+            
+            // アイスを追加
+            if (iceItem && iceSetState.iceQty > 0) {
+                const existingIce = appState.cart.find(c => c.id === iceItem.id);
+                if (existingIce) {
+                    existingIce.quantity += iceSetState.iceQty;
+                } else {
+                    appState.cart.push({
+                        id: iceItem.id,
+                        name: iceItem.name,
+                        price: iceItem.price,
+                        quantity: iceSetState.iceQty,
+                        category: iceItem.category
+                    });
+                }
+            }
+            
+            renderCart();
+            closeIceSetModal();
+            showNotification(`アイスセット（グラス${iceSetState.glassQty}個・アイス${iceSetState.iceQty}個）を追加しました`);
         }
         
         function changeDrinkQty(delta) {
