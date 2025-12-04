@@ -1945,13 +1945,14 @@ async function requestCheck() {
             
             // 有料ドリンク（ショット・グラスワイン）はお客様でも課金
             const isPaidDrink = paidDrinks.includes(item.name);
+            const category = (item.category || '').toLowerCase();
+            const isBottleOrChampagne = ['bottle', 'champagne', 'wine'].includes(category);
             
-            if (isPaidDrink) {
-                // ショット・グラスワインは誰が飲んでも統一価格、サイズなし
+            if (isPaidDrink || isBottleOrChampagne) {
+                // ショット・グラスワイン・ボトル・シャンパン・ワインは誰が飲んでも統一価格
                 finalPrice = item.price;
-                // 種類だけ表示（サイズ表記なし）
             } else if (drinkFor === 'customer') {
-                // お客様のドリンクはセット料金込み → 0円
+                // お客様の通常ドリンクはセット料金込み → 0円
                 finalPrice = 0;
             } else if (drinkModalState.isDrinkOnly) {
                 // キャスト/スタッフのドリンクはサイズで価格決定

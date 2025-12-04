@@ -17,6 +17,22 @@
             -webkit-tap-highlight-color: transparent;
         }
         
+        /* スクロールバーのスタイル */
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(214, 179, 106, 0.4);
+            border-radius: 3px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: rgba(214, 179, 106, 0.6);
+        }
+        
         :root {
             --cabax-navy: #0b1628;
             --cabax-navy-light: #122040;
@@ -2066,7 +2082,7 @@ function renderTableDetailPanel(session) {
                 <span class="text-xs text-white/40">（複数可・バックは人数で等分）</span>
               </div>
               <div class="text-xs text-white/50 mb-2">※ 指名なしの場合は「フリー」扱い</div>
-              <div id="shimeiCastList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+              <div id="shimeiCastList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin">
                 ${castCheckboxes}
               </div>
               <div id="shimeiCastPreview" class="mt-2 text-sm text-amber-400"></div>
