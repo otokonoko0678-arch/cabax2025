@@ -536,8 +536,37 @@
             }
             
             body {
-                background: white;
-                color: black;
+                background: white !important;
+                color: black !important;
+            }
+            
+            /* 日報タブを印刷時に表示 */
+            #daily-report-tab {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+            
+            #dailyReportContent {
+                display: block !important;
+                color: black !important;
+            }
+            
+            #dailyReportContent * {
+                color: black !important;
+                background: white !important;
+                border-color: #ccc !important;
+            }
+            
+            /* サイドバーとナビを非表示 */
+            #sidebar, .bottom-nav, nav {
+                display: none !important;
+            }
+            
+            /* メインコンテンツを全幅に */
+            .main-content {
+                margin-left: 0 !important;
+                padding: 0 !important;
             }
             
             .luxury-card {
@@ -2546,6 +2575,7 @@ async function checkoutSession(sessionId) {
                 ...sessionToCheckout,
                 checkoutTime: new Date().toISOString(),
                 totalAmount: totalWithTax,
+                orders: ordersForReceipt, // 注文履歴を保存
                 status: 'completed'
             };
             appState.checkoutHistory.push(checkoutRecord);
@@ -5175,6 +5205,7 @@ async function openTableDetail(tableId) {
                 ...sessionToCheckout,
                 checkoutTime: new Date().toISOString(),
                 totalAmount: totalWithTax,
+                orders: ordersForReceipt, // 注文履歴を保存
                 status: 'completed'
               };
               appState.checkoutHistory.push(checkoutRecord);
@@ -6802,25 +6833,87 @@ function openEditCheckoutModal(historyIndex) {
     
     const total = session.totalAmount || session.currentTotal || session.current_total || 0;
     const guests = session.guests || 0;
+    const tableName = session.tableName || session.table_name || session.tableId || '?';
+    const castName = session.castName || session.cast_name || '未設定';
+    const shimeiCasts = session.shimei_casts || '';
+    const catchStaff = session.catchStaff || session.catch_staff || '';
+    const taxRate = session.taxRate || session.tax_rate || 20;
+    const orders = session.orders || [];
+    
+    // 注文明細のHTML生成
+    const ordersHtml = orders.length > 0 ? orders.map((o, idx) => {
+        const itemName = o.item_name || o.itemName || '商品';
+        const price = o.price || 0;
+        const qty = o.quantity || 1;
+        return `
+            <div class="flex items-center gap-2 py-2 border-b border-gray-700">
+                <input type="text" id="editOrderName_${idx}" value="${itemName}" 
+                       class="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm">
+                <input type="number" id="editOrderQty_${idx}" value="${qty}" min="0"
+                       class="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm text-center">
+                <input type="number" id="editOrderPrice_${idx}" value="${price}" 
+                       class="w-24 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm text-right">
+            </div>
+        `;
+    }).join('') : '<p class="text-gray-500 text-sm">注文データなし</p>';
     
     // 修正用モーダルを表示
     const modalHtml = `
-        <div id="editCheckoutModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-            <div class="luxury-card rounded-2xl max-w-md w-full p-6">
-                <h2 class="text-xl font-bold gold-accent mb-4">会計修正</h2>
-                <div class="space-y-4">
+        <div id="editCheckoutModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="luxury-card rounded-2xl max-w-2xl w-full p-6 my-4">
+                <h2 class="text-xl font-bold gold-accent mb-4">会計修正 - テーブル${tableName}</h2>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="text-sm text-gray-400 block mb-1">来店人数</label>
                         <input type="number" id="editGuests" value="${guests}" min="1" 
-                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white">
+                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white">
                     </div>
                     <div>
-                        <label class="text-sm text-gray-400 block mb-1">合計金額</label>
-                        <input type="number" id="editTotal" value="${total}" 
-                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white">
+                        <label class="text-sm text-gray-400 block mb-1">TAX/サービス率（%）</label>
+                        <input type="number" id="editTaxRate" value="${taxRate}" min="0" max="100"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400 block mb-1">担当キャスト</label>
+                        <input type="text" id="editCastName" value="${castName}" 
+                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400 block mb-1">指名キャスト</label>
+                        <input type="text" id="editShimeiCasts" value="${shimeiCasts}" 
+                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white"
+                               placeholder="カンマ区切り">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="text-sm text-gray-400 block mb-1">キャッチ担当</label>
+                        <input type="text" id="editCatchStaff" value="${catchStaff}" 
+                               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white">
                     </div>
                 </div>
-                <div class="flex gap-2 mt-6">
+                
+                <div class="mb-4">
+                    <label class="text-sm text-gray-400 block mb-2">注文明細（品名 / 数量 / 単価）</label>
+                    <div class="max-h-48 overflow-y-auto bg-gray-900/50 rounded-xl p-2" id="editOrdersList">
+                        ${ordersHtml}
+                    </div>
+                    <button onclick="addEditOrderRow(${historyIndex})" 
+                            class="mt-2 text-sm text-amber-400 hover:text-amber-300">
+                        ＋ 行を追加
+                    </button>
+                </div>
+                
+                <div class="mb-4 p-3 bg-amber-900/20 rounded-xl border border-amber-800/30">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-300">合計金額（自動計算）</span>
+                        <span id="editCalculatedTotal" class="text-xl font-bold gold-accent">¥${total.toLocaleString()}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        保存時に注文明細から自動計算されます
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
                     <button onclick="saveEditCheckout(${historyIndex})" 
                             class="flex-1 luxury-btn py-3 rounded-xl font-bold">
                         保存
@@ -6841,6 +6934,26 @@ function openEditCheckoutModal(historyIndex) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
+// 注文行を追加
+function addEditOrderRow(historyIndex) {
+    const container = document.getElementById('editOrdersList');
+    if (!container) return;
+    
+    const idx = container.querySelectorAll('.flex.items-center').length;
+    const newRow = document.createElement('div');
+    newRow.className = 'flex items-center gap-2 py-2 border-b border-gray-700';
+    newRow.innerHTML = `
+        <input type="text" id="editOrderName_${idx}" value="" 
+               class="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm"
+               placeholder="品名">
+        <input type="number" id="editOrderQty_${idx}" value="1" min="0"
+               class="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm text-center">
+        <input type="number" id="editOrderPrice_${idx}" value="0" 
+               class="w-24 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm text-right">
+    `;
+    container.appendChild(newRow);
+}
+
 function closeEditCheckoutModal() {
     const modal = document.getElementById('editCheckoutModal');
     if (modal) modal.remove();
@@ -6851,10 +6964,45 @@ function saveEditCheckout(historyIndex) {
     if (!session) return;
     
     const newGuests = parseInt(document.getElementById('editGuests').value) || 0;
-    const newTotal = parseInt(document.getElementById('editTotal').value) || 0;
+    const newTaxRate = parseInt(document.getElementById('editTaxRate').value) || 20;
+    const newCastName = document.getElementById('editCastName').value || '';
+    const newShimeiCasts = document.getElementById('editShimeiCasts').value || '';
+    const newCatchStaff = document.getElementById('editCatchStaff').value || '';
+    
+    // 注文明細を収集
+    const orderRows = document.querySelectorAll('#editOrdersList .flex.items-center');
+    const newOrders = [];
+    let subtotal = 0;
+    
+    orderRows.forEach((row, idx) => {
+        const name = document.getElementById(`editOrderName_${idx}`)?.value || '';
+        const qty = parseInt(document.getElementById(`editOrderQty_${idx}`)?.value) || 0;
+        const price = parseInt(document.getElementById(`editOrderPrice_${idx}`)?.value) || 0;
+        
+        if (name && qty > 0) {
+            newOrders.push({
+                item_name: name,
+                quantity: qty,
+                price: price
+            });
+            subtotal += price * qty;
+        }
+    });
+    
+    // TAXを計算
+    const taxAmount = Math.floor(subtotal * (newTaxRate / 100));
+    const newTotal = subtotal + taxAmount;
     
     // 更新
     session.guests = newGuests;
+    session.taxRate = newTaxRate;
+    session.tax_rate = newTaxRate;
+    session.castName = newCastName;
+    session.cast_name = newCastName;
+    session.shimei_casts = newShimeiCasts;
+    session.catchStaff = newCatchStaff;
+    session.catch_staff = newCatchStaff;
+    session.orders = newOrders;
     session.totalAmount = newTotal;
     session.currentTotal = newTotal;
     session.current_total = newTotal;
