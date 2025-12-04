@@ -1039,12 +1039,25 @@
                     
                     <!-- サブタブ3: 給与計算 -->
                     <div id="salary-subtab" class="cast-subtab-content">
-                        <div class="mb-6 flex flex-col md:flex-row gap-3">
-                            <select id="salaryMonth" class="px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-200" onchange="renderSalaryCalculation()">
-                                <option value="2024-11">2024年11月</option>
-                                <option value="2024-10">2024年10月</option>
-                                <option value="2024-09">2024年9月</option>
-                            </select>
+                        <div class="mb-6 flex flex-col md:flex-row gap-3 items-start md:items-center">
+                            <div class="flex gap-2">
+                                <select id="salaryYear" class="px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-200" onchange="renderSalaryCalculation()">
+                                </select>
+                                <select id="salaryMonth" class="px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-200" onchange="renderSalaryCalculation()">
+                                    <option value="1">1月</option>
+                                    <option value="2">2月</option>
+                                    <option value="3">3月</option>
+                                    <option value="4">4月</option>
+                                    <option value="5">5月</option>
+                                    <option value="6">6月</option>
+                                    <option value="7">7月</option>
+                                    <option value="8">8月</option>
+                                    <option value="9">9月</option>
+                                    <option value="10">10月</option>
+                                    <option value="11">11月</option>
+                                    <option value="12">12月</option>
+                                </select>
+                            </div>
                             <button onclick="exportSalaryCSV()" class="luxury-btn px-6 py-3 rounded-xl text-sm">
                                 📥 給与明細CSV
                             </button>
@@ -1655,7 +1668,29 @@
                         <option value="chief">チーフ</option>
                         <option value="manager">マネージャー</option>
                     </select>
-                    <input type="number" id="castHourlyRate" placeholder="時給" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    
+                    <!-- 給与体系 -->
+                    <div class="border-t border-gray-700 pt-4 mt-4">
+                        <p class="text-sm text-gray-400 mb-3">💵 給与体系</p>
+                        <div class="flex gap-3 mb-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="castSalaryType" value="hourly" checked onchange="toggleSalaryType('add', 'hourly')" class="accent-amber-500">
+                                <span class="text-sm text-gray-300">時給制</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="castSalaryType" value="monthly" onchange="toggleSalaryType('add', 'monthly')" class="accent-amber-500">
+                                <span class="text-sm text-gray-300">月給制</span>
+                            </label>
+                        </div>
+                        <div id="addHourlyInput">
+                            <label class="block text-xs text-gray-500 mb-1">時給（円）</label>
+                            <input type="number" id="castHourlyRate" placeholder="3000" class="w-full px-4 py-3 rounded-xl text-sm">
+                        </div>
+                        <div id="addMonthlyInput" class="hidden">
+                            <label class="block text-xs text-gray-500 mb-1">月給（円）</label>
+                            <input type="number" id="castMonthlySalary" placeholder="300000" class="w-full px-4 py-3 rounded-xl text-sm">
+                        </div>
+                    </div>
                     
                     <!-- バック設定 -->
                     <div class="border-t border-gray-700 pt-4 mt-4">
@@ -1705,7 +1740,29 @@
                         <option value="chief">チーフ</option>
                         <option value="manager">マネージャー</option>
                     </select>
-                    <input type="number" id="editCastHourlyRate" placeholder="時給" class="w-full px-4 md:px-5 py-3 md:py-4 rounded-xl text-sm" required>
+                    
+                    <!-- 給与体系 -->
+                    <div class="border-t border-gray-700 pt-4 mt-4">
+                        <p class="text-sm text-gray-400 mb-3">💵 給与体系</p>
+                        <div class="flex gap-3 mb-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="editCastSalaryType" id="editSalaryTypeHourly" value="hourly" checked onchange="toggleSalaryType('edit', 'hourly')" class="accent-amber-500">
+                                <span class="text-sm text-gray-300">時給制</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="editCastSalaryType" id="editSalaryTypeMonthly" value="monthly" onchange="toggleSalaryType('edit', 'monthly')" class="accent-amber-500">
+                                <span class="text-sm text-gray-300">月給制</span>
+                            </label>
+                        </div>
+                        <div id="editHourlyInput">
+                            <label class="block text-xs text-gray-500 mb-1">時給（円）</label>
+                            <input type="number" id="editCastHourlyRate" placeholder="3000" class="w-full px-4 py-3 rounded-xl text-sm">
+                        </div>
+                        <div id="editMonthlyInput" class="hidden">
+                            <label class="block text-xs text-gray-500 mb-1">月給（円）</label>
+                            <input type="number" id="editCastMonthlySalary" placeholder="300000" class="w-full px-4 py-3 rounded-xl text-sm">
+                        </div>
+                    </div>
                     
                     <!-- バック設定 -->
                     <div class="border-t border-gray-700 pt-4 mt-4">
@@ -6349,7 +6406,28 @@ function cancelOneFromGroup(tableId, groupIndex) {
         }
 
         function openAddCastModal() {
+            // フォームをリセット
+            toggleSalaryType('add', 'hourly');
+            document.querySelector('input[name="castSalaryType"][value="hourly"]').checked = true;
             document.getElementById('addCastModal').classList.add('active');
+        }
+        
+        function toggleSalaryType(mode, type) {
+            const prefix = mode === 'add' ? '' : 'edit';
+            const hourlyInput = document.getElementById(`${prefix}${mode === 'add' ? 'add' : 'edit'}HourlyInput`);
+            const monthlyInput = document.getElementById(`${prefix}${mode === 'add' ? 'add' : 'edit'}MonthlyInput`);
+            
+            // IDの修正
+            const hourlyEl = document.getElementById(mode === 'add' ? 'addHourlyInput' : 'editHourlyInput');
+            const monthlyEl = document.getElementById(mode === 'add' ? 'addMonthlyInput' : 'editMonthlyInput');
+            
+            if (type === 'hourly') {
+                hourlyEl?.classList.remove('hidden');
+                monthlyEl?.classList.add('hidden');
+            } else {
+                hourlyEl?.classList.add('hidden');
+                monthlyEl?.classList.remove('hidden');
+            }
         }
 
 async function addCast(event) {
@@ -6357,7 +6435,9 @@ async function addCast(event) {
 
     const name = document.getElementById('castName').value;
     const rank = document.getElementById('castRank').value;
-    const hourlyRate = parseInt(document.getElementById('castHourlyRate').value);
+    const salaryType = document.querySelector('input[name="castSalaryType"]:checked').value;
+    const hourlyRate = parseInt(document.getElementById('castHourlyRate').value) || 0;
+    const monthlySalary = parseInt(document.getElementById('castMonthlySalary').value) || 0;
     const companionBack = parseInt(document.getElementById('castCompanionBack').value) || 3000;
     const nominationBack = parseInt(document.getElementById('castNominationBack').value) || 1000;
     const drinkBackRate = parseInt(document.getElementById('castDrinkBackRate').value) || 10;
@@ -6368,7 +6448,9 @@ async function addCast(event) {
         name: name,
         stage_name: name,
         rank: rank,
+        salary_type: salaryType,
         hourly_rate: hourlyRate,
+        monthly_salary: monthlySalary,
         companion_back: companionBack,
         nomination_back: nominationBack,
         drink_back_rate: drinkBackRate,
@@ -6437,7 +6519,19 @@ async function addCast(event) {
             document.getElementById('editCastId').value = cast.id;
             document.getElementById('editCastName').value = cast.name || cast.stage_name || '';
             document.getElementById('editCastRank').value = cast.rank;
+            
+            // 給与体系
+            const salaryType = cast.salaryType ?? cast.salary_type ?? 'hourly';
+            if (salaryType === 'monthly') {
+                document.getElementById('editSalaryTypeMonthly').checked = true;
+                toggleSalaryType('edit', 'monthly');
+            } else {
+                document.getElementById('editSalaryTypeHourly').checked = true;
+                toggleSalaryType('edit', 'hourly');
+            }
             document.getElementById('editCastHourlyRate').value = cast.hourlyRate ?? cast.hourly_rate ?? 0;
+            document.getElementById('editCastMonthlySalary').value = cast.monthlySalary ?? cast.monthly_salary ?? 0;
+            
             document.getElementById('editCastCompanionBack').value = cast.companionBack ?? cast.companion_back ?? 3000;
             document.getElementById('editCastNominationBack').value = cast.nominationBack ?? cast.nomination_back ?? 1000;
             document.getElementById('editCastDrinkBackRate').value = cast.drinkBackRate ?? cast.drink_back_rate ?? 10;
@@ -6455,7 +6549,9 @@ async function updateCast(event) {
 
     const name = document.getElementById('editCastName').value;
     const rank = document.getElementById('editCastRank').value;
-    const hourlyRate = parseInt(document.getElementById('editCastHourlyRate').value);
+    const salaryType = document.querySelector('input[name="editCastSalaryType"]:checked').value;
+    const hourlyRate = parseInt(document.getElementById('editCastHourlyRate').value) || 0;
+    const monthlySalary = parseInt(document.getElementById('editCastMonthlySalary').value) || 0;
     const companionBack = parseInt(document.getElementById('editCastCompanionBack').value) || 3000;
     const nominationBack = parseInt(document.getElementById('editCastNominationBack').value) || 1000;
     const drinkBackRate = parseInt(document.getElementById('editCastDrinkBackRate').value) || 10;
@@ -6467,7 +6563,9 @@ async function updateCast(event) {
         name: name,
         stage_name: name,
         rank: rank,
+        salary_type: salaryType,
         hourly_rate: hourlyRate,
+        monthly_salary: monthlySalary,
         companion_back: companionBack,
         nomination_back: nominationBack,
         drink_back_rate: drinkBackRate,
@@ -6488,7 +6586,9 @@ async function updateCast(event) {
             ...appState.casts[castIndex],
             name: name,
             rank: rank,
+            salaryType: salaryType,
             hourlyRate: hourlyRate,
+            monthlySalary: monthlySalary,
             companionBack: companionBack,
             nominationBack: nominationBack,
             drinkBackRate: drinkBackRate,
@@ -6884,99 +6984,84 @@ function populateCastSelects() {
             }
         }
 
-        function renderSalaryCalculation() {
-            const month = document.getElementById('salaryMonth')?.value || '2024-11';
+        async function renderSalaryCalculation() {
+            // 年選択の初期化
+            const yearSelect = document.getElementById('salaryYear');
+            const monthSelect = document.getElementById('salaryMonth');
+            const now = new Date();
             
-            // バック設定を取得
-            const backSettings = appState.backSettings || {
-                db: 60, nomination: 60, sales: 10, companion: 100, champagne: 10, bottle: 10
-            };
+            if (yearSelect && yearSelect.options.length === 0) {
+                for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+                    const opt = document.createElement('option');
+                    opt.value = y;
+                    opt.textContent = `${y}年`;
+                    yearSelect.appendChild(opt);
+                }
+                monthSelect.value = now.getMonth() + 1;
+            }
             
-            const salaryData = appState.casts.map(cast => {
-                const workDays = 20;
-                const hoursPerDay = 8;
-                const totalHours = workDays * hoursPerDay;
-                const hourlyWage = (cast.hourlyRate || 2500) * totalHours;
-                
-                let totalDb = 0;
-                let nominationFees = 0;
-                let companionBack = 0;
-                let salesBack = 0;
-                let champagneBack = 0;
-                let bottleBack = 0;
-                
-                const allSessions = [
-                    ...(appState.activeSessions || []),
-                    ...(appState.checkoutHistory || [])
-                ];
-                
-                allSessions.forEach(session => {
-                    // ドリンクバック計算
-                    if (session.castName === cast.name && session.orders) {
-                        session.orders.filter(o => o.isDrinkBack && o.castName === cast.name).forEach(order => {
-                            totalDb += Math.floor(order.price * order.quantity * (backSettings.db / 100));
-                        });
-                    }
-                    
-                    // 指名関連のバック計算
-                    if (session.shimei_casts) {
-                        const shimeiNames = session.shimei_casts.split(',').map(n => n.trim());
-                        if (shimeiNames.includes(cast.name) || shimeiNames.includes(cast.stage_name)) {
-                            // 指名料を人数で等分
-                            const perCast = Math.floor(session.nomination_fee / shimeiNames.length * (backSettings.nomination / 100));
-                            nominationFees += perCast;
-                            
-                            // 売上バック（人数で等分）
-                            const sessionTotal = session.current_total || session.total || 0;
-                            const salesBackPerCast = Math.floor(sessionTotal * (backSettings.sales / 100) / shimeiNames.length);
-                            salesBack += salesBackPerCast;
-                        }
-                    } else if (session.nomination && session.nomination.castName === cast.name) {
-                        // 従来方式（後方互換）
-                        nominationFees += Math.floor(session.nomination.fee * (backSettings.nomination / 100));
-                        const sessionTotal = session.current_total || session.total || 0;
-                        salesBack += Math.floor(sessionTotal * (backSettings.sales / 100));
-                    }
-                    
-                    // 同伴バック
-                    if (session.has_companion && session.castName === cast.name) {
-                        companionBack += Math.floor(3000 * (backSettings.companion / 100));
-                    }
-                    
-                    // シャンパン・ボトルバック計算（ordersから）
-                    if (session.orders) {
-                        session.orders.forEach(order => {
-                            const cat = (order.category || '').toLowerCase();
-                            if (cat === 'champagne' && session.castName === cast.name) {
-                                champagneBack += Math.floor(order.price * order.quantity * (backSettings.champagne / 100));
-                            }
-                            if (cat === 'bottle' && session.castName === cast.name) {
-                                bottleBack += Math.floor(order.price * order.quantity * (backSettings.bottle / 100));
-                            }
-                        });
-                    }
-                });
-                
-                const totalSalary = hourlyWage + totalDb + nominationFees + companionBack + salesBack + champagneBack + bottleBack;
-                
-                return {
-                    cast: cast,
-                    workDays: workDays,
-                    totalHours: totalHours,
-                    hourlyWage: hourlyWage,
-                    totalDb: totalDb,
-                    nominationFees: nominationFees,
-                    companionBack: companionBack,
-                    salesBack: salesBack,
-                    champagneBack: champagneBack,
-                    bottleBack: bottleBack,
-                    totalSalary: totalSalary
-                };
-            });
+            const year = yearSelect?.value || now.getFullYear();
+            const month = monthSelect?.value || (now.getMonth() + 1);
             
             const salaryListEl = document.getElementById('salaryList');
-            salaryListEl.innerHTML = salaryData.map(data => {
-                const initial = data.cast.name.charAt(0);
+            salaryListEl.innerHTML = '<div class="text-center py-8 text-gray-400">読み込み中...</div>';
+            
+            try {
+                let payrollData;
+                if (appState.apiConnected) {
+                    payrollData = await apiRequest(`/cast-payroll?year=${year}&month=${month}`);
+                } else {
+                    // デモデータ
+                    payrollData = {
+                        period: `${year}年${month}月`,
+                        payroll_list: appState.casts.map(cast => ({
+                            cast_name: cast.name || cast.stage_name,
+                            rank: cast.rank,
+                            salary_type: cast.salaryType || cast.salary_type || 'hourly',
+                            work_days: 20,
+                            total_hours: 160,
+                            hourly_rate: cast.hourlyRate || cast.hourly_rate || 0,
+                            monthly_salary: cast.monthlySalary || cast.monthly_salary || 0,
+                            base_salary: (cast.salaryType === 'monthly' || cast.salary_type === 'monthly') 
+                                ? (cast.monthlySalary || cast.monthly_salary || 0) 
+                                : ((cast.hourlyRate || cast.hourly_rate || 0) * 160),
+                            companion_count: Math.floor(Math.random() * 10),
+                            companion_back: Math.floor(Math.random() * 30000),
+                            nomination_count: Math.floor(Math.random() * 20),
+                            nomination_back: Math.floor(Math.random() * 20000),
+                            drink_count: Math.floor(Math.random() * 50),
+                            drink_sales: Math.floor(Math.random() * 50000),
+                            drink_back: Math.floor(Math.random() * 5000),
+                            total_sales: Math.floor(Math.random() * 500000),
+                            sales_back: Math.floor(Math.random() * 25000),
+                            total_payroll: 0
+                        }))
+                    };
+                    payrollData.payroll_list.forEach(p => {
+                        p.total_payroll = p.base_salary + p.companion_back + p.nomination_back + p.drink_back + p.sales_back;
+                    });
+                }
+                
+                renderPayrollList(payrollData);
+            } catch (e) {
+                console.error('給与計算エラー:', e);
+                salaryListEl.innerHTML = `<div class="text-red-400 py-8">給与データの読み込みに失敗しました: ${e.message}</div>`;
+            }
+        }
+        
+        function renderPayrollList(data) {
+            const salaryListEl = document.getElementById('salaryList');
+            
+            if (!data.payroll_list || data.payroll_list.length === 0) {
+                salaryListEl.innerHTML = '<div class="text-center py-8 text-gray-400">データがありません</div>';
+                return;
+            }
+            
+            salaryListEl.innerHTML = data.payroll_list.map(p => {
+                const initial = (p.cast_name || 'キ').charAt(0);
+                const salaryTypeLabel = p.salary_type === 'monthly' ? '月給制' : '時給制';
+                const salaryTypeColor = p.salary_type === 'monthly' ? 'text-purple-400' : 'text-blue-400';
+                
                 return `
                 <div class="luxury-card rounded-xl overflow-hidden">
                     <div class="bg-gray-800/50 p-4 border-b border-gray-700">
@@ -6986,13 +7071,13 @@ function populateCastSelects() {
                                     ${initial}
                                 </div>
                                 <div>
-                                    <h3 class="text-xl font-bold text-gray-200">${data.cast.name}</h3>
-                                    <p class="text-sm text-gray-400">${month}</p>
+                                    <h3 class="text-xl font-bold text-gray-200">${p.cast_name}</h3>
+                                    <p class="text-sm text-gray-400">${data.period} <span class="${salaryTypeColor}">(${salaryTypeLabel})</span></p>
                                 </div>
                             </div>
                             <div class="text-right">
                                 <p class="text-sm text-gray-400">総支給額</p>
-                                <p class="text-3xl font-bold gold-accent">¥${data.totalSalary.toLocaleString()}</p>
+                                <p class="text-3xl font-bold gold-accent">¥${Number(p.total_payroll).toLocaleString()}</p>
                             </div>
                         </div>
                     </div>
@@ -7000,58 +7085,94 @@ function populateCastSelects() {
                     <div class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="text-center">
                             <p class="text-xs text-gray-400 mb-1">出勤日数</p>
-                            <p class="text-xl font-semibold text-gray-200">${data.workDays}日</p>
+                            <p class="text-xl font-semibold text-gray-200">${p.work_days}日</p>
                         </div>
                         <div class="text-center">
                             <p class="text-xs text-gray-400 mb-1">勤務時間</p>
-                            <p class="text-xl font-semibold text-gray-200">${data.totalHours}h</p>
+                            <p class="text-xl font-semibold text-gray-200">${p.total_hours}h</p>
                         </div>
                         <div class="text-center">
-                            <p class="text-xs text-gray-400 mb-1">時給</p>
-                            <p class="text-xl font-semibold text-gray-200">¥${data.cast.hourlyRate.toLocaleString()}</p>
+                            <p class="text-xs text-gray-400 mb-1">${p.salary_type === 'monthly' ? '月給' : '時給'}</p>
+                            <p class="text-xl font-semibold text-gray-200">¥${Number(p.salary_type === 'monthly' ? p.monthly_salary : p.hourly_rate).toLocaleString()}</p>
                         </div>
                         <div class="text-center">
-                            <p class="text-xs text-gray-400 mb-1">時給計</p>
-                            <p class="text-xl font-semibold text-blue-300">¥${data.hourlyWage.toLocaleString()}</p>
+                            <p class="text-xs text-gray-400 mb-1">基本給</p>
+                            <p class="text-xl font-semibold text-blue-300">¥${Number(p.base_salary).toLocaleString()}</p>
                         </div>
                     </div>
                     
                     <div class="p-4 border-t border-gray-700 space-y-2">
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-400">💎 DB合計</span>
-                            <span class="font-semibold text-pink-300">¥${data.totalDb.toLocaleString()}</span>
+                            <span class="text-gray-400">💰 同伴バック (${p.companion_count}回)</span>
+                            <span class="font-semibold text-amber-300">¥${Number(p.companion_back).toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-400">⭐ 指名料バック</span>
-                            <span class="font-semibold text-purple-300">¥${data.nominationFees.toLocaleString()}</span>
+                            <span class="text-gray-400">💎 指名バック (${p.nomination_count}回)</span>
+                            <span class="font-semibold text-purple-300">¥${Number(p.nomination_back).toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-400">💰 売上バック</span>
-                            <span class="font-semibold text-green-300">¥${data.salesBack.toLocaleString()}</span>
+                            <span class="text-gray-400">🍸 ドリンクバック (${p.drink_count}杯)</span>
+                            <span class="font-semibold text-blue-300">¥${Number(p.drink_back).toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="text-gray-400">🚗 同伴バック</span>
-                            <span class="font-semibold text-amber-300">¥${data.companionBack.toLocaleString()}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-400">🍾 シャンパンバック</span>
-                            <span class="font-semibold text-yellow-300">¥${data.champagneBack.toLocaleString()}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-400">🥃 ボトルバック</span>
-                            <span class="font-semibold text-orange-300">¥${data.bottleBack.toLocaleString()}</span>
+                            <span class="text-gray-400">📈 売上バック (売上: ¥${Number(p.total_sales).toLocaleString()})</span>
+                            <span class="font-semibold text-green-300">¥${Number(p.sales_back).toLocaleString()}</span>
                         </div>
                     </div>
                     
                     <div class="p-4 bg-gray-800/50 border-t-2 border-yellow-700/50">
                         <div class="flex justify-between items-center">
                             <span class="text-lg font-bold text-gray-200">総支給額</span>
-                            <span class="text-2xl font-bold gold-accent">¥${data.totalSalary.toLocaleString()}</span>
+                            <span class="text-2xl font-bold gold-accent">¥${Number(p.total_payroll).toLocaleString()}</span>
                         </div>
+                    </div>
+                    
+                    <div class="p-3 bg-gray-900/50 border-t border-gray-700">
+                        <button onclick="printPayrollSlip('${p.cast_name}', ${JSON.stringify(p).replace(/"/g, '&quot;')})" class="w-full text-sm text-gray-400 hover:text-white transition">
+                            🖨️ 給与明細を印刷
+                        </button>
                     </div>
                 </div>
             `;
             }).join('');
+        }
+        
+        function printPayrollSlip(castName, data) {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>給与明細 - ${castName}</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; }
+                        h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+                        .info { margin: 20px 0; }
+                        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+                        .total { font-size: 1.5em; font-weight: bold; border-top: 2px solid #000; margin-top: 20px; padding-top: 20px; }
+                        @media print { body { padding: 20px; } }
+                    </style>
+                </head>
+                <body>
+                    <h1>給与明細書</h1>
+                    <div class="info">
+                        <p><strong>氏名:</strong> ${castName}</p>
+                        <p><strong>期間:</strong> ${data.period || ''}</p>
+                        <p><strong>給与体系:</strong> ${data.salary_type === 'monthly' ? '月給制' : '時給制'}</p>
+                    </div>
+                    <div class="row"><span>出勤日数</span><span>${data.work_days}日</span></div>
+                    <div class="row"><span>勤務時間</span><span>${data.total_hours}時間</span></div>
+                    <div class="row"><span>基本給</span><span>¥${Number(data.base_salary).toLocaleString()}</span></div>
+                    <div class="row"><span>同伴バック (${data.companion_count}回)</span><span>¥${Number(data.companion_back).toLocaleString()}</span></div>
+                    <div class="row"><span>指名バック (${data.nomination_count}回)</span><span>¥${Number(data.nomination_back).toLocaleString()}</span></div>
+                    <div class="row"><span>ドリンクバック (${data.drink_count}杯)</span><span>¥${Number(data.drink_back).toLocaleString()}</span></div>
+                    <div class="row"><span>売上バック</span><span>¥${Number(data.sales_back).toLocaleString()}</span></div>
+                    <div class="row total"><span>総支給額</span><span>¥${Number(data.total_payroll).toLocaleString()}</span></div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
         }
 
         function renderRankings() {

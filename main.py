@@ -80,7 +80,9 @@ class Cast(Base):
     id = Column(Integer, primary_key=True, index=True)
     stage_name = Column(String, unique=True, index=True)
     rank = Column(String, default="regular")
+    salary_type = Column(String, default="hourly")  # hourly or monthly
     hourly_rate = Column(Integer)
+    monthly_salary = Column(Integer, default=0)  # 月給（月給制の場合）
     drink_back_rate = Column(Integer, default=10)  # ドリンクバック率(%)
     companion_back = Column(Integer, default=3000)  # 同伴バック（円）
     nomination_back = Column(Integer, default=1000)  # 指名バック（円）
@@ -188,7 +190,9 @@ class Token(BaseModel):
 class CastCreate(BaseModel):
     stage_name: str
     rank: str
-    hourly_rate: int
+    salary_type: str = "hourly"
+    hourly_rate: int = 0
+    monthly_salary: int = 0
     drink_back_rate: int = 10
     companion_back: int = 3000
     nomination_back: int = 1000
@@ -197,7 +201,9 @@ class CastCreate(BaseModel):
 class CastUpdate(BaseModel):
     stage_name: Optional[str] = None
     rank: Optional[str] = None
+    salary_type: Optional[str] = None
     hourly_rate: Optional[int] = None
+    monthly_salary: Optional[int] = None
     drink_back_rate: Optional[int] = None
     companion_back: Optional[int] = None
     nomination_back: Optional[int] = None
@@ -207,7 +213,9 @@ class CastResponse(BaseModel):
     id: int
     stage_name: str
     rank: str
+    salary_type: str
     hourly_rate: int
+    monthly_salary: int
     drink_back_rate: int
     companion_back: int
     nomination_back: int
@@ -501,11 +509,11 @@ def startup_event():
     # キャスト
     if db.query(Cast).count() == 0:
         casts = [
-            Cast(stage_name="あいり", rank="レギュラー", hourly_rate=3000, drink_back_rate=10, companion_back=3000, nomination_back=1000, sales_back_rate=0),
-            Cast(stage_name="みゆ", rank="レギュラー", hourly_rate=3000, drink_back_rate=10, companion_back=3000, nomination_back=1000, sales_back_rate=0),
-            Cast(stage_name="れな", rank="エース", hourly_rate=4000, drink_back_rate=15, companion_back=4000, nomination_back=1500, sales_back_rate=3),
-            Cast(stage_name="かな", rank="エース", hourly_rate=4000, drink_back_rate=15, companion_back=4000, nomination_back=1500, sales_back_rate=3),
-            Cast(stage_name="りお", rank="ナンバー", hourly_rate=5000, drink_back_rate=20, companion_back=5000, nomination_back=2000, sales_back_rate=5),
+            Cast(stage_name="あいり", rank="レギュラー", salary_type="hourly", hourly_rate=3000, drink_back_rate=10, companion_back=3000, nomination_back=1000, sales_back_rate=0),
+            Cast(stage_name="みゆ", rank="レギュラー", salary_type="hourly", hourly_rate=3000, drink_back_rate=10, companion_back=3000, nomination_back=1000, sales_back_rate=0),
+            Cast(stage_name="れな", rank="エース", salary_type="hourly", hourly_rate=4000, drink_back_rate=15, companion_back=4000, nomination_back=1500, sales_back_rate=3),
+            Cast(stage_name="かな", rank="エース", salary_type="hourly", hourly_rate=4000, drink_back_rate=15, companion_back=4000, nomination_back=1500, sales_back_rate=3),
+            Cast(stage_name="りお", rank="ナンバー", salary_type="monthly", hourly_rate=0, monthly_salary=500000, drink_back_rate=20, companion_back=5000, nomination_back=2000, sales_back_rate=5),
         ]
         db.add_all(casts)
         db.commit()
@@ -1374,6 +1382,131 @@ def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, 
         "avg_per_person": round(total_sales / total_guests) if total_guests > 0 else 0,
         "daily_sales": [{"date": k, "sales": v} for k, v in sorted(daily_sales.items())],
         "cast_ranking": cast_ranking
+    }
+
+# キャスト給与計算
+@app.get("/api/cast-payroll")
+def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, cast_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """キャスト給与明細を取得"""
+    from calendar import monthrange
+    
+    now = datetime.utcnow()
+    target_year = year or now.year
+    target_month = month or now.month
+    
+    # 月の開始日と終了日
+    start_date = f"{target_year}-{target_month:02d}-01"
+    last_day = monthrange(target_year, target_month)[1]
+    end_date = f"{target_year}-{target_month:02d}-{last_day}"
+    
+    # キャスト取得
+    if cast_id:
+        casts = db.query(Cast).filter(Cast.id == cast_id).all()
+    else:
+        casts = db.query(Cast).all()
+    
+    payroll_list = []
+    
+    for cast in casts:
+        # 出勤記録
+        attendances = db.query(Attendance).filter(
+            Attendance.cast_id == cast.id,
+            Attendance.date >= start_date,
+            Attendance.date <= end_date
+        ).all()
+        
+        # 勤務時間計算
+        total_hours = 0
+        work_days = len(attendances)
+        for att in attendances:
+            if att.clock_in and att.clock_out:
+                try:
+                    clock_in = datetime.strptime(att.clock_in, "%H:%M")
+                    clock_out = datetime.strptime(att.clock_out, "%H:%M")
+                    # 深夜跨ぎ対応
+                    if clock_out < clock_in:
+                        clock_out = clock_out.replace(day=clock_in.day + 1)
+                    hours = (clock_out - clock_in).seconds / 3600
+                    total_hours += hours
+                except:
+                    pass
+        
+        # 基本給計算
+        if cast.salary_type == "monthly":
+            base_salary = cast.monthly_salary or 0
+        else:
+            base_salary = int((cast.hourly_rate or 0) * total_hours)
+        
+        # セッション取得
+        sessions = db.query(SessionModel).filter(
+            SessionModel.cast_id == cast.id,
+            SessionModel.start_time >= f"{start_date} 00:00:00",
+            SessionModel.start_time <= f"{end_date} 23:59:59"
+        ).all()
+        
+        # 同伴バック
+        companion_count = 0
+        companion_back = 0
+        for session in sessions:
+            if session.has_companion and session.companion_name == cast.stage_name:
+                companion_count += 1
+                companion_back += cast.companion_back or 0
+        
+        # 指名バック
+        nomination_count = 0
+        nomination_back = 0
+        for session in sessions:
+            if session.nomination_type:
+                nomination_count += 1
+                nomination_back += cast.nomination_back or 0
+        
+        # ドリンクバック
+        orders = db.query(Order).filter(
+            Order.cast_name == cast.stage_name,
+            Order.is_drink_back == True,
+            Order.created_at >= f"{start_date} 00:00:00",
+            Order.created_at <= f"{end_date} 23:59:59"
+        ).all()
+        
+        drink_sales = sum(o.price * o.quantity for o in orders)
+        drink_back = int(drink_sales * (cast.drink_back_rate or 10) / 100)
+        drink_count = sum(o.quantity for o in orders)
+        
+        # 売上バック
+        total_sales = sum(s.current_total or 0 for s in sessions)
+        sales_back = int(total_sales * (cast.sales_back_rate or 0) / 100)
+        
+        # 合計
+        total_payroll = base_salary + companion_back + nomination_back + drink_back + sales_back
+        
+        payroll_list.append({
+            "cast_id": cast.id,
+            "cast_name": cast.stage_name,
+            "rank": cast.rank,
+            "salary_type": cast.salary_type or "hourly",
+            "period": f"{target_year}年{target_month}月",
+            "work_days": work_days,
+            "total_hours": round(total_hours, 1),
+            "hourly_rate": cast.hourly_rate or 0,
+            "monthly_salary": cast.monthly_salary or 0,
+            "base_salary": base_salary,
+            "companion_count": companion_count,
+            "companion_back": companion_back,
+            "nomination_count": nomination_count,
+            "nomination_back": nomination_back,
+            "drink_count": drink_count,
+            "drink_sales": drink_sales,
+            "drink_back": drink_back,
+            "total_sales": total_sales,
+            "sales_back": sales_back,
+            "total_payroll": total_payroll
+        })
+    
+    return {
+        "year": target_year,
+        "month": target_month,
+        "period": f"{target_year}年{target_month}月",
+        "payroll_list": payroll_list
     }
 
 # ヘルスチェック
