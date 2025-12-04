@@ -692,13 +692,11 @@ def call_staff(session_id: int, db: Session = Depends(get_db)):
     return {"message": "Staff called", "session_id": session_id}
 
 @app.post("/api/sessions/{session_id}/extend")
-def extend_session(session_id: int, data: dict, db: Session = Depends(get_db)):
+def extend_session(session_id: int, db: Session = Depends(get_db)):
     """セッションを延長"""
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
-    minutes = data.get("minutes", 30)
     
     # 延長回数を増やす
     session.extension_count = (session.extension_count or 0) + 1
@@ -707,7 +705,7 @@ def extend_session(session_id: int, data: dict, db: Session = Depends(get_db)):
     db.refresh(session)
     
     return {
-        "message": f"Session extended by {minutes} minutes",
+        "message": "Session extended",
         "extension_count": session.extension_count
     }
 

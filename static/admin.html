@@ -4874,8 +4874,7 @@ async function openTableDetail(tableId) {
           try {
             msg('30分延長（自動注文追加）中...');
             await fetchJson(`/sessions/${sessionId}/extend`, {
-              method: 'POST',
-              body: JSON.stringify({ minutes: 30 })
+              method: 'POST'
             });
             msg('30分延長しました');
             await refreshPanel();
@@ -4891,8 +4890,7 @@ async function openTableDetail(tableId) {
           try {
             msg('60分延長（自動注文追加）中...');
             await fetchJson(`/sessions/${sessionId}/extend`, {
-              method: 'POST',
-              body: JSON.stringify({ minutes: 60 })
+              method: 'POST'
             });
             msg('60分延長しました');
             await refreshPanel();
