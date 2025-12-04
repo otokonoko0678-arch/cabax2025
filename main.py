@@ -396,11 +396,11 @@ def startup_event():
             MenuItem(name="グラス（追加）", price=0, category="tableset", description="グラスの追加"),
             MenuItem(name="ウーロン茶ピッチャー", price=0, category="tableset", description="割り物"),
             MenuItem(name="緑茶ピッチャー", price=0, category="tableset", description="割り物"),
-            MenuItem(name="ソーダピッチャー", price=0, category="tableset", description="割り物"),
+            MenuItem(name="炭酸水ピッチャー", price=0, category="tableset", description="割り物"),
             MenuItem(name="紅茶ピッチャー", price=0, category="tableset", description="割り物"),
             MenuItem(name="ジャスミン茶ピッチャー", price=0, category="tableset", description="割り物"),
             MenuItem(name="コーヒーピッチャー", price=0, category="tableset", description="割り物"),
-            MenuItem(name="水ピッチャー", price=0, category="tableset", description="割り物"),
+            MenuItem(name="ミネラルウォーターピッチャー", price=0, category="tableset", description="割り物"),
             
             # === シャンパン ===
             MenuItem(name="アルマンド ブリニャック ブリュット", price=120000, category="champagne", description="ゴールドボトル", premium=True),
