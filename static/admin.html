@@ -603,7 +603,7 @@
                     </button>
                     <button onclick="showTab('tables')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">🪑</span>
-                        <span>テーブル管理</span>
+                        <span>テーブル設定</span>
                     </button>
                     <button onclick="showTab('orders')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">🍽️</span>
@@ -623,7 +623,7 @@
                     </button>
                     <button onclick="showTab('table-settings')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">🪑</span>
-                        <span>テーブル管理</span>
+                        <span>テーブル設定</span>
                     </button>
                     <button onclick="showTab('casts')" class="nav-btn w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm text-gray-300 hover:bg-gray-800/50 transition">
                         <span class="text-lg">👥</span>
@@ -731,9 +731,9 @@
                     </div>
                 </div>
 
-                <!-- テーブル管理 -->
+                <!-- テーブル設定 -->
                 <div id="tables-tab" class="tab-content">
-                    <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-8 md:mb-10">テーブル管理</h1>
+                    <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-8 md:mb-10">テーブル設定</h1>
 
                     <div id="tablesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
                     </div>
@@ -883,10 +883,10 @@
                     <div id="menuGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"></div>
                 </div>
 
-                <!-- テーブル管理 -->
+                <!-- テーブル設定 -->
                 <div id="table-settings-tab" class="tab-content">
                     <div class="mb-6 md:mb-8">
-                        <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-4">テーブル管理</h1>
+                        <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-4">テーブル設定</h1>
                         <p class="text-gray-400">テーブルの追加・編集・削除ができます</p>
                     </div>
                     
@@ -1608,7 +1608,7 @@ async function fetchOrdersForSession(sessionId) {
     }
 }
 
-// テーブル管理の描画（セッションが真実）
+// テーブル設定の描画（セッションが真実）
 function renderTables() {
     const grid = document.getElementById('tablesGrid');
     if (!grid) return;
@@ -3277,7 +3277,7 @@ async function syncWithBackend() {
             renderMenu();
         }
 
-        // ========== テーブル管理 ==========
+        // ========== テーブル設定 ==========
         
         function renderTableSettings() {
             const grid = document.getElementById('tableSettingsGrid');
@@ -3944,7 +3944,7 @@ async function toggleOrderStatusFromList(sessionId, orderId, setServed) {
         // リストを更新
         await loadOrdersFromApi();
         
-        // テーブル管理も更新
+        // テーブル設定も更新
         if (typeof loadActiveSessionsFromApi === 'function') {
             await loadActiveSessionsFromApi();
         }
@@ -7226,7 +7226,7 @@ function setupCharts() {
                 loadOrdersFromApi();
             }
             
-            // テーブル管理タブを開いたらテーブル一覧を描画
+            // テーブル設定タブを開いたらテーブル一覧を描画
             if (tabName === 'table-settings') {
                 renderTableSettings();
             }
