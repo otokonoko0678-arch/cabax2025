@@ -1438,21 +1438,17 @@ async function requestCheck() {
                 
                 <!-- 誰が飲むか選択 -->
                 <div id="drinkForSectionOrder">
-                    <div class="text-sm text-gray-400 mb-2">誰が飲む？</div>
                     <div class="grid grid-cols-3 gap-2 mb-3">
                         <label class="drink-for-order-label flex flex-col items-center justify-center p-3 rounded-xl bg-black/20 border-2 border-blue-500 bg-blue-500/20 cursor-pointer">
                             <input type="radio" name="drinkForOrder" value="customer" checked onchange="onDrinkForOrderChange(); updateDrinkForOrderStyle()" class="hidden">
-                            <span class="text-2xl">👤</span>
                             <span class="text-white text-sm">お客様</span>
                         </label>
                         <label class="drink-for-order-label flex flex-col items-center justify-center p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
                             <input type="radio" name="drinkForOrder" value="staff" onchange="onDrinkForOrderChange(); updateDrinkForOrderStyle()" class="hidden">
-                            <span class="text-2xl">🧑‍💼</span>
                             <span class="text-white text-sm">スタッフ</span>
                         </label>
                         <label class="drink-for-order-label flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
                             <input type="radio" name="drinkForOrder" value="cast" onchange="onDrinkForOrderChange(); updateDrinkForOrderStyle()" class="hidden">
-                            
                             <span class="text-white text-xs sm:text-sm">キャスト</span>
                         </label>
                     </div>
