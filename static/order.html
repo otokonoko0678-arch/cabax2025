@@ -1698,8 +1698,10 @@ async function requestCheck() {
             
             // 初期価格設定
             const isPaidDrink = paidDrinks.includes(item.name);
-            if (isPaidDrink) {
-                // ショット・グラスワインは誰が飲んでも2,000円
+            const isBottleOrChampagne = ['bottle', 'champagne', 'wine'].includes(category);
+            
+            if (isPaidDrink || isBottleOrChampagne) {
+                // ショット・グラスワイン・ボトル・シャンパン・ワインは価格表示
                 document.getElementById('drinkModalItemPrice').textContent = '¥' + item.price.toLocaleString();
             } else if (isCastDrink) {
                 // キャストドリンクはサイズ別価格
@@ -1859,6 +1861,8 @@ async function requestCheck() {
             // 現在のアイテム取得
             const item = appState.menuItems.find(m => m.id === drinkModalState.itemId);
             const isPaidDrink = item && paidDrinks.includes(item.name);
+            const category = (item?.category || '').toLowerCase();
+            const isBottleOrChampagne = ['bottle', 'champagne', 'wine'].includes(category);
             
             if (drinkFor === 'customer') {
                 // お客様：人物選択不要
@@ -1866,8 +1870,8 @@ async function requestCheck() {
                 drinkBackInfo.classList.add('hidden');
                 sizeSection.classList.add('hidden');
                 
-                if (isPaidDrink) {
-                    // ショット・グラスワインは2,000円
+                if (isPaidDrink || isBottleOrChampagne) {
+                    // ショット・グラスワイン・ボトル・シャンパン・ワインは価格表示
                     document.getElementById('drinkModalItemPrice').textContent = '¥' + item.price.toLocaleString();
                 } else {
                     // 他のドリンクはセット料金込み
