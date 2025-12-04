@@ -2201,10 +2201,13 @@ function renderTableDetailPanel(session) {
             const shimeiCastsStr = s.shimei_casts || '';
             const shimeiCount = shimeiCastsStr ? shimeiCastsStr.split(',').filter(n => n.trim()).length : 0;
             
-            // 30分延長料金（ハーフ）= 人数×3000 + 指名数×2000
-            const halfExtension = (guests * 3000) + (shimeiCount * 2000);
-            // 60分延長料金（1セット）= 人数×5000 + 指名数×2000
-            const fullExtension = (guests * 5000) + (shimeiCount * 2000);
+            // シングルチャージ（1名の場合のみ）
+            const singleCharge = guests === 1 ? 2000 : 0;
+            
+            // 30分延長料金（ハーフ）= 人数×3000 + 指名数×2000 + シングルチャージ
+            const halfExtension = (guests * 3000) + (shimeiCount * 2000) + singleCharge;
+            // 60分延長料金（1セット）= 人数×5000 + 指名数×2000 + シングルチャージ
+            const fullExtension = (guests * 5000) + (shimeiCount * 2000) + singleCharge;
             
             // 現在の会計
             const currentTax = Math.floor(currentSubtotal * (taxRate / 100));
@@ -2220,6 +2223,10 @@ function renderTableDetailPanel(session) {
             const tax60 = Math.floor(subtotal60 * (taxRate / 100));
             const total60 = subtotal60 + tax60;
             
+            // 延長内訳の説明文
+            const ext30Desc = `${guests}名×3000${singleCharge > 0 ? ' + SC' : ''}${shimeiCount > 0 ? ` + 指名${shimeiCount}×2000` : ''}`;
+            const ext60Desc = `${guests}名×5000${singleCharge > 0 ? ' + SC' : ''}${shimeiCount > 0 ? ` + 指名${shimeiCount}×2000` : ''}`;
+            
             return `
           <div class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5">
             <div class="font-bold text-white mb-3">💰 会計シミュレーション <span class="text-white/40 text-xs">（TAX ${taxRate}%込）</span></div>
@@ -2232,14 +2239,14 @@ function renderTableDetailPanel(session) {
               </div>
               <div class="p-3 rounded-xl bg-black/30 border border-blue-500/30">
                 <div class="text-[11px] text-blue-400 mb-1">+30分延長後</div>
-                <div class="text-xs text-white/60">+¥${yen(halfExtension)}（${guests}名×3000${shimeiCount > 0 ? ` + 指名${shimeiCount}×2000` : ''}）</div>
+                <div class="text-xs text-white/60">+¥${yen(halfExtension)}（${ext30Desc}）</div>
                 <div class="text-xs text-white/60">小計: ¥${yen(subtotal30)} / TAX: ¥${yen(tax30)}</div>
                 <div class="font-extrabold text-xl text-blue-300">¥${yen(total30)}</div>
                 <div class="text-[10px] text-white/40 mt-1">（+¥${yen(total30 - currentTotal)}）</div>
               </div>
               <div class="p-3 rounded-xl bg-black/30 border border-purple-500/30">
                 <div class="text-[11px] text-purple-400 mb-1">+60分延長後</div>
-                <div class="text-xs text-white/60">+¥${yen(fullExtension)}（${guests}名×5000${shimeiCount > 0 ? ` + 指名${shimeiCount}×2000` : ''}）</div>
+                <div class="text-xs text-white/60">+¥${yen(fullExtension)}（${ext60Desc}）</div>
                 <div class="text-xs text-white/60">小計: ¥${yen(subtotal60)} / TAX: ¥${yen(tax60)}</div>
                 <div class="font-extrabold text-xl text-purple-300">¥${yen(total60)}</div>
                 <div class="text-[10px] text-white/40 mt-1">（+¥${yen(total60 - currentTotal)}）</div>
@@ -4880,9 +4887,10 @@ async function openTableDetail(tableId) {
             const shimeiCastsStr = sessionData?.shimei_casts || '';
             const shimeiCount = shimeiCastsStr ? shimeiCastsStr.split(',').filter(n => n.trim()).length : 0;
             
-            // 延長料金計算: 人数×3000 + 指名数×2000
+            // 延長料金計算: 人数×3000 + 指名数×2000 + シングルチャージ（1名のみ）
             const setExtension = guests * 3000;
             const shimeiExtension = shimeiCount * 2000;
+            const singleCharge = guests === 1 ? 2000 : 0;
             
             // 延長APIを呼ぶ
             await fetchJson(`/sessions/${sessionId}/extend`, {
@@ -4896,6 +4904,18 @@ async function openTableDetail(tableId) {
                 body: JSON.stringify({
                   item_name: `延長30分（${guests}名×3000）`,
                   price: setExtension,
+                  quantity: 1
+                })
+              });
+            }
+            
+            // シングルチャージを注文に追加（1名の場合のみ）
+            if (singleCharge > 0) {
+              await fetchJson(`/sessions/${sessionId}/add-charge`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  item_name: 'シングルチャージ（延長）',
+                  price: singleCharge,
                   quantity: 1
                 })
               });
@@ -4934,9 +4954,10 @@ async function openTableDetail(tableId) {
             const shimeiCastsStr = sessionData?.shimei_casts || '';
             const shimeiCount = shimeiCastsStr ? shimeiCastsStr.split(',').filter(n => n.trim()).length : 0;
             
-            // 延長料金計算: 人数×5000 + 指名数×2000
+            // 延長料金計算: 人数×5000 + 指名数×2000 + シングルチャージ（1名のみ）
             const setExtension = guests * 5000;
             const shimeiExtension = shimeiCount * 2000;
+            const singleCharge = guests === 1 ? 2000 : 0;
             
             // 延長APIを呼ぶ
             await fetchJson(`/sessions/${sessionId}/extend`, {
@@ -4950,6 +4971,18 @@ async function openTableDetail(tableId) {
                 body: JSON.stringify({
                   item_name: `延長60分（${guests}名×5000）`,
                   price: setExtension,
+                  quantity: 1
+                })
+              });
+            }
+            
+            // シングルチャージを注文に追加（1名の場合のみ）
+            if (singleCharge > 0) {
+              await fetchJson(`/sessions/${sessionId}/add-charge`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  item_name: 'シングルチャージ（延長）',
+                  price: singleCharge,
                   quantity: 1
                 })
               });
