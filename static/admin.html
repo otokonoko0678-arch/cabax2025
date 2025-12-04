@@ -6408,9 +6408,9 @@ async function addCast(event) {
             if (!cast) return;
 
             document.getElementById('editCastId').value = cast.id;
-            document.getElementById('editCastName').value = cast.name;
+            document.getElementById('editCastName').value = cast.name || cast.stage_name || '';
             document.getElementById('editCastRank').value = cast.rank;
-            document.getElementById('editCastHourlyRate').value = cast.hourlyRate;
+            document.getElementById('editCastHourlyRate').value = cast.hourlyRate ?? cast.hourly_rate ?? 0;
             document.getElementById('editCastCompanionBack').value = cast.companionBack ?? cast.companion_back ?? 3000;
             document.getElementById('editCastNominationBack').value = cast.nominationBack ?? cast.nomination_back ?? 1000;
             document.getElementById('editCastDrinkBackRate').value = cast.drinkBackRate ?? cast.drink_back_rate ?? 10;
