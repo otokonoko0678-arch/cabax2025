@@ -7927,7 +7927,7 @@ async function loadMonthlyReport() {
     try {
         let data;
         if (appState.apiConnected) {
-            data = await apiRequest(`/api/monthly-report?year=${year}&month=${month}`);
+            data = await apiRequest(`/monthly-report?year=${year}&month=${month}`);
         } else {
             // デモデータ
             data = generateDemoMonthlyReport(parseInt(year), parseInt(month));
