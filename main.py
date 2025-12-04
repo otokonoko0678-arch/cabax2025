@@ -103,6 +103,7 @@ class SessionModel(Base):
     extension_count = Column(Integer, default=0)
     nomination_type = Column(String, nullable=True)
     nomination_fee = Column(Integer, default=0)
+    shimei_casts = Column(String, nullable=True)  # 指名キャスト名（カンマ区切り）
     status = Column(String, default="active")
     
     table = relationship("Table", back_populates="sessions")
@@ -239,6 +240,7 @@ class SessionCreate(BaseModel):
     companion_name: Optional[str] = None
     nomination_type: Optional[str] = None
     nomination_fee: int = 0
+    shimei_casts: Optional[str] = None  # 指名キャスト名（カンマ区切り）
 
 class SessionResponse(BaseModel):
     id: int

@@ -1871,6 +1871,17 @@ function renderTableDetailPanel(session) {
   return `${freeOpt}${list}`;
 })();
 
+  // 複数指名キャスト用チェックボックス
+  const castCheckboxes = (() => {
+    if (!casts.length) return '<div class="text-white/50 text-sm">キャスト未取得</div>';
+    return casts.map(c => `
+      <label class="flex items-center gap-2 p-2 rounded-xl bg-black/20 border border-white/10 cursor-pointer hover:bg-black/30 hover:border-amber-500/30">
+        <input type="checkbox" class="shimei-cast-checkbox w-4 h-4 accent-[#d6b36a]" value="${c.id}" data-name="${c.stage_name ?? c.name ?? `Cast#${c.id}`}">
+        <span class="text-sm text-white/90">${c.stage_name ?? c.name ?? `Cast#${c.id}`}</span>
+      </label>
+    `).join('');
+  })();
+
   const ordersHtml = orders.length
     ? orders.map((o, idx) => {
         const line = (Number(o.price || 0) * Number(o.quantity || 0));
@@ -1939,7 +1950,7 @@ function renderTableDetailPanel(session) {
             <!-- 基本情報 -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
               <label class="block sm:col-span-2">
-                <div class="text-[11px] text-white/50 mb-1">担当キャスト</div>
+                <div class="text-[11px] text-white/50 mb-1">担当キャスト（着席時）</div>
                 <select id="selStartCast" class="rounded-xl px-3 py-2 w-full bg-black/40 border border-white/10 text-white outline-none focus:border-[#d6b36a]/60">
                   ${castOptions}
                 </select>
@@ -1955,6 +1966,18 @@ function renderTableDetailPanel(session) {
                 <input id="inpStartCatch" type="text" placeholder="例）山田"
                        class="w-full rounded-xl px-3 py-2 bg-black/40 border border-white/10 text-white outline-none focus:border-[#d6b36a]/60">
               </label>
+            </div>
+            
+            <!-- 指名キャスト（複数選択可） -->
+            <div class="border-t border-white/10 pt-4 mt-4">
+              <div class="font-bold text-white mb-3 flex items-center gap-2">
+                👑 指名キャスト
+                <span class="text-xs text-white/40">（複数選択可・指名料は1人あたり¥2,000）</span>
+              </div>
+              <div id="shimeiCastList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                ${castCheckboxes}
+              </div>
+              <div id="shimeiCastPreview" class="mt-2 text-sm text-amber-400"></div>
             </div>
             
             <!-- 料金設定 -->
@@ -1989,14 +2012,10 @@ function renderTableDetailPanel(session) {
               </div>
               
               <!-- オプション料金 -->
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
                 <label class="flex items-center gap-2 p-2 rounded-xl bg-black/20 border border-white/10 cursor-pointer hover:bg-black/30">
                   <input id="chkDouhan" type="checkbox" onchange="updateStartCharges()" class="w-4 h-4 accent-[#d6b36a]">
                   <span class="text-sm text-white/90">同伴 <span class="text-amber-400">¥3,000</span></span>
-                </label>
-                <label class="flex items-center gap-2 p-2 rounded-xl bg-black/20 border border-white/10 cursor-pointer hover:bg-black/30">
-                  <input id="chkShimei" type="checkbox" onchange="updateStartCharges()" class="w-4 h-4 accent-[#d6b36a]">
-                  <span class="text-sm text-white/90">指名 <span class="text-amber-400">¥2,000</span></span>
                 </label>
                 <label class="flex items-center gap-2 p-2 rounded-xl bg-black/20 border border-white/10 cursor-pointer hover:bg-black/30">
                   <input id="chkSingle" type="checkbox" onchange="updateStartCharges()" class="w-4 h-4 accent-[#d6b36a]">
@@ -4204,6 +4223,18 @@ function updateStartCharges() {
     document.getElementById('previewTax').textContent = `¥${charges.tax.toLocaleString()}`;
     document.getElementById('previewTotal').textContent = `¥${charges.total.toLocaleString()}`;
     
+    // 指名キャストプレビュー更新
+    const shimeiPreview = document.getElementById('shimeiCastPreview');
+    if (shimeiPreview) {
+        const checkedCasts = document.querySelectorAll('.shimei-cast-checkbox:checked');
+        if (checkedCasts.length > 0) {
+            const names = Array.from(checkedCasts).map(c => c.dataset.name).join(', ');
+            shimeiPreview.textContent = `選択中: ${names}（指名料 ¥${(checkedCasts.length * 2000).toLocaleString()}）`;
+        } else {
+            shimeiPreview.textContent = '';
+        }
+    }
+    
     // シングルチャージの自動チェック（1名の場合）
     const guests = Number(document.getElementById('inpStartGuests')?.value ?? 1);
     const chkSingle = document.getElementById('chkSingle');
@@ -4220,9 +4251,11 @@ function calculateStartCharges() {
     const setPrice = Number(document.getElementById('inpSetPrice')?.value ?? 5000);
     const taxRate = Number(document.getElementById('selTaxRate')?.value ?? 20);
     const hasDouhan = document.getElementById('chkDouhan')?.checked ?? false;
-    const hasShimei = document.getElementById('chkShimei')?.checked ?? false;
     const hasSingle = document.getElementById('chkSingle')?.checked ?? false;
     const isFree = document.getElementById('chkFree')?.checked ?? false;
+    
+    // 指名キャストの数を取得
+    const shimeiCastCount = document.querySelectorAll('.shimei-cast-checkbox:checked').length;
     
     // フリー客の場合は割引適用
     const discount = isFree ? 0.8 : 1; // 20%OFF
@@ -4236,8 +4269,8 @@ function calculateStartCharges() {
     // 同伴料
     const douhan = hasDouhan ? 3000 : 0;
     
-    // 指名料
-    const shimei = hasShimei ? 2000 : 0;
+    // 指名料（1人あたり2000円 × 指名キャスト数）
+    const shimei = shimeiCastCount * 2000;
     
     // 小計
     const subtotal = setTotal + single + douhan + shimei;
@@ -4248,7 +4281,7 @@ function calculateStartCharges() {
     // 合計
     const total = subtotal + tax;
     
-    return { setTotal, single, douhan, shimei, tax, total, subtotal, taxRate };
+    return { setTotal, single, douhan, shimei, tax, total, subtotal, taxRate, shimeiCastCount };
 }
 
 // 初期料金を注文として追加
@@ -4416,7 +4449,13 @@ async function openTableDetail(tableId) {
               
               // 料金オプション
               const hasDouhan = document.getElementById('chkDouhan')?.checked ?? false;
-              const hasShimei = document.getElementById('chkShimei')?.checked ?? false;
+              
+              // 指名キャストを取得（複数対応）
+              const shimeiCasts = Array.from(document.querySelectorAll('.shimei-cast-checkbox:checked')).map(c => ({
+                id: Number(c.value),
+                name: c.dataset.name
+              }));
+              const hasShimei = shimeiCasts.length > 0;
 
               if (castVal === '') throw new Error('担当キャストを選ぶか「フリー」を選択してください');
               if (castVal !== 'free' && (!castId || castId < 0)) throw new Error('担当キャストの値が不正です');
@@ -4433,7 +4472,8 @@ async function openTableDetail(tableId) {
                   has_companion: hasDouhan,
                   companion_name: null,
                   nomination_type: hasShimei ? 'shimei' : (hasDouhan ? 'douhan' : null),
-                  nomination_fee: hasShimei ? 2000 : 0
+                  nomination_fee: shimeiCasts.length * 2000,
+                  shimei_casts: shimeiCasts.map(c => c.name).join(', ')
                 })
               });
               
@@ -4444,7 +4484,12 @@ async function openTableDetail(tableId) {
                 if (charges.setTotal > 0) await addInitialCharge(newSessionId, 'セット料金', charges.setTotal, 1);
                 if (charges.single > 0) await addInitialCharge(newSessionId, 'シングルチャージ', charges.single, 1);
                 if (charges.douhan > 0) await addInitialCharge(newSessionId, '同伴料', charges.douhan, 1);
-                if (charges.shimei > 0) await addInitialCharge(newSessionId, '指名料', charges.shimei, 1);
+                // 指名料は各キャストごとに記録
+                if (shimeiCasts.length > 0) {
+                  for (const cast of shimeiCasts) {
+                    await addInitialCharge(newSessionId, `指名料（${cast.name}）`, 2000, 1);
+                  }
+                }
                 if (charges.tax > 0) await addInitialCharge(newSessionId, 'TAX/サービス', charges.tax, 1);
               }
 
@@ -4459,6 +4504,11 @@ async function openTableDetail(tableId) {
         }
         // 料金プレビュー初期化
         if (typeof updateStartCharges === 'function') setTimeout(() => updateStartCharges(), 100);
+        
+        // 指名キャストチェックボックスにイベントリスナーを追加
+        document.querySelectorAll('.shimei-cast-checkbox').forEach(cb => {
+          cb.addEventListener('change', updateStartCharges);
+        });
         return;
       }
 
