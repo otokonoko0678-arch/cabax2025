@@ -1200,6 +1200,182 @@ def get_cast_ranking(date: Optional[str] = None, db: Session = Depends(get_db)):
     
     return {"date": target_date, "ranking": ranking}
 
+# 月次レポート
+@app.get("/api/monthly-report")
+def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, db: Session = Depends(get_db)):
+    """月次レポートデータを取得"""
+    from calendar import monthrange
+    
+    now = datetime.utcnow()
+    target_year = year or now.year
+    target_month = month or now.month
+    
+    # 月の開始日と終了日
+    start_date = f"{target_year}-{target_month:02d}-01"
+    last_day = monthrange(target_year, target_month)[1]
+    end_date = f"{target_year}-{target_month:02d}-{last_day}"
+    
+    # 月間のセッション
+    sessions = db.query(SessionModel).filter(
+        SessionModel.start_time >= f"{start_date} 00:00:00",
+        SessionModel.start_time <= f"{end_date} 23:59:59"
+    ).all()
+    
+    # 売上計算
+    total_sales = 0
+    total_guests = 0
+    session_count = len(sessions)
+    companion_count = 0
+    nomination_count = 0
+    extension_count = 0
+    
+    for session in sessions:
+        total_sales += session.current_total or 0
+        total_guests += session.guests or 0
+        if session.has_companion:
+            companion_count += 1
+        if session.nomination_type:
+            nomination_count += 1
+        extension_count += session.extension_count or 0
+    
+    # 月間の注文
+    orders = db.query(Order).filter(
+        Order.created_at >= f"{start_date} 00:00:00",
+        Order.created_at <= f"{end_date} 23:59:59"
+    ).all()
+    
+    # 原価計算
+    total_cost = 0
+    for order in orders:
+        if order.menu_item and order.menu_item.cost:
+            total_cost += order.menu_item.cost * order.quantity
+    
+    # キャスト情報を取得
+    casts = db.query(Cast).all()
+    cast_dict = {c.stage_name: c for c in casts}
+    
+    # ===== キャストバック計算 =====
+    companion_back_total = 0
+    nomination_back_total = 0
+    drink_back_total = 0
+    sales_back_total = 0
+    
+    # 同伴バック
+    for session in sessions:
+        if session.has_companion and session.companion_name:
+            cast = cast_dict.get(session.companion_name)
+            if cast:
+                companion_back_total += cast.companion_back or 0
+    
+    # 指名バック
+    for session in sessions:
+        if session.nomination_type and session.shimei_casts:
+            cast_names = session.shimei_casts.split(',')
+            for cast_name in cast_names:
+                cast_name = cast_name.strip()
+                cast = cast_dict.get(cast_name)
+                if cast:
+                    nomination_back_total += cast.nomination_back or 0
+    
+    # ドリンクバック
+    for order in orders:
+        if order.is_drink_back and order.cast_name:
+            cast = cast_dict.get(order.cast_name)
+            if cast:
+                drink_back_rate = cast.drink_back_rate or 10
+                drink_back_total += int(order.price * order.quantity * drink_back_rate / 100)
+    
+    # 売上バック
+    cast_sales = {}
+    for session in sessions:
+        if session.cast:
+            cast_name = session.cast.stage_name
+            if cast_name not in cast_sales:
+                cast_sales[cast_name] = 0
+            cast_sales[cast_name] += session.current_total or 0
+    
+    for cast_name, sales in cast_sales.items():
+        cast = cast_dict.get(cast_name)
+        if cast and cast.sales_back_rate:
+            sales_back_total += int(sales * cast.sales_back_rate / 100)
+    
+    cast_payroll_total = companion_back_total + nomination_back_total + drink_back_total + sales_back_total
+    
+    # スタッフ人件費（月間）
+    staff_attendances = db.query(StaffAttendance).filter(
+        StaffAttendance.date >= start_date,
+        StaffAttendance.date <= end_date
+    ).all()
+    staff_cost_total = sum(att.daily_wage or 0 for att in staff_attendances)
+    
+    # 粗利
+    gross_profit = total_sales - total_cost - cast_payroll_total - staff_cost_total
+    
+    # 日別売上データ（グラフ用）
+    daily_sales = {}
+    for day in range(1, last_day + 1):
+        date_str = f"{target_year}-{target_month:02d}-{day:02d}"
+        daily_sales[date_str] = 0
+    
+    for session in sessions:
+        if session.start_time:
+            date_str = session.start_time.strftime("%Y-%m-%d")
+            if date_str in daily_sales:
+                daily_sales[date_str] += session.current_total or 0
+    
+    # キャスト成績ランキング
+    cast_stats = {}
+    for session in sessions:
+        if session.cast:
+            cast_name = session.cast.stage_name
+            if cast_name not in cast_stats:
+                cast_stats[cast_name] = {
+                    "name": cast_name,
+                    "sales": 0,
+                    "nominations": 0,
+                    "companions": 0,
+                    "drink_count": 0
+                }
+            cast_stats[cast_name]["sales"] += session.current_total or 0
+            if session.nomination_type:
+                cast_stats[cast_name]["nominations"] += 1
+            if session.has_companion and session.companion_name == cast_name:
+                cast_stats[cast_name]["companions"] += 1
+    
+    # ドリンクバック回数を集計
+    for order in orders:
+        if order.is_drink_back and order.cast_name and order.cast_name in cast_stats:
+            cast_stats[order.cast_name]["drink_count"] += order.quantity
+    
+    cast_ranking = sorted(cast_stats.values(), key=lambda x: x["sales"], reverse=True)
+    
+    return {
+        "year": target_year,
+        "month": target_month,
+        "period": f"{target_year}年{target_month}月",
+        "session_count": session_count,
+        "total_guests": total_guests,
+        "total_sales": total_sales,
+        "total_cost": total_cost,
+        "companion_count": companion_count,
+        "nomination_count": nomination_count,
+        "extension_count": extension_count,
+        "cast_payroll": {
+            "companion_back": companion_back_total,
+            "nomination_back": nomination_back_total,
+            "drink_back": drink_back_total,
+            "sales_back": sales_back_total,
+            "total": cast_payroll_total
+        },
+        "staff_cost": staff_cost_total,
+        "gross_profit": gross_profit,
+        "gross_profit_rate": round(gross_profit / total_sales * 100, 1) if total_sales > 0 else 0,
+        "avg_per_group": round(total_sales / session_count) if session_count > 0 else 0,
+        "avg_per_person": round(total_sales / total_guests) if total_guests > 0 else 0,
+        "daily_sales": [{"date": k, "sales": v} for k, v in sorted(daily_sales.items())],
+        "cast_ranking": cast_ranking
+    }
+
 # ヘルスチェック
 @app.get("/")
 def root():

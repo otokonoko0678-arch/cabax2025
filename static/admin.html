@@ -1108,14 +1108,41 @@
 
                 <!-- 日報タブ -->
                 <div id="daily-report-tab" class="tab-content">
-                    <div class="mb-8 flex justify-between items-center no-print">
-                        <h1 class="text-4xl md:text-5xl font-bold gold-accent">日報</h1>
-                        <button onclick="printFullDailyReport()" class="luxury-btn px-6 py-3 rounded-xl text-sm">
-                            🖨️ 印刷
-                        </button>
+                    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
+                        <h1 class="text-4xl md:text-5xl font-bold gold-accent">レポート</h1>
+                        <div class="flex items-center gap-3">
+                            <!-- 日報/月報切り替え -->
+                            <div class="flex bg-gray-800 rounded-xl p-1">
+                                <button id="btnDailyReport" onclick="switchReportMode('daily')" class="px-4 py-2 rounded-lg text-sm font-semibold transition bg-amber-500 text-black">日報</button>
+                                <button id="btnMonthlyReport" onclick="switchReportMode('monthly')" class="px-4 py-2 rounded-lg text-sm font-semibold transition text-gray-400 hover:text-white">月報</button>
+                            </div>
+                            <!-- 月選択（月報時のみ表示） -->
+                            <div id="monthSelector" class="hidden flex items-center gap-2">
+                                <select id="reportYear" class="px-3 py-2 rounded-lg bg-gray-800 text-white text-sm" onchange="loadMonthlyReport()">
+                                </select>
+                                <select id="reportMonth" class="px-3 py-2 rounded-lg bg-gray-800 text-white text-sm" onchange="loadMonthlyReport()">
+                                    <option value="1">1月</option>
+                                    <option value="2">2月</option>
+                                    <option value="3">3月</option>
+                                    <option value="4">4月</option>
+                                    <option value="5">5月</option>
+                                    <option value="6">6月</option>
+                                    <option value="7">7月</option>
+                                    <option value="8">8月</option>
+                                    <option value="9">9月</option>
+                                    <option value="10">10月</option>
+                                    <option value="11">11月</option>
+                                    <option value="12">12月</option>
+                                </select>
+                            </div>
+                            <button onclick="printFullDailyReport()" class="luxury-btn px-6 py-3 rounded-xl text-sm">
+                                🖨️ 印刷
+                            </button>
+                        </div>
                     </div>
                     
                     <div id="dailyReportContent"></div>
+                    <div id="monthlyReportContent" class="hidden"></div>
                 </div>
 
                 <!-- 店舗設定 -->
@@ -7836,6 +7863,287 @@ function renderDailyReport() {
             </div>
         `;
     }
+}
+
+// ===== 月報機能 =====
+let currentReportMode = 'daily';
+
+function switchReportMode(mode) {
+    currentReportMode = mode;
+    const btnDaily = document.getElementById('btnDailyReport');
+    const btnMonthly = document.getElementById('btnMonthlyReport');
+    const monthSelector = document.getElementById('monthSelector');
+    const dailyContent = document.getElementById('dailyReportContent');
+    const monthlyContent = document.getElementById('monthlyReportContent');
+    
+    if (mode === 'daily') {
+        btnDaily.classList.add('bg-amber-500', 'text-black');
+        btnDaily.classList.remove('text-gray-400');
+        btnMonthly.classList.remove('bg-amber-500', 'text-black');
+        btnMonthly.classList.add('text-gray-400');
+        monthSelector.classList.add('hidden');
+        dailyContent.classList.remove('hidden');
+        monthlyContent.classList.add('hidden');
+        renderDailyReport();
+    } else {
+        btnMonthly.classList.add('bg-amber-500', 'text-black');
+        btnMonthly.classList.remove('text-gray-400');
+        btnDaily.classList.remove('bg-amber-500', 'text-black');
+        btnDaily.classList.add('text-gray-400');
+        monthSelector.classList.remove('hidden');
+        dailyContent.classList.add('hidden');
+        monthlyContent.classList.remove('hidden');
+        initMonthSelector();
+        loadMonthlyReport();
+    }
+}
+
+function initMonthSelector() {
+    const yearSelect = document.getElementById('reportYear');
+    const monthSelect = document.getElementById('reportMonth');
+    const now = new Date();
+    
+    // 年選択肢を生成（現在年から過去3年）
+    if (yearSelect.options.length === 0) {
+        for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = `${y}年`;
+            yearSelect.appendChild(opt);
+        }
+    }
+    
+    // 現在の月を選択
+    monthSelect.value = now.getMonth() + 1;
+}
+
+async function loadMonthlyReport() {
+    const year = document.getElementById('reportYear').value;
+    const month = document.getElementById('reportMonth').value;
+    const container = document.getElementById('monthlyReportContent');
+    
+    container.innerHTML = '<div class="text-center py-8 text-gray-400">読み込み中...</div>';
+    
+    try {
+        let data;
+        if (appState.apiConnected) {
+            data = await apiRequest(`${API_BASE}/api/monthly-report?year=${year}&month=${month}`);
+        } else {
+            // デモデータ
+            data = generateDemoMonthlyReport(parseInt(year), parseInt(month));
+        }
+        renderMonthlyReport(data);
+    } catch (e) {
+        console.error('月報読み込みエラー:', e);
+        container.innerHTML = `<div class="text-red-400 py-8">月報の読み込みに失敗しました: ${e.message}</div>`;
+    }
+}
+
+function generateDemoMonthlyReport(year, month) {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const dailySales = [];
+    let totalSales = 0;
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+        const sales = Math.floor(Math.random() * 200000) + 50000;
+        totalSales += sales;
+        dailySales.push({
+            date: `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+            sales: sales
+        });
+    }
+    
+    return {
+        year, month,
+        period: `${year}年${month}月`,
+        session_count: Math.floor(Math.random() * 100) + 50,
+        total_guests: Math.floor(Math.random() * 300) + 100,
+        total_sales: totalSales,
+        total_cost: Math.floor(totalSales * 0.25),
+        companion_count: Math.floor(Math.random() * 30) + 10,
+        nomination_count: Math.floor(Math.random() * 50) + 20,
+        extension_count: Math.floor(Math.random() * 40) + 15,
+        cast_payroll: {
+            companion_back: Math.floor(Math.random() * 100000) + 30000,
+            nomination_back: Math.floor(Math.random() * 80000) + 20000,
+            drink_back: Math.floor(Math.random() * 150000) + 50000,
+            sales_back: Math.floor(Math.random() * 50000) + 10000,
+            total: 0
+        },
+        staff_cost: Math.floor(Math.random() * 200000) + 100000,
+        gross_profit: 0,
+        gross_profit_rate: 0,
+        avg_per_group: Math.floor(totalSales / 80),
+        avg_per_person: Math.floor(totalSales / 200),
+        daily_sales: dailySales,
+        cast_ranking: [
+            { name: 'りお', sales: 850000, nominations: 25, companions: 12, drink_count: 45 },
+            { name: 'れな', sales: 720000, nominations: 20, companions: 8, drink_count: 38 },
+            { name: 'かな', sales: 650000, nominations: 18, companions: 10, drink_count: 32 },
+            { name: 'あいり', sales: 480000, nominations: 12, companions: 5, drink_count: 28 },
+            { name: 'みゆ', sales: 420000, nominations: 10, companions: 4, drink_count: 22 }
+        ]
+    };
+}
+
+function renderMonthlyReport(data) {
+    const container = document.getElementById('monthlyReportContent');
+    
+    // 粗利計算（APIから来ない場合）
+    const castPayrollTotal = data.cast_payroll?.total || 
+        (data.cast_payroll?.companion_back || 0) + 
+        (data.cast_payroll?.nomination_back || 0) + 
+        (data.cast_payroll?.drink_back || 0) + 
+        (data.cast_payroll?.sales_back || 0);
+    
+    const grossProfit = data.gross_profit || 
+        (data.total_sales - (data.total_cost || 0) - castPayrollTotal - (data.staff_cost || 0));
+    
+    const grossProfitRate = data.total_sales > 0 ? 
+        Math.round(grossProfit / data.total_sales * 100) : 0;
+    
+    // 日別売上の最大値（グラフ用）
+    const maxDailySales = Math.max(...(data.daily_sales || []).map(d => d.sales), 1);
+    
+    const content = `
+        <div class="space-y-6">
+            <!-- 月次サマリー -->
+            <div class="luxury-card rounded-xl p-6">
+                <h2 class="text-2xl font-bold mb-6 gold-accent">${data.period} 月次サマリー</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-800/50 rounded-xl p-4">
+                        <p class="text-sm text-gray-400 mb-1">月間売上</p>
+                        <p class="text-2xl font-bold gold-accent">
+                            ¥${Number(data.total_sales).toLocaleString()}
+                        </p>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-xl p-4">
+                        <p class="text-sm text-gray-400 mb-1">粗利</p>
+                        <p class="text-2xl font-bold text-green-400">
+                            ¥${Number(grossProfit).toLocaleString()}
+                        </p>
+                        <p class="text-xs text-gray-500">粗利率 ${grossProfitRate}%</p>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-xl p-4">
+                        <p class="text-sm text-gray-400 mb-1">来客数</p>
+                        <p class="text-2xl font-bold text-blue-300">
+                            ${data.session_count}組 / ${data.total_guests}名
+                        </p>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-xl p-4">
+                        <p class="text-sm text-gray-400 mb-1">客単価</p>
+                        <p class="text-2xl font-bold text-gray-200">
+                            ¥${Number(data.avg_per_person || 0).toLocaleString()}
+                        </p>
+                        <p class="text-xs text-gray-500">組単価: ¥${Number(data.avg_per_group || 0).toLocaleString()}</p>
+                    </div>
+                </div>
+                
+                <!-- キャストバック内訳 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                    <div class="bg-amber-900/30 rounded-xl p-4 border border-amber-700/30">
+                        <p class="text-sm text-amber-400 mb-1">💰 同伴バック</p>
+                        <p class="text-xl font-bold text-amber-300">
+                            ¥${Number(data.cast_payroll?.companion_back || 0).toLocaleString()}
+                        </p>
+                        <p class="text-xs text-gray-500">${data.companion_count}回</p>
+                    </div>
+                    <div class="bg-purple-900/30 rounded-xl p-4 border border-purple-700/30">
+                        <p class="text-sm text-purple-400 mb-1">💎 指名バック</p>
+                        <p class="text-xl font-bold text-purple-300">
+                            ¥${Number(data.cast_payroll?.nomination_back || 0).toLocaleString()}
+                        </p>
+                        <p class="text-xs text-gray-500">${data.nomination_count}回</p>
+                    </div>
+                    <div class="bg-blue-900/30 rounded-xl p-4 border border-blue-700/30">
+                        <p class="text-sm text-blue-400 mb-1">🍸 ドリンクバック</p>
+                        <p class="text-xl font-bold text-blue-300">
+                            ¥${Number(data.cast_payroll?.drink_back || 0).toLocaleString()}
+                        </p>
+                    </div>
+                    <div class="bg-green-900/30 rounded-xl p-4 border border-green-700/30">
+                        <p class="text-sm text-green-400 mb-1">📈 売上バック</p>
+                        <p class="text-xl font-bold text-green-300">
+                            ¥${Number(data.cast_payroll?.sales_back || 0).toLocaleString()}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- コスト内訳 -->
+                <div class="grid grid-cols-3 gap-4 mt-4">
+                    <div class="bg-gray-800/50 rounded-xl p-4">
+                        <p class="text-sm text-gray-400 mb-1">原価</p>
+                        <p class="text-xl font-bold text-red-400">
+                            ¥${Number(data.total_cost || 0).toLocaleString()}
+                        </p>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-xl p-4">
+                        <p class="text-sm text-gray-400 mb-1">キャストバック計</p>
+                        <p class="text-xl font-bold text-orange-400">
+                            ¥${Number(castPayrollTotal).toLocaleString()}
+                        </p>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-xl p-4">
+                        <p class="text-sm text-gray-400 mb-1">スタッフ人件費</p>
+                        <p class="text-xl font-bold text-yellow-400">
+                            ¥${Number(data.staff_cost || 0).toLocaleString()}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 日別売上グラフ -->
+            <div class="luxury-card rounded-xl p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-200">📊 日別売上推移</h3>
+                <div class="overflow-x-auto">
+                    <div class="flex items-end gap-1 h-48 min-w-max">
+                        ${(data.daily_sales || []).map(d => {
+                            const height = Math.max((d.sales / maxDailySales) * 100, 2);
+                            const day = new Date(d.date).getDate();
+                            return `
+                                <div class="flex flex-col items-center">
+                                    <div class="w-6 bg-gradient-to-t from-amber-600 to-amber-400 rounded-t transition-all hover:from-amber-500 hover:to-amber-300" 
+                                         style="height: ${height}%" 
+                                         title="${d.date}: ¥${Number(d.sales).toLocaleString()}">
+                                    </div>
+                                    <span class="text-xs text-gray-500 mt-1">${day}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- キャストランキング -->
+            <div class="luxury-card rounded-xl p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-200">🏆 キャスト月間ランキング</h3>
+                <div class="space-y-4">
+                    ${(data.cast_ranking || []).map((cast, index) => `
+                        <div class="bg-gray-800/50 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl">
+                                        ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}位`}
+                                    </span>
+                                    <span class="text-xl font-bold text-gray-200">${cast.name}</span>
+                                </div>
+                                <span class="text-2xl font-bold gold-accent">
+                                    ¥${Number(cast.sales).toLocaleString()}
+                                </span>
+                            </div>
+                            <div class="flex gap-4 text-sm text-gray-400">
+                                <span>💎 指名 ${cast.nominations}回</span>
+                                <span>💰 同伴 ${cast.companions}回</span>
+                                <span>🍸 DB ${cast.drink_count}杯</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = content;
 }
 
 
