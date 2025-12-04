@@ -7,10 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600;700&display=swap');
         
         * { 
-            font-family: 'Inter', sans-serif;
+            font-family: 'Noto Serif JP', serif;
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -855,25 +855,25 @@
                             すべて
                         </button>
                         <button onclick="filterMenuCategory('drink')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="drink">
-                            🍹 ドリンク
+                            ドリンク
                         </button>
                         <button onclick="filterMenuCategory('castdrink')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="castdrink">
-                            👩 キャスト/スタッフ
+                            キャスト/スタッフ
                         </button>
                         <button onclick="filterMenuCategory('tableset')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="tableset">
-                            🧊 卓セット
+                            卓セット
                         </button>
                         <button onclick="filterMenuCategory('bottle')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="bottle">
-                            🍾 ボトル
+                            ボトル
                         </button>
                         <button onclick="filterMenuCategory('champagne')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="champagne">
-                            🥂 シャンパン
+                            シャンパン
                         </button>
                         <button onclick="filterMenuCategory('wine')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="wine">
-                            🍷 ワイン
+                            ワイン
                         </button>
                         <button onclick="filterMenuCategory('food')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="food">
-                            🍽 フード
+                            フード
                         </button>
                     </div>
                     <div id="menuGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"></div>
@@ -2087,7 +2087,7 @@ function renderTableDetailPanel(session) {
                   </label>
                   <label class="drink-for-label flex items-center justify-center gap-2 p-2 rounded-xl bg-black/20 border border-white/10 cursor-pointer hover:bg-black/30">
                     <input type="radio" name="drinkFor" value="cast" onchange="onDrinkForChange(); updateDrinkForStyle()" class="hidden">
-                    <span class="text-sm text-white/90">👩 キャスト</span>
+                    <span class="text-sm text-white/90">キャスト</span>
                   </label>
                 </div>
                 
@@ -2098,7 +2098,7 @@ function renderTableDetailPanel(session) {
                     <option value="">選択してください</option>
                   </select>
                   <div id="drinkBackInfo" class="mt-2 text-xs text-purple-400 hidden">
-                    💎 ドリンクバック発生
+                    
                   </div>
                 </div>
               </div>

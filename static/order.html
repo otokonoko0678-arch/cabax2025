@@ -6,10 +6,10 @@
     <title>Cabax Order - Luxury Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600;700&display=swap');
         
         * { 
-            font-family: 'Inter', sans-serif;
+            font-family: 'Noto Serif JP', serif;
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -334,25 +334,25 @@
     すべて
 </button>
 <button onclick="filterCategory('drink')" class="category-tab" data-category="drink">
-    🍹 ドリンク
+    ドリンク
 </button>
 <button onclick="filterCategory('castdrink')" class="category-tab" data-category="castdrink">
-    👩 キャスト/スタッフ
+    キャスト/スタッフ
 </button>
 <button onclick="filterCategory('tableset')" class="category-tab" data-category="tableset">
-    🧊 卓セット
+    卓セット
 </button>
 <button onclick="filterCategory('bottle')" class="category-tab" data-category="bottle">
-    🍾 ボトル
+    ボトル
 </button>
 <button onclick="filterCategory('champagne')" class="category-tab" data-category="champagne">
-    🥂 シャンパン
+    シャンパン
 </button>
 <button onclick="filterCategory('wine')" class="category-tab" data-category="wine">
-    🍷 ワイン
+    ワイン
 </button>
 <button onclick="filterCategory('food')" class="category-tab" data-category="food">
-    🍽️ フード
+    フード
 </button>
             </div>
         </div>
@@ -1452,7 +1452,7 @@ async function requestCheck() {
                         </label>
                         <label class="drink-for-order-label flex flex-col items-center justify-center p-2 sm:p-3 rounded-xl bg-black/20 border border-white/10 cursor-pointer">
                             <input type="radio" name="drinkForOrder" value="cast" onchange="onDrinkForOrderChange(); updateDrinkForOrderStyle()" class="hidden">
-                            <span class="text-xl sm:text-2xl">👩</span>
+                            
                             <span class="text-white text-xs sm:text-sm">キャスト</span>
                         </label>
                     </div>
@@ -1463,7 +1463,7 @@ async function requestCheck() {
                             <option value="">選択してください</option>
                         </select>
                         <div id="drinkBackInfoOrder" class="mt-2 text-sm text-purple-400 hidden">
-                            💎 ドリンクバック発生
+                            
                         </div>
                     </div>
                 </div>
@@ -1490,7 +1490,7 @@ async function requestCheck() {
     <div id="iceSetModal" class="fixed inset-0 z-50 items-center justify-center bg-black/80 p-2 sm:p-4 hidden">
         <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl">
             <div class="border-b border-gray-700 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between">
-                <h2 class="text-lg sm:text-xl font-bold gold-accent">🧊 アイスセット</h2>
+                <h2 class="text-lg sm:text-xl font-bold gold-accent">アイスセット</h2>
                 <button onclick="closeIceSetModal()" class="text-gray-400 hover:text-gray-200 text-2xl p-2">✕</button>
             </div>
             <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -1498,7 +1498,7 @@ async function requestCheck() {
                 
                 <!-- グラス個数 -->
                 <div>
-                    <div class="text-sm text-gray-400 mb-2">🥃 グラス数</div>
+                    <div class="text-sm text-gray-400 mb-2">グラス数</div>
                     <div class="flex items-center justify-center gap-4">
                         <button onclick="adjustIceSetQty('glass', -1)" class="w-12 h-12 rounded-full bg-gray-700 text-white text-2xl font-bold hover:bg-gray-600">-</button>
                         <span id="iceSetGlassQty" class="text-3xl font-bold text-white w-16 text-center">2</span>
@@ -1508,7 +1508,7 @@ async function requestCheck() {
                 
                 <!-- アイス個数 -->
                 <div>
-                    <div class="text-sm text-gray-400 mb-2">🧊 アイスペール数</div>
+                    <div class="text-sm text-gray-400 mb-2">アイスペール数</div>
                     <div class="flex items-center justify-center gap-4">
                         <button onclick="adjustIceSetQty('ice', -1)" class="w-12 h-12 rounded-full bg-gray-700 text-white text-2xl font-bold hover:bg-gray-600">-</button>
                         <span id="iceSetIceQty" class="text-3xl font-bold text-white w-16 text-center">1</span>
