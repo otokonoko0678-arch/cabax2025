@@ -218,6 +218,10 @@ class MenuItemResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class TableCreate(BaseModel):
+    name: str
+    is_vip: bool = False
+
 class TableResponse(BaseModel):
     id: int
     name: str
@@ -580,6 +584,58 @@ def delete_menu_item(item_id: int, db: Session = Depends(get_db), ):
 @app.get("/api/tables", response_model=List[TableResponse])
 def get_tables(db: Session = Depends(get_db), ):
     return db.query(Table).all()
+
+@app.post("/api/tables", response_model=TableResponse)
+def create_table(table: TableCreate, db: Session = Depends(get_db)):
+    # 同名テーブルチェック
+    existing = db.query(Table).filter(Table.name == table.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="同じ名前のテーブルが既に存在します")
+    
+    db_table = Table(name=table.name, is_vip=table.is_vip, status="available")
+    db.add(db_table)
+    db.commit()
+    db.refresh(db_table)
+    return db_table
+
+@app.put("/api/tables/{table_id}", response_model=TableResponse)
+def update_table(table_id: int, table: TableCreate, db: Session = Depends(get_db)):
+    db_table = db.query(Table).filter(Table.id == table_id).first()
+    if not db_table:
+        raise HTTPException(status_code=404, detail="テーブルが見つかりません")
+    
+    # 同名テーブルチェック（自分以外）
+    existing = db.query(Table).filter(Table.name == table.name, Table.id != table_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="同じ名前のテーブルが既に存在します")
+    
+    db_table.name = table.name
+    db_table.is_vip = table.is_vip
+    db.commit()
+    db.refresh(db_table)
+    return db_table
+
+@app.delete("/api/tables/{table_id}")
+def delete_table(table_id: int, db: Session = Depends(get_db)):
+    db_table = db.query(Table).filter(Table.id == table_id).first()
+    if not db_table:
+        raise HTTPException(status_code=404, detail="テーブルが見つかりません")
+    
+    # 使用中のテーブルは削除不可
+    if db_table.status == "occupied":
+        raise HTTPException(status_code=400, detail="使用中のテーブルは削除できません")
+    
+    # アクティブなセッションがあるか確認
+    active_session = db.query(SessionModel).filter(
+        SessionModel.table_id == table_id,
+        SessionModel.status == "active"
+    ).first()
+    if active_session:
+        raise HTTPException(status_code=400, detail="アクティブなセッションがあるテーブルは削除できません")
+    
+    db.delete(db_table)
+    db.commit()
+    return {"message": "テーブルを削除しました"}
 
 # セッション管理
 @app.post("/api/sessions", response_model=SessionResponse)
