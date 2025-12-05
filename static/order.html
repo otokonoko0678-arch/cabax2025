@@ -438,6 +438,43 @@ const API_BASE = (() => {
 })();
 
 console.log('[Cabax] API_BASE:', API_BASE);  
+
+// ★ 店舗IDを取得（sessionStorageまたはURLパラメータから）
+function getStoreId() {
+    // sessionStorageから取得（admin.htmlでログイン時に保存される）
+    const stored = sessionStorage.getItem('cabax_store_id');
+    if (stored) return stored;
+    
+    // URLパラメータから取得（order.html?store_id=1）
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlStoreId = urlParams.get('store_id');
+    if (urlStoreId) {
+        sessionStorage.setItem('cabax_store_id', urlStoreId);
+        return urlStoreId;
+    }
+    
+    return null;
+}
+
+// ★ APIリクエストヘルパー（自動でX-Store-Idヘッダーを追加）
+async function apiRequest(url, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    
+    // Content-Typeがなければ追加
+    if (!headers['Content-Type'] && options.body) {
+        headers['Content-Type'] = 'application/json';
+    }
+    
+    // Store IDをヘッダーに追加
+    const storeId = getStoreId();
+    if (storeId) {
+        headers['X-Store-Id'] = storeId;
+    }
+    
+    return fetch(url, { ...options, headers });
+}
+
+console.log('[Cabax] Store ID:', getStoreId());  
         
       const appState = {
     selectedTable: null,
@@ -460,7 +497,7 @@ async function requestCheck() {
             return;
         }
 
-        const response = await fetch(
+        const response = await apiRequest(
             `${API_BASE}/sessions/${appState.sessionId}/checkout`,
             {
                 method: 'PUT',
@@ -550,7 +587,7 @@ async function createOrderForCurrentTable(menuItemId, quantity, options = {}) {
         cast_name: castName,
     };
 
-    const res = await fetch(`${API_BASE}/orders`, {
+    const res = await apiRequest(`${API_BASE}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -613,7 +650,7 @@ async function submitCartOrders() {
 // 稼働中セッション一覧を API から取得して state に反映（注文アプリ側）
 async function loadActiveSessions() {
     try {
-        const res = await fetch(`${API_BASE}/sessions/active`);
+        const res = await apiRequest(`${API_BASE}/sessions/active`);
         if (!res.ok) {
             throw new Error(`active sessions error: ${res.status}`);
         }
@@ -752,7 +789,7 @@ const STATIC_MENU_ITEMS = [
 async function loadTables() {
     console.log('[order] loadTables', API_BASE);
     try {
-        const response = await fetch(`${API_BASE}/tables`);
+        const response = await apiRequest(`${API_BASE}/tables`);
         console.log('[order] /tables status', response.status);
 
         let tables;
@@ -781,7 +818,7 @@ async function loadTables() {
         // アクティブセッションを取得して人数を表示
         let activeSessions = [];
         try {
-            const sessRes = await fetch(`${API_BASE}/sessions/active`);
+            const sessRes = await apiRequest(`${API_BASE}/sessions/active`);
             if (sessRes.ok) {
                 activeSessions = await sessRes.json();
             }
@@ -855,7 +892,7 @@ async function selectTable(tableId) {
 
     // 1) 既存のアクティブセッションを探す
     try {
-        const res = await fetch(`${API_BASE}/sessions/active`);
+        const res = await apiRequest(`${API_BASE}/sessions/active`);
         if (res.ok) {
             const sessions = await res.json();
             const session = sessions.find(
@@ -905,7 +942,7 @@ async function loadMenu() {
     console.log('[order] loadMenu');
     
     try {
-        const response = await fetch(`${API_BASE}/menu`);
+        const response = await apiRequest(`${API_BASE}/menu`);
         console.log('[order] /menu URL:', `${API_BASE}/menu`);
         console.log('[order] /menu status', response.status);
         
@@ -1190,7 +1227,7 @@ async function submitOrder() {
                 cast_name:     null,
             };
 
-            const res = await fetch(`${API_BASE}/orders`, {
+            const res = await apiRequest(`${API_BASE}/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -1230,7 +1267,7 @@ async function loadOrderHistory() {
     
     /* API呼び出しはコメントアウト
     try {
-        const response = await fetch(`${API_BASE}/sessions/${appState.sessionId}/orders`);
+        const response = await apiRequest(`${API_BASE}/sessions/${appState.sessionId}/orders`);
         const data = await response.json();
         appState.orders = Array.isArray(data) ? data : [];
         renderHistory();
@@ -1296,7 +1333,7 @@ async function loadOrderHistory() {
         // スタッフ呼び出し
         async function callStaff() {
             try {
-                await fetch(`${API_BASE}/sessions/${appState.sessionId}/call-staff`, {
+                await apiRequest(`${API_BASE}/sessions/${appState.sessionId}/call-staff`, {
                     method: 'POST'
                 });
                 showNotification('スタッフを呼び出しました', 'success');
@@ -1314,7 +1351,7 @@ async function requestCheck() {
             return;
         }
 
-        const response = await fetch(`${API_BASE}/sessions/${appState.sessionId}/checkout`, {
+        const response = await apiRequest(`${API_BASE}/sessions/${appState.sessionId}/checkout`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
         });
@@ -1542,7 +1579,7 @@ async function requestCheck() {
         // キャスト一覧を取得
         async function loadCastsForOrder() {
             try {
-                const res = await fetch(`${API_BASE}/casts`);
+                const res = await apiRequest(`${API_BASE}/casts`);
                 if (res.ok) {
                     castList = await res.json();
                     console.log('[order] キャスト取得:', castList.length, '件');
@@ -1555,7 +1592,7 @@ async function requestCheck() {
         // スタッフ一覧を取得
         async function loadStaffForOrder() {
             try {
-                const res = await fetch(`${API_BASE}/staff`);
+                const res = await apiRequest(`${API_BASE}/staff`);
                 if (res.ok) {
                     staffList = await res.json();
                     console.log('[order] スタッフ取得:', staffList.length, '件');
