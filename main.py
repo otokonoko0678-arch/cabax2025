@@ -18,6 +18,8 @@ from datetime import datetime, timedelta
 import jwt
 import bcrypt
 import os
+import secrets
+import string
 from pathlib import Path
 
 # 設定
@@ -171,6 +173,23 @@ class Staff(Base):
     salary_amount = Column(Integer, default=1000)  # 時給/日給/月給の金額
     phone = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Store(Base):
+    """店舗・ライセンス管理"""
+    __tablename__ = "stores"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)  # 店舗名
+    license_key = Column(String, unique=True, index=True)  # ライセンスキー
+    expires_at = Column(DateTime)  # 有効期限
+    status = Column(String, default="active")  # active, expired, suspended
+    plan = Column(String, default="standard")  # standard, premium
+    monthly_fee = Column(Integer, default=30000)  # 月額料金
+    owner_name = Column(String, nullable=True)  # オーナー名
+    phone = Column(String, nullable=True)  # 電話番号
+    email = Column(String, nullable=True)  # メール
+    address = Column(String, nullable=True)  # 住所
+    notes = Column(Text, nullable=True)  # メモ
     created_at = Column(DateTime, default=datetime.utcnow)
 
 Base.metadata.create_all(bind=engine)
@@ -359,6 +378,46 @@ class StaffAttendanceResponse(BaseModel):
     clock_out: Optional[str]
     hours_worked: float = 0
     daily_wage: int = 0
+    class Config:
+        from_attributes = True
+
+# 店舗・ライセンス管理用
+class StoreCreate(BaseModel):
+    name: str
+    owner_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    plan: str = "standard"
+    monthly_fee: int = 30000
+    notes: Optional[str] = None
+
+class StoreUpdate(BaseModel):
+    name: Optional[str] = None
+    owner_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    plan: Optional[str] = None
+    monthly_fee: Optional[int] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+class StoreResponse(BaseModel):
+    id: int
+    name: str
+    license_key: str
+    expires_at: datetime
+    status: str
+    plan: str
+    monthly_fee: int
+    owner_name: Optional[str]
+    phone: Optional[str]
+    email: Optional[str]
+    address: Optional[str]
+    notes: Optional[str]
+    created_at: datetime
+    days_remaining: Optional[int] = None
     class Config:
         from_attributes = True
 
@@ -1579,3 +1638,193 @@ async def serve_admin():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+# ========================
+# 店舗・ライセンス管理 API
+# ========================
+
+SUPER_ADMIN_KEY = os.getenv("SUPER_ADMIN_KEY", "cabax-super-admin-2025")
+
+def verify_super_admin(key: str):
+    """超管理者認証"""
+    if key != SUPER_ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Invalid super admin key")
+
+def generate_license_key():
+    """ライセンスキー生成 (CABAX-XXXX-XXXX-XXXX)"""
+    chars = string.ascii_uppercase + string.digits
+    parts = [''.join(secrets.choice(chars) for _ in range(4)) for _ in range(3)]
+    return f"CABAX-{'-'.join(parts)}"
+
+@app.get("/api/stores")
+async def get_stores(admin_key: str, db: Session = Depends(get_db)):
+    """全店舗一覧取得"""
+    verify_super_admin(admin_key)
+    stores = db.query(Store).all()
+    result = []
+    for store in stores:
+        days_remaining = (store.expires_at - datetime.utcnow()).days if store.expires_at else 0
+        result.append({
+            "id": store.id,
+            "name": store.name,
+            "license_key": store.license_key,
+            "expires_at": store.expires_at.isoformat() if store.expires_at else None,
+            "status": store.status,
+            "plan": store.plan,
+            "monthly_fee": store.monthly_fee,
+            "owner_name": store.owner_name,
+            "phone": store.phone,
+            "email": store.email,
+            "address": store.address,
+            "notes": store.notes,
+            "created_at": store.created_at.isoformat() if store.created_at else None,
+            "days_remaining": days_remaining
+        })
+    return result
+
+@app.post("/api/stores")
+async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends(get_db)):
+    """新規店舗登録"""
+    verify_super_admin(admin_key)
+    
+    license_key = generate_license_key()
+    # 重複チェック
+    while db.query(Store).filter(Store.license_key == license_key).first():
+        license_key = generate_license_key()
+    
+    # 初回は1ヶ月後に期限設定
+    expires_at = datetime.utcnow() + timedelta(days=30)
+    
+    new_store = Store(
+        name=store.name,
+        license_key=license_key,
+        expires_at=expires_at,
+        status="active",
+        plan=store.plan,
+        monthly_fee=store.monthly_fee,
+        owner_name=store.owner_name,
+        phone=store.phone,
+        email=store.email,
+        address=store.address,
+        notes=store.notes
+    )
+    db.add(new_store)
+    db.commit()
+    db.refresh(new_store)
+    
+    return {
+        "id": new_store.id,
+        "name": new_store.name,
+        "license_key": new_store.license_key,
+        "expires_at": new_store.expires_at.isoformat(),
+        "status": new_store.status,
+        "message": "店舗を登録しました"
+    }
+
+@app.put("/api/stores/{store_id}")
+async def update_store(store_id: int, store: StoreUpdate, admin_key: str, db: Session = Depends(get_db)):
+    """店舗情報更新"""
+    verify_super_admin(admin_key)
+    
+    db_store = db.query(Store).filter(Store.id == store_id).first()
+    if not db_store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
+    update_data = store.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_store, key, value)
+    
+    db.commit()
+    db.refresh(db_store)
+    return {"message": "更新しました", "id": db_store.id}
+
+@app.post("/api/stores/{store_id}/extend")
+async def extend_license(store_id: int, months: int, admin_key: str, db: Session = Depends(get_db)):
+    """ライセンス期限延長"""
+    verify_super_admin(admin_key)
+    
+    db_store = db.query(Store).filter(Store.id == store_id).first()
+    if not db_store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
+    # 現在の期限から延長（期限切れの場合は今日から）
+    base_date = db_store.expires_at if db_store.expires_at > datetime.utcnow() else datetime.utcnow()
+    db_store.expires_at = base_date + timedelta(days=30 * months)
+    db_store.status = "active"
+    
+    db.commit()
+    return {
+        "message": f"{months}ヶ月延長しました",
+        "new_expires_at": db_store.expires_at.isoformat()
+    }
+
+@app.post("/api/stores/{store_id}/suspend")
+async def suspend_store(store_id: int, admin_key: str, db: Session = Depends(get_db)):
+    """店舗一時停止"""
+    verify_super_admin(admin_key)
+    
+    db_store = db.query(Store).filter(Store.id == store_id).first()
+    if not db_store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
+    db_store.status = "suspended"
+    db.commit()
+    return {"message": "停止しました"}
+
+@app.post("/api/stores/{store_id}/activate")
+async def activate_store(store_id: int, admin_key: str, db: Session = Depends(get_db)):
+    """店舗再開"""
+    verify_super_admin(admin_key)
+    
+    db_store = db.query(Store).filter(Store.id == store_id).first()
+    if not db_store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
+    db_store.status = "active"
+    db.commit()
+    return {"message": "再開しました"}
+
+@app.delete("/api/stores/{store_id}")
+async def delete_store(store_id: int, admin_key: str, db: Session = Depends(get_db)):
+    """店舗削除"""
+    verify_super_admin(admin_key)
+    
+    db_store = db.query(Store).filter(Store.id == store_id).first()
+    if not db_store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
+    db.delete(db_store)
+    db.commit()
+    return {"message": "削除しました"}
+
+@app.get("/api/license/verify/{license_key}")
+async def verify_license(license_key: str, db: Session = Depends(get_db)):
+    """ライセンス検証（店舗側から呼ぶ）"""
+    store = db.query(Store).filter(Store.license_key == license_key).first()
+    if not store:
+        return {"valid": False, "message": "無効なライセンスキーです"}
+    
+    if store.status == "suspended":
+        return {"valid": False, "message": "ライセンスが停止されています"}
+    
+    if store.expires_at < datetime.utcnow():
+        return {"valid": False, "message": "ライセンスの有効期限が切れています", "expired": True}
+    
+    days_remaining = (store.expires_at - datetime.utcnow()).days
+    return {
+        "valid": True,
+        "store_name": store.name,
+        "plan": store.plan,
+        "expires_at": store.expires_at.isoformat(),
+        "days_remaining": days_remaining,
+        "warning": days_remaining <= 7
+    }
+
+# 超管理画面
+@app.get("/super-admin", response_class=HTMLResponse)
+async def serve_super_admin():
+    """超管理画面"""
+    file_path = STATIC_DIR / "super-admin.html"
+    if file_path.exists():
+        return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="Super admin page not found")
