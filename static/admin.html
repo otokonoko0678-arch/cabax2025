@@ -644,9 +644,8 @@
             </form>
             
             <div class="demo-credentials">
-                <p class="font-semibold mb-2 text-gray-300">デモアカウント</p>
-                <p>ユーザー名: <code>admin</code></p>
-                <p>パスワード: <code>cabax2024</code></p>
+                <p class="font-semibold mb-2 text-gray-300">ログイン情報</p>
+                <p class="text-sm text-gray-400">店舗に発行されたユーザー名とパスワードでログインしてください</p>
             </div>
         </div>
     </div>
@@ -3500,33 +3499,47 @@ function initializeApp() {
 }
 
         // ログイン処理
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
             
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
             
-            // デバッグ
-            console.log('ログイン試行:', { username, password, len: password.length });
+            console.log('ログイン試行:', { username });
             
-            // デモアカウント認証（大文字小文字を無視）
-            if (username.toLowerCase() === 'admin' && password === 'cabax2024') {
-                // ログイン成功
-                console.log('ログイン成功！');
-                sessionStorage.setItem('cabax_logged_in', 'true');
-                sessionStorage.setItem('cabax_user', username);
+            try {
+                // API認証
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
                 
-                errorDiv.classList.remove('active');
-                showMainApp();
-                initializeApp();
-                
-                showNotification('ログインしました', 'success');
-            } else {
-                // ログイン失敗
-                console.log('ログイン失敗 - 期待値: admin / cabax2024');
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('ログイン成功！');
+                    
+                    sessionStorage.setItem('cabax_logged_in', 'true');
+                    sessionStorage.setItem('cabax_user', username);
+                    sessionStorage.setItem('cabax_token', data.access_token);
+                    
+                    errorDiv.classList.remove('active');
+                    showMainApp();
+                    initializeApp();
+                    
+                    showNotification('ログインしました', 'success');
+                } else {
+                    const err = await response.json().catch(() => ({}));
+                    console.log('ログイン失敗:', err.detail);
+                    errorDiv.textContent = err.detail || 'ユーザー名またはパスワードが正しくありません';
+                    errorDiv.classList.add('active');
+                    document.getElementById('loginPassword').value = '';
+                }
+            } catch (e) {
+                console.error('ログインエラー:', e);
+                errorDiv.textContent = 'サーバーに接続できません';
                 errorDiv.classList.add('active');
-                document.getElementById('loginPassword').value = '';
             }
         }
 
