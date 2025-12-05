@@ -940,8 +940,11 @@
                         <button onclick="filterMenuCategory('tableset')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="tableset">
                             卓セット
                         </button>
-                        <button onclick="filterMenuCategory('bottle')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="bottle">
-                            ボトル
+                        <button onclick="filterMenuCategory('shochu')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="shochu">
+                            焼酎
+                        </button>
+                        <button onclick="filterMenuCategory('whisky')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="whisky">
+                            ウイスキー
                         </button>
                         <button onclick="filterMenuCategory('champagne')" class="menu-filter-btn px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition bg-gray-800 text-gray-300 border border-gray-700" data-category="champagne">
                             シャンパン
@@ -3838,31 +3841,36 @@ async function syncWithBackend() {
             if (itemName) {
                 const name = String(itemName).toLowerCase();
                 if (name.includes('セット料金') || name.includes('指名料') || name.includes('シングルチャージ') || name.includes('同伴料') || name.includes('延長')) {
-                    return 'set';
+                    return 'tableset';
                 }
                 if (name.includes('tax') || name.includes('サービス')) {
-                    return 'set'; // TAXもセットに含める
+                    return 'tableset';
                 }
             }
             
             if (!category) return 'other';
             const c = String(category).toLowerCase().trim();
             const map = {
-                'set': 'set',
-                'セット': 'set',
-                'tableset': 'set',
-                'fee_set': 'set',
-                'fee_inhouse': 'set',
-                'fee_hon': 'set',
-                'bottle': 'bottle',
-                'ボトル': 'bottle',
+                'set': 'tableset',
+                'セット': 'tableset',
+                'tableset': 'tableset',
+                'fee_set': 'tableset',
+                'fee_inhouse': 'tableset',
+                'fee_hon': 'tableset',
+                'shochu': 'shochu',
+                '焼酎': 'shochu',
+                'whisky': 'whisky',
+                'ウイスキー': 'whisky',
+                'bottle': 'shochu',
+                'ボトル': 'shochu',
                 'champagne': 'champagne',
                 'シャンパン': 'champagne',
                 'wine': 'wine',
                 'ワイン': 'wine',
                 'drink': 'drink',
                 'ドリンク': 'drink',
-                'castdrink': 'drink',
+                'castdrink': 'castdrink',
+                'キャストドリンク': 'castdrink',
                 'food': 'food',
                 'フード': 'food'
             };
