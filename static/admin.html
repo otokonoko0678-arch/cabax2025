@@ -5369,7 +5369,8 @@ async function openTableDetail(tableId) {
                   nomination_type: hasShimei ? 'shimei' : (hasDouhan ? 'douhan' : null),
                   nomination_fee: shimeiCasts.length * 2000,
                   shimei_casts: shimeiCasts.map(c => c.name).join(', '),
-                  tax_rate: taxRate
+                  tax_rate: taxRate,
+                  store_id: sessionStorage.getItem('cabax_store_id') ? Number(sessionStorage.getItem('cabax_store_id')) : null
                 })
               });
               
