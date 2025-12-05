@@ -354,6 +354,9 @@
 <button onclick="filterCategory('food')" class="category-tab" data-category="food">
     フード
 </button>
+<button onclick="showNominationModal()" class="category-tab bg-gradient-to-r from-pink-600 to-rose-500 text-white border-pink-500">
+    💕 場内指名
+</button>
             </div>
         </div>
 
@@ -1557,6 +1560,25 @@ async function requestCheck() {
         </div>
     </div>
     
+    <!-- 場内指名モーダル -->
+    <div id="nominationModal" class="fixed inset-0 z-50 items-center justify-center bg-black/80 p-2 sm:p-4 hidden">
+        <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="border-b border-gray-700 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between sticky top-0 bg-gray-900/95 backdrop-blur">
+                <h2 class="text-lg sm:text-xl font-bold gold-accent">💕 場内指名</h2>
+                <button onclick="closeNominationModal()" class="text-gray-400 hover:text-gray-200 text-2xl p-2">✕</button>
+            </div>
+            <div class="p-4 sm:p-6 space-y-4">
+                <p class="text-gray-400 text-sm text-center">指名するキャストを選んでください</p>
+                <p class="text-center text-amber-400 font-bold">場内指名料：¥2,000</p>
+                
+                <!-- キャスト一覧 -->
+                <div id="nominationCastList" class="space-y-3">
+                    <!-- キャストカードがここに表示される -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // ドリンク注文モーダル用の状態
         let drinkModalState = {
@@ -1575,6 +1597,93 @@ async function requestCheck() {
         // キャスト・スタッフデータ
         let staffList = [];
         let castList = [];
+        
+        // 場内指名料
+        const NOMINATION_FEE = 2000;
+        
+        // 場内指名モーダルを表示
+        function showNominationModal() {
+            if (!currentTableId || !currentSessionId) {
+                alert('テーブルを選択してください');
+                return;
+            }
+            
+            const modal = document.getElementById('nominationModal');
+            const listContainer = document.getElementById('nominationCastList');
+            
+            // キャスト一覧を表示
+            if (castList.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-gray-500">キャストが登録されていません</p>';
+            } else {
+                listContainer.innerHTML = castList.map(cast => `
+                    <div class="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 border border-gray-700 hover:border-pink-500 transition cursor-pointer"
+                         onclick="confirmNomination(${cast.id}, '${cast.name.replace(/'/g, "\\'")}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold text-lg">
+                                ${cast.name.charAt(0)}
+                            </div>
+                            <div>
+                                <p class="font-bold text-white">${cast.name}</p>
+                                <p class="text-sm text-gray-400">キャスト</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 bg-gradient-to-r from-pink-600 to-rose-500 rounded-lg text-white font-bold text-sm">
+                            指名する
+                        </button>
+                    </div>
+                `).join('');
+            }
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        // 場内指名モーダルを閉じる
+        function closeNominationModal() {
+            const modal = document.getElementById('nominationModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        
+        // 場内指名を確定
+        async function confirmNomination(castId, castName) {
+            if (!currentSessionId) {
+                alert('セッションが見つかりません');
+                return;
+            }
+            
+            if (!confirm(`${castName}さんを場内指名しますか？\n指名料：¥${NOMINATION_FEE.toLocaleString()}`)) {
+                return;
+            }
+            
+            try {
+                // 場内指名料を注文として追加
+                const res = await apiRequest(`${API_BASE}/sessions/${currentSessionId}/add-charge`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_name: `場内指名料（${castName}）`,
+                        price: NOMINATION_FEE,
+                        quantity: 1
+                    })
+                });
+                
+                if (res.ok) {
+                    showNotification(`${castName}さんを場内指名しました！`, 'success');
+                    closeNominationModal();
+                    // 履歴を更新
+                    if (typeof loadOrderHistory === 'function') {
+                        loadOrderHistory(currentSessionId);
+                    }
+                } else {
+                    const error = await res.json();
+                    alert('指名に失敗しました: ' + (error.detail || '不明なエラー'));
+                }
+            } catch (e) {
+                console.error('場内指名エラー:', e);
+                alert('指名に失敗しました');
+            }
+        }
         
         // キャスト一覧を取得
         async function loadCastsForOrder() {
