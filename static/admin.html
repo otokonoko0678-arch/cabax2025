@@ -3136,6 +3136,7 @@ async function startSessionForTable(tableId, options = {}) {
         nomination_type: nominationType,
         nomination_fee: nominationFee,
         shimei_casts: shimeiCasts || null,
+        store_id: sessionStorage.getItem('cabax_store_id') ? Number(sessionStorage.getItem('cabax_store_id')) : null,
     };
 
     try {
