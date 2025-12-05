@@ -966,8 +966,12 @@ def delete_table(table_id: int, db: Session = Depends(get_db), store_id: Optiona
 
 # セッション管理
 @app.post("/api/sessions", response_model=SessionResponse)
-def create_session(session: SessionCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
-    print(f"[DEBUG] create_session called with store_id={store_id}")
+def create_session(session: SessionCreate, request: Request, db: Session = Depends(get_db)):
+    # 直接ヘッダーから取得
+    x_store_id = request.headers.get("x-store-id") or request.headers.get("X-Store-Id")
+    store_id = int(x_store_id) if x_store_id else None
+    print(f"[DEBUG] create_session: x_store_id={x_store_id}, store_id={store_id}")
+    
     db_session = SessionModel(**session.dict(), store_id=store_id)
     db.add(db_session)
     table = db.query(Table).filter(Table.id == session.table_id).first()
