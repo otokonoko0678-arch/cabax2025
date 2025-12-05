@@ -322,6 +322,7 @@ class SessionResponse(BaseModel):
     current_total: int
     tax_rate: int = 20
     status: str
+    store_id: Optional[int] = None
     class Config:
         from_attributes = True
 
