@@ -1612,7 +1612,7 @@ async function requestCheck() {
             const listContainer = document.getElementById('nominationCastList');
             
             // 有効なキャストのみフィルタ
-            const validCasts = castList.filter(c => c && c.name);
+            const validCasts = castList.filter(c => c && c.stage_name);
             console.log('[order] 場内指名モーダル - キャスト:', validCasts);
             
             // キャスト一覧を表示
@@ -1620,7 +1620,7 @@ async function requestCheck() {
                 listContainer.innerHTML = '<p class="text-center text-gray-500">キャストが登録されていません</p>';
             } else {
                 listContainer.innerHTML = validCasts.map(cast => {
-                    const name = cast.name || '名前なし';
+                    const name = cast.stage_name || '名前なし';
                     const escapedName = name.replace(/'/g, "\\'");
                     return `
                     <div class="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 border border-gray-700 hover:border-amber-500 transition cursor-pointer"
@@ -1631,7 +1631,7 @@ async function requestCheck() {
                             </div>
                             <div>
                                 <p class="font-bold text-white">${name}</p>
-                                <p class="text-sm text-gray-400">キャスト</p>
+                                <p class="text-sm text-gray-400">${cast.rank || 'キャスト'}</p>
                             </div>
                         </div>
                         <button class="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-lg text-black font-bold text-sm">
