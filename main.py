@@ -1839,19 +1839,16 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
     
     # デフォルトメニュー
     default_menu = [
-        # drink - お客様用ドリンク
-        {"name": "レモンサワー", "category": "drink", "price": 0, "cost": 0, "premium": False},
-        {"name": "コークハイ", "category": "drink", "price": 0, "cost": 0, "premium": False},
-        {"name": "ジンジャーハイ", "category": "drink", "price": 0, "cost": 0, "premium": False},
+        # drink - お客様用ドリンク（割り方はモーダルで選択）
         {"name": "ビール", "category": "drink", "price": 0, "cost": 0, "premium": False},
         {"name": "カクテル", "category": "drink", "price": 0, "cost": 0, "premium": False},
         {"name": "ソフトドリンク", "category": "drink", "price": 0, "cost": 0, "premium": False},
         {"name": "ショット", "category": "drink", "price": 2000, "cost": 0, "premium": False},
         {"name": "グラスワイン", "category": "drink", "price": 2000, "cost": 0, "premium": False},
-        # castdrink - キャストドリンク
+        # castdrink - キャストドリンク（サイズはモーダルで選択）
         {"name": "麦焼酎", "category": "castdrink", "price": 1000, "cost": 0, "premium": False},
         {"name": "ウイスキー", "category": "castdrink", "price": 1000, "cost": 0, "premium": False},
-        # tableset - 卓セット（無料）
+        # tableset - 卓セット（無料・管理用）
         {"name": "アイスセット", "category": "tableset", "price": 0, "cost": 0, "premium": False},
         {"name": "アイス追加", "category": "tableset", "price": 0, "cost": 0, "premium": False},
         {"name": "グラス追加", "category": "tableset", "price": 0, "cost": 0, "premium": False},
@@ -1876,11 +1873,12 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
         # wine - ワイン
         {"name": "赤ワイン", "category": "wine", "price": 8000, "cost": 0, "premium": False},
         {"name": "白ワイン", "category": "wine", "price": 8000, "cost": 0, "premium": False},
-        # bottle - ボトル
-        {"name": "黒霧島", "category": "bottle", "price": 5000, "cost": 0, "premium": False},
-        {"name": "いいちこ", "category": "bottle", "price": 4500, "cost": 0, "premium": False},
-        {"name": "ジャックダニエル", "category": "bottle", "price": 12000, "cost": 0, "premium": False},
-        {"name": "山崎", "category": "bottle", "price": 35000, "cost": 0, "premium": True},
+        # shochu - 焼酎ボトル
+        {"name": "黒霧島", "category": "shochu", "price": 5000, "cost": 0, "premium": False},
+        {"name": "いいちこ", "category": "shochu", "price": 4500, "cost": 0, "premium": False},
+        # whisky - ウイスキーボトル
+        {"name": "ジャックダニエル", "category": "whisky", "price": 12000, "cost": 0, "premium": False},
+        {"name": "山崎", "category": "whisky", "price": 35000, "cost": 0, "premium": True},
         # food - フード
         {"name": "フルーツ盛り", "category": "food", "price": 3000, "cost": 0, "premium": False},
         {"name": "チョコレート", "category": "food", "price": 1500, "cost": 0, "premium": False},

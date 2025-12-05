@@ -4417,11 +4417,13 @@ async function syncWithBackend() {
             const sel = document.getElementById('menuCategory');
             if (sel && sel.options.length === 0) {
                 const categories = [
-                    { value: 'set', label: 'セット' },
-                    { value: 'bottle', label: 'ボトル' },
+                    { value: 'tableset', label: '卓セット' },
+                    { value: 'drink', label: 'ドリンク' },
+                    { value: 'castdrink', label: 'キャストドリンク' },
+                    { value: 'shochu', label: '焼酎' },
+                    { value: 'whisky', label: 'ウイスキー' },
                     { value: 'champagne', label: 'シャンパン' },
                     { value: 'wine', label: 'ワイン' },
-                    { value: 'drink', label: 'ドリンク' },
                     { value: 'food', label: 'フード' }
                 ];
                 categories.forEach(cat => {
@@ -4430,7 +4432,7 @@ async function syncWithBackend() {
                     opt.textContent = cat.label;
                     sel.appendChild(opt);
                 });
-                sel.value = 'bottle'; // デフォルト
+                sel.value = 'drink'; // デフォルト
             }
         }
 
@@ -4496,11 +4498,13 @@ async function addMenuItem(event) {
             const sel = document.getElementById('editMenuCategory');
             if (sel && sel.options.length === 0) {
                 const categories = [
-                    { value: 'set', label: 'セット' },
-                    { value: 'bottle', label: 'ボトル' },
+                    { value: 'tableset', label: '卓セット' },
+                    { value: 'drink', label: 'ドリンク' },
+                    { value: 'castdrink', label: 'キャストドリンク' },
+                    { value: 'shochu', label: '焼酎' },
+                    { value: 'whisky', label: 'ウイスキー' },
                     { value: 'champagne', label: 'シャンパン' },
                     { value: 'wine', label: 'ワイン' },
-                    { value: 'drink', label: 'ドリンク' },
                     { value: 'food', label: 'フード' }
                 ];
                 categories.forEach(cat => {
