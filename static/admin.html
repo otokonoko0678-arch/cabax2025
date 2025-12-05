@@ -2704,13 +2704,13 @@ function renderTableDetailPanel(session) {
           </div>
 
           <!-- 場内指名 -->
-          <div class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5">
+          <div class="p-4 rounded-2xl border border-white/10 bg-white/3">
             <div class="flex items-center justify-between gap-3">
               <div>
-                <div class="font-bold text-amber-400">✨ 場内指名</div>
+                <div class="font-bold text-white">場内指名</div>
                 <div class="text-xs text-white/45">指名料：¥2,000</div>
               </div>
-              <button onclick="showAdminNominationModal(${s?.id || 'null'}, ${s?.table_id || 'null'})" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-yellow-600 text-black hover:opacity-90 transition">
+              <button onclick="showAdminNominationModal(${s?.id || 'null'}, ${s?.table_id || 'null'})" class="${btnPri}">
                 指名する
               </button>
             </div>
