@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cabax Super Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -451,8 +452,29 @@
             const expiresAt = new Date(store.expires_at).toLocaleString('ja-JP');
             const createdAt = new Date(store.created_at).toLocaleString('ja-JP');
 
+            const orderUrl = `${window.location.origin}/static/order.html?store_id=${store.id}`;
+            const adminUrl = `${window.location.origin}/admin?store_id=${store.id}`;
+            
             document.getElementById('detailContent').innerHTML = `
                 <div class="space-y-3">
+                    <!-- 注文用URL & QRコード -->
+                    <div class="bg-gradient-to-r from-amber-500/20 to-yellow-600/20 rounded-xl p-4 mb-4">
+                        <p class="text-amber-400 font-bold mb-2">📱 注文用URL</p>
+                        <div class="flex items-center gap-2 mb-3">
+                            <input type="text" readonly value="${orderUrl}" 
+                                   class="flex-1 px-3 py-2 bg-gray-900 rounded-lg text-sm font-mono text-gray-300"
+                                   id="orderUrlInput_${store.id}">
+                            <button onclick="copyOrderUrl(${store.id})" 
+                                    class="px-3 py-2 bg-amber-500 rounded-lg hover:bg-amber-600 text-black font-bold text-sm">
+                                📋 コピー
+                            </button>
+                        </div>
+                        <div class="flex justify-center bg-white rounded-xl p-4">
+                            <canvas id="qrcode_${store.id}"></canvas>
+                        </div>
+                        <p class="text-gray-400 text-xs text-center mt-2">このQRコードをテーブルに設置してください</p>
+                    </div>
+                    
                     <div class="flex justify-between border-b border-gray-700 pb-2">
                         <span class="text-gray-400">店舗名</span>
                         <span class="font-bold">${store.name}</span>
@@ -510,7 +532,27 @@
                 </div>
             `;
             document.getElementById('detailModal').classList.remove('hidden');
+            
+            // QRコード生成
+            setTimeout(() => {
+                const canvas = document.getElementById(`qrcode_${store.id}`);
+                if (canvas && typeof QRCode !== 'undefined') {
+                    QRCode.toCanvas(canvas, orderUrl, { width: 200, margin: 2 }, function(error) {
+                        if (error) console.error('QRCode error:', error);
+                    });
+                }
+            }, 100);
         }
+        
+        function copyOrderUrl(storeId) {
+            const input = document.getElementById(`orderUrlInput_${storeId}`);
+            if (input) {
+                input.select();
+                document.execCommand('copy');
+                alert('URLをコピーしました');
+            }
+        }
+        
         function hideDetailModal() {
             document.getElementById('detailModal').classList.add('hidden');
         }
