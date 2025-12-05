@@ -181,6 +181,8 @@ class Store(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)  # 店舗名
     license_key = Column(String, unique=True, index=True)  # ライセンスキー
+    username = Column(String, unique=True, index=True, nullable=True)  # ログインユーザー名
+    hashed_password = Column(String, nullable=True)  # ハッシュ化パスワード
     expires_at = Column(DateTime)  # 有効期限
     status = Column(String, default="active")  # active, expired, suspended
     plan = Column(String, default="standard")  # standard, premium
@@ -384,6 +386,8 @@ class StaffAttendanceResponse(BaseModel):
 # 店舗・ライセンス管理用
 class StoreCreate(BaseModel):
     name: str
+    username: Optional[str] = None  # ログインユーザー名
+    password: Optional[str] = None  # パスワード（平文で受け取りハッシュ化）
     owner_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -394,6 +398,8 @@ class StoreCreate(BaseModel):
 
 class StoreUpdate(BaseModel):
     name: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None  # 新しいパスワード（設定する場合）
     owner_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -407,6 +413,7 @@ class StoreResponse(BaseModel):
     id: int
     name: str
     license_key: str
+    username: Optional[str]
     expires_at: datetime
     status: str
     plan: str
@@ -600,9 +607,22 @@ def startup_event():
 # 認証
 @app.post("/api/auth/login", response_model=Token)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
+    # まず店舗テーブルで認証を試みる
+    store = db.query(Store).filter(Store.username == request.username).first()
+    if store and store.hashed_password and verify_password(request.password, store.hashed_password):
+        # ステータスチェック
+        if store.status == "suspended":
+            raise HTTPException(status_code=403, detail="このアカウントは停止されています")
+        if store.expires_at and store.expires_at < datetime.utcnow():
+            raise HTTPException(status_code=403, detail="ライセンスの有効期限が切れています")
+        
+        access_token = create_access_token(data={"sub": request.username, "store_id": store.id, "store_name": store.name})
+        return {"access_token": access_token, "token_type": "bearer"}
+    
+    # 従来のUserテーブルで認証（後方互換性）
     user = db.query(User).filter(User.username == request.username).first()
     if not user or not verify_password(request.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザー名またはパスワードが正しくありません")
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -1672,6 +1692,7 @@ async def get_stores(admin_key: str, db: Session = Depends(get_db)):
             "id": store.id,
             "name": store.name,
             "license_key": store.license_key,
+            "username": store.username,
             "expires_at": store.expires_at.isoformat() if store.expires_at else None,
             "status": store.status,
             "plan": store.plan,
@@ -1691,6 +1712,12 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
     """新規店舗登録"""
     verify_super_admin(admin_key)
     
+    # ユーザー名の重複チェック
+    if store.username:
+        existing = db.query(Store).filter(Store.username == store.username).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="このユーザー名は既に使用されています")
+    
     license_key = generate_license_key()
     # 重複チェック
     while db.query(Store).filter(Store.license_key == license_key).first():
@@ -1699,9 +1726,14 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
     # 初回は1ヶ月後に期限設定
     expires_at = datetime.utcnow() + timedelta(days=30)
     
+    # パスワードのハッシュ化
+    hashed_pw = get_password_hash(store.password) if store.password else None
+    
     new_store = Store(
         name=store.name,
         license_key=license_key,
+        username=store.username,
+        hashed_password=hashed_pw,
         expires_at=expires_at,
         status="active",
         plan=store.plan,
@@ -1720,6 +1752,7 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
         "id": new_store.id,
         "name": new_store.name,
         "license_key": new_store.license_key,
+        "username": new_store.username,
         "expires_at": new_store.expires_at.isoformat(),
         "status": new_store.status,
         "message": "店舗を登録しました"
@@ -1734,7 +1767,21 @@ async def update_store(store_id: int, store: StoreUpdate, admin_key: str, db: Se
     if not db_store:
         raise HTTPException(status_code=404, detail="Store not found")
     
+    # ユーザー名の重複チェック（自分以外）
+    if store.username:
+        existing = db.query(Store).filter(Store.username == store.username, Store.id != store_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="このユーザー名は既に使用されています")
+    
     update_data = store.dict(exclude_unset=True)
+    
+    # パスワードはハッシュ化して保存
+    if 'password' in update_data and update_data['password']:
+        db_store.hashed_password = get_password_hash(update_data['password'])
+        del update_data['password']
+    elif 'password' in update_data:
+        del update_data['password']
+    
     for key, value in update_data.items():
         setattr(db_store, key, value)
     

@@ -98,6 +98,20 @@
                     <label class="text-gray-400 text-sm">店舗名 *</label>
                     <input type="text" id="newStoreName" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
                 </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-amber-400 text-sm font-bold mb-2">🔐 ログイン情報</p>
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">ユーザー名 *</label>
+                    <input type="text" id="newUsername" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="店舗用ログインID">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">パスワード *</label>
+                    <input type="text" id="newPassword" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="初期パスワード">
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-gray-500 text-sm mb-2">📋 店舗情報</p>
+                </div>
                 <div>
                     <label class="text-gray-400 text-sm">オーナー名</label>
                     <input type="text" id="newOwnerName" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
@@ -174,6 +188,59 @@
             <button onclick="hideExtendModal()" class="w-full py-3 bg-gray-800 rounded-xl mt-4">
                 キャンセル
             </button>
+        </div>
+    </div>
+
+    <!-- 編集モーダル -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="glass-card rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold gold-accent mb-4">店舗編集</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-gray-400 text-sm">店舗名</label>
+                    <input type="text" id="editStoreName" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-amber-400 text-sm font-bold mb-2">🔐 ログイン情報</p>
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">ユーザー名</label>
+                    <input type="text" id="editUsername" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">新しいパスワード（変更する場合のみ）</label>
+                    <input type="text" id="editPassword" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="空欄なら変更なし">
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-gray-500 text-sm mb-2">📋 店舗情報</p>
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">オーナー名</label>
+                    <input type="text" id="editOwnerName" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">電話番号</label>
+                    <input type="text" id="editPhone" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">メール</label>
+                    <input type="email" id="editEmail" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">月額料金</label>
+                    <input type="number" id="editMonthlyFee" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">メモ</label>
+                    <textarea id="editNotes" rows="2" class="w-full px-4 py-2 bg-gray-800 rounded-lg"></textarea>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="hideEditModal()" class="flex-1 py-3 bg-gray-700 rounded-xl">キャンセル</button>
+                <button onclick="updateStore()" class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-xl font-bold">
+                    保存
+                </button>
+            </div>
         </div>
     </div>
 
@@ -264,17 +331,24 @@
                                     <h3 class="text-lg font-bold">${store.name}</h3>
                                     <span class="px-2 py-1 rounded text-xs ${statusClass} bg-gray-800">${statusText}</span>
                                 </div>
-                                <p class="text-gray-400 text-sm font-mono">${store.license_key}</p>
+                                <div class="flex gap-4 text-sm text-gray-400">
+                                    <span class="font-mono">${store.license_key}</span>
+                                    ${store.username ? `<span>🔐 ${store.username}</span>` : '<span class="text-red-400">⚠️ ログイン未設定</span>'}
+                                </div>
                                 <div class="flex gap-4 mt-2 text-sm">
                                     <span class="${warningClass}">${daysText}</span>
                                     <span class="text-gray-500">¥${store.monthly_fee.toLocaleString()}/月</span>
                                     ${store.owner_name ? `<span class="text-gray-500">${store.owner_name}</span>` : ''}
                                 </div>
                             </div>
-                            <div class="flex gap-2">
+                            <div class="flex gap-2 flex-wrap">
                                 <button onclick="showExtendModal(${store.id}, '${store.name}')" 
                                         class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500 text-sm">
                                     延長
+                                </button>
+                                <button onclick="showEditModal(${store.id})" 
+                                        class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 text-sm">
+                                    編集
                                 </button>
                                 <button onclick="showDetail(${store.id})" 
                                         class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 text-sm">
@@ -312,13 +386,22 @@
 
         async function createStore() {
             const name = document.getElementById('newStoreName').value;
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            
             if (!name) {
                 alert('店舗名を入力してください');
+                return;
+            }
+            if (!username || !password) {
+                alert('ユーザー名とパスワードを入力してください');
                 return;
             }
 
             const data = {
                 name,
+                username,
+                password,
                 owner_name: document.getElementById('newOwnerName').value || null,
                 phone: document.getElementById('newPhone').value || null,
                 email: document.getElementById('newEmail').value || null,
@@ -337,10 +420,12 @@
                 
                 if (res.ok) {
                     const result = await res.json();
-                    alert(`店舗を登録しました\n\nライセンスキー:\n${result.license_key}`);
+                    alert(`店舗を登録しました\n\nユーザー名: ${result.username}\nライセンスキー: ${result.license_key}`);
                     hideAddModal();
                     // フォームリセット
                     document.getElementById('newStoreName').value = '';
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newPassword').value = '';
                     document.getElementById('newOwnerName').value = '';
                     document.getElementById('newPhone').value = '';
                     document.getElementById('newEmail').value = '';
@@ -349,7 +434,8 @@
                     document.getElementById('newMonthlyFee').value = '30000';
                     loadStores();
                 } else {
-                    alert('登録に失敗しました');
+                    const err = await res.json();
+                    alert(err.detail || '登録に失敗しました');
                 }
             } catch (e) {
                 console.error(e);
@@ -374,6 +460,10 @@
                     <div class="flex justify-between border-b border-gray-700 pb-2">
                         <span class="text-gray-400">ライセンスキー</span>
                         <span class="font-mono text-sm">${store.license_key}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">ユーザー名</span>
+                        <span class="font-mono">${store.username || '未設定'}</span>
                     </div>
                     <div class="flex justify-between border-b border-gray-700 pb-2">
                         <span class="text-gray-400">有効期限</span>
@@ -451,6 +541,69 @@
                     loadStores();
                 } else {
                     alert('延長に失敗しました');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('エラーが発生しました');
+            }
+        }
+
+        // 編集モーダル
+        function showEditModal(storeId) {
+            const store = stores.find(s => s.id === storeId);
+            if (!store) return;
+            
+            selectedStoreId = storeId;
+            document.getElementById('editStoreName').value = store.name || '';
+            document.getElementById('editUsername').value = store.username || '';
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editOwnerName').value = store.owner_name || '';
+            document.getElementById('editPhone').value = store.phone || '';
+            document.getElementById('editEmail').value = store.email || '';
+            document.getElementById('editMonthlyFee').value = store.monthly_fee || 30000;
+            document.getElementById('editNotes').value = store.notes || '';
+            
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        
+        function hideEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            selectedStoreId = null;
+        }
+        
+        async function updateStore() {
+            if (!selectedStoreId) return;
+            
+            const data = {
+                name: document.getElementById('editStoreName').value,
+                username: document.getElementById('editUsername').value || null,
+                owner_name: document.getElementById('editOwnerName').value || null,
+                phone: document.getElementById('editPhone').value || null,
+                email: document.getElementById('editEmail').value || null,
+                monthly_fee: parseInt(document.getElementById('editMonthlyFee').value) || 30000,
+                notes: document.getElementById('editNotes').value || null
+            };
+            
+            // パスワードは入力された場合のみ送信
+            const password = document.getElementById('editPassword').value;
+            if (password) {
+                data.password = password;
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/stores/${selectedStoreId}?admin_key=${encodeURIComponent(adminKey)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    alert('更新しました');
+                    hideEditModal();
+                    loadStores();
+                } else {
+                    const err = await res.json();
+                    alert(err.detail || '更新に失敗しました');
                 }
             } catch (e) {
                 console.error(e);
