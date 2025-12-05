@@ -1839,31 +1839,55 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
     
     # デフォルトメニュー
     default_menu = [
-        # セット料金
-        {"name": "セット料金（60分）", "category": "tableset", "price": 7000, "cost": 0},
-        {"name": "延長（30分）", "category": "tableset", "price": 4000, "cost": 0},
-        {"name": "指名料", "category": "tableset", "price": 2000, "cost": 0},
-        {"name": "同伴料", "category": "tableset", "price": 3000, "cost": 0},
-        # ドリンク
-        {"name": "ビール", "category": "drink", "price": 800, "cost": 200},
-        {"name": "ハイボール", "category": "drink", "price": 700, "cost": 150},
-        {"name": "カクテル", "category": "drink", "price": 900, "cost": 200},
-        {"name": "ソフトドリンク", "category": "drink", "price": 500, "cost": 100},
-        {"name": "ウーロン茶", "category": "drink", "price": 500, "cost": 50},
-        # キャストドリンク
-        {"name": "キャストドリンク", "category": "castdrink", "price": 1000, "cost": 200},
-        {"name": "キャストドリンク（高）", "category": "castdrink", "price": 1500, "cost": 300},
-        # ボトル
-        {"name": "焼酎ボトル", "category": "bottle", "price": 5000, "cost": 1500},
-        {"name": "ウィスキーボトル", "category": "bottle", "price": 8000, "cost": 2500},
-        # シャンパン
-        {"name": "モエ・エ・シャンドン", "category": "champagne", "price": 15000, "cost": 5000},
-        {"name": "ドンペリニヨン", "category": "champagne", "price": 50000, "cost": 20000},
-        {"name": "ヴーヴ・クリコ", "category": "champagne", "price": 20000, "cost": 8000},
-        # フード
-        {"name": "フルーツ盛り合わせ", "category": "food", "price": 2000, "cost": 500},
-        {"name": "おつまみセット", "category": "food", "price": 1500, "cost": 400},
-        {"name": "チョコレート", "category": "food", "price": 800, "cost": 200},
+        # drink - お客様用ドリンク
+        {"name": "レモンサワー", "category": "drink", "price": 0, "cost": 0, "premium": False},
+        {"name": "コークハイ", "category": "drink", "price": 0, "cost": 0, "premium": False},
+        {"name": "ジンジャーハイ", "category": "drink", "price": 0, "cost": 0, "premium": False},
+        {"name": "ビール", "category": "drink", "price": 0, "cost": 0, "premium": False},
+        {"name": "カクテル", "category": "drink", "price": 0, "cost": 0, "premium": False},
+        {"name": "ソフトドリンク", "category": "drink", "price": 0, "cost": 0, "premium": False},
+        {"name": "ショット", "category": "drink", "price": 2000, "cost": 0, "premium": False},
+        {"name": "グラスワイン", "category": "drink", "price": 2000, "cost": 0, "premium": False},
+        # castdrink - キャストドリンク
+        {"name": "麦焼酎", "category": "castdrink", "price": 1000, "cost": 0, "premium": False},
+        {"name": "ウイスキー", "category": "castdrink", "price": 1000, "cost": 0, "premium": False},
+        # tableset - 卓セット（無料）
+        {"name": "アイスセット", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "アイス追加", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "グラス追加", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "ウーロン茶", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "緑茶", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "炭酸水", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "紅茶", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "ジャスミン茶", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "コーヒー", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "ミネラルウォーター", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        # champagne - シャンパン
+        {"name": "アルマンド ブリュット", "category": "champagne", "price": 120000, "cost": 0, "premium": True},
+        {"name": "アルマンド ロゼ", "category": "champagne", "price": 150000, "cost": 0, "premium": True},
+        {"name": "クリュッグ", "category": "champagne", "price": 50000, "cost": 0, "premium": True},
+        {"name": "ドンペリ", "category": "champagne", "price": 45000, "cost": 0, "premium": True},
+        {"name": "ドンペリ ロゼ", "category": "champagne", "price": 70000, "cost": 0, "premium": True},
+        {"name": "ベルエポック", "category": "champagne", "price": 35000, "cost": 0, "premium": True},
+        {"name": "サロン", "category": "champagne", "price": 80000, "cost": 0, "premium": True},
+        {"name": "ヴーヴクリコ", "category": "champagne", "price": 18000, "cost": 0, "premium": False},
+        {"name": "モエ", "category": "champagne", "price": 15000, "cost": 0, "premium": False},
+        {"name": "ローランペリエ", "category": "champagne", "price": 20000, "cost": 0, "premium": False},
+        # wine - ワイン
+        {"name": "赤ワイン", "category": "wine", "price": 8000, "cost": 0, "premium": False},
+        {"name": "白ワイン", "category": "wine", "price": 8000, "cost": 0, "premium": False},
+        # bottle - ボトル
+        {"name": "黒霧島", "category": "bottle", "price": 5000, "cost": 0, "premium": False},
+        {"name": "いいちこ", "category": "bottle", "price": 4500, "cost": 0, "premium": False},
+        {"name": "ジャックダニエル", "category": "bottle", "price": 12000, "cost": 0, "premium": False},
+        {"name": "山崎", "category": "bottle", "price": 35000, "cost": 0, "premium": True},
+        # food - フード
+        {"name": "フルーツ盛り", "category": "food", "price": 3000, "cost": 0, "premium": False},
+        {"name": "チョコレート", "category": "food", "price": 1500, "cost": 0, "premium": False},
+        {"name": "ナッツ", "category": "food", "price": 1000, "cost": 0, "premium": False},
+        {"name": "チーズ盛り", "category": "food", "price": 2000, "cost": 0, "premium": False},
+        {"name": "枝豆", "category": "food", "price": 500, "cost": 0, "premium": False},
+        {"name": "唐揚げ", "category": "food", "price": 800, "cost": 0, "premium": False},
     ]
     for m in default_menu:
         db.add(MenuItem(
@@ -1871,6 +1895,7 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
             category=m["category"], 
             price=m["price"], 
             cost=m["cost"],
+            premium=m["premium"],
             store_id=store_id
         ))
     
