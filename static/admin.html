@@ -2869,6 +2869,10 @@ function showTableDetailPanel({ tableId, session, orders }) {
             </div>
 
             <div class="flex gap-2 pt-4 border-t border-gray-700">
+                <button class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg text-sm"
+                        onclick="showAdminNominationModal(${session.id}, ${tableId})">
+                    ✨ 場内指名
+                </button>
                 <button class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg text-sm"
                         onclick="checkoutSession(${session.id})">
                     清算（チェックアウト）
@@ -2978,6 +2982,9 @@ async function checkoutSession(sessionId) {
         if (typeof closeTableDetailPanel === 'function') {
             closeTableDetailPanel();
         }
+        
+        // ★ ダッシュボードタブに戻る
+        showTab('dashboard');
         
         // ★ ダッシュボード・日報・レポートを更新
         if (typeof updateDashboard === 'function') updateDashboard();
@@ -9574,5 +9581,111 @@ function setupCharts() {
             }
         }
     </style>
+
+    <!-- 場内指名モーダル -->
+    <div id="adminNominationModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+        <div class="bg-gray-900 rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto border border-gray-700">
+            <div class="border-b border-gray-700 px-6 py-4 flex items-center justify-between sticky top-0 bg-gray-900">
+                <h2 class="text-xl font-bold gold-accent">✨ 場内指名</h2>
+                <button onclick="closeAdminNominationModal()" class="text-gray-400 hover:text-gray-200 text-2xl">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-gray-400 text-sm text-center">指名するキャストを選んでください</p>
+                <p class="text-center text-amber-400 font-bold text-lg">場内指名料：¥2,000</p>
+                <div id="adminNominationCastList" class="space-y-3">
+                    <!-- キャストカードがここに表示される -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 場内指名料
+    const NOMINATION_FEE = 2000;
+    let nominationSessionId = null;
+    let nominationTableId = null;
+
+    // 場内指名モーダルを表示
+    function showAdminNominationModal(sessionId, tableId) {
+        nominationSessionId = sessionId;
+        nominationTableId = tableId;
+        
+        const modal = document.getElementById('adminNominationModal');
+        const listContainer = document.getElementById('adminNominationCastList');
+        
+        // キャストリスト取得
+        const casts = appState.casts || [];
+        const validCasts = casts.filter(c => c && c.stage_name);
+        
+        if (validCasts.length === 0) {
+            listContainer.innerHTML = '<p class="text-center text-gray-500">キャストが登録されていません</p>';
+        } else {
+            listContainer.innerHTML = validCasts.map(cast => {
+                const name = cast.stage_name || '名前なし';
+                return `
+                <div class="flex items-center justify-between bg-gray-800/50 rounded-xl p-4 border border-gray-700 hover:border-amber-500 transition cursor-pointer"
+                     onclick="confirmAdminNomination(${cast.id}, '${name.replace(/'/g, "\\'")}')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-black font-bold text-lg">
+                            ${name.charAt(0)}
+                        </div>
+                        <div>
+                            <p class="font-bold text-white">${name}</p>
+                            <p class="text-sm text-gray-400">${cast.rank || 'キャスト'}</p>
+                        </div>
+                    </div>
+                    <button class="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-lg text-black font-bold text-sm">
+                        指名する
+                    </button>
+                </div>
+            `}).join('');
+        }
+        
+        modal.classList.remove('hidden');
+    }
+
+    // 場内指名モーダルを閉じる
+    function closeAdminNominationModal() {
+        document.getElementById('adminNominationModal').classList.add('hidden');
+        nominationSessionId = null;
+        nominationTableId = null;
+    }
+
+    // 場内指名を確定
+    async function confirmAdminNomination(castId, castName) {
+        if (!nominationSessionId) {
+            alert('セッションが見つかりません');
+            return;
+        }
+        
+        if (!confirm(`${castName}さんを場内指名しますか？\n指名料：¥${NOMINATION_FEE.toLocaleString()}`)) {
+            return;
+        }
+        
+        try {
+            const res = await apiRequest(`/sessions/${nominationSessionId}/add-charge`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    item_name: `場内指名料（${castName}）`,
+                    price: NOMINATION_FEE,
+                    quantity: 1
+                })
+            });
+            
+            showNotification(`${castName}さんを場内指名しました！`, 'success');
+            closeAdminNominationModal();
+            
+            // テーブル詳細を更新
+            if (nominationTableId && typeof openTableDetail === 'function') {
+                await syncWithBackend();
+                openTableDetail(nominationTableId);
+            }
+        } catch (e) {
+            console.error('場内指名エラー:', e);
+            alert('指名に失敗しました');
+        }
+    }
+    </script>
 </body>
 </html>
