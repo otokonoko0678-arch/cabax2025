@@ -4206,7 +4206,7 @@ async function syncWithBackend() {
             }
             
             try {
-                const res = await fetch(`${API_BASE}/tables`, {
+                const res = await fetch(`${API_BASE_URL}/tables`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: name, is_vip: isVip })
@@ -4252,7 +4252,7 @@ async function syncWithBackend() {
             }
             
             try {
-                const res = await fetch(`${API_BASE}/tables/${tableId}`, {
+                const res = await fetch(`${API_BASE_URL}/tables/${tableId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: name, is_vip: isVip })
@@ -4287,7 +4287,7 @@ async function syncWithBackend() {
             }
             
             try {
-                const res = await fetch(`${API_BASE}/tables/${tableId}`, {
+                const res = await fetch(`${API_BASE_URL}/tables/${tableId}`, {
                     method: 'DELETE'
                 });
                 

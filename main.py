@@ -1952,4 +1952,3 @@ async def serve_super_admin():
     if file_path.exists():
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="Super admin page not found")
-# force
