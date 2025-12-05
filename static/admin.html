@@ -540,42 +540,66 @@
                 color: black !important;
             }
             
-            /* 日報タブを印刷時に表示 */
+            /* タブコンテンツの表示制御 */
+            .tab-content {
+                display: none !important;
+            }
+            
+            /* 日報タブを印刷時に強制表示 */
             #daily-report-tab {
                 display: block !important;
                 opacity: 1 !important;
                 visibility: visible !important;
             }
             
-            #dailyReportContent {
+            #dailyReportContent:not(.hidden),
+            #monthlyReportContent:not(.hidden) {
                 display: block !important;
                 color: black !important;
             }
             
-            #dailyReportContent * {
+            #dailyReportContent.hidden,
+            #monthlyReportContent.hidden {
+                display: none !important;
+            }
+            
+            #dailyReportContent *,
+            #monthlyReportContent * {
                 color: black !important;
                 background: white !important;
                 border-color: #ccc !important;
             }
             
             /* サイドバーとナビを非表示 */
-            #sidebar, .bottom-nav, nav {
+            #sidebar, .bottom-nav, nav, #loginScreen {
                 display: none !important;
             }
             
             /* メインコンテンツを全幅に */
             .main-content {
                 margin-left: 0 !important;
-                padding: 0 !important;
+                padding: 20px !important;
+                display: block !important;
             }
             
             .luxury-card {
-                border: 1px solid #ccc;
-                background: white;
+                border: 1px solid #ccc !important;
+                background: white !important;
+                box-shadow: none !important;
             }
             
             .print-page-break {
                 page-break-after: always;
+            }
+            
+            /* グラフバーの色を維持 */
+            .bg-gradient-to-t {
+                background: #f59e0b !important;
+            }
+            
+            /* gold-accentを黒に */
+            .gold-accent {
+                color: black !important;
             }
         }
     </style>
@@ -8269,7 +8293,15 @@ function renderMonthlyReport(data) {
 
 
         function printFullDailyReport() {
-            window.print();
+            // 印刷前にタブを表示状態にする
+            const dailyTab = document.getElementById('daily-report-tab');
+            dailyTab.style.display = 'block';
+            dailyTab.style.opacity = '1';
+            dailyTab.style.visibility = 'visible';
+            
+            setTimeout(() => {
+                window.print();
+            }, 100);
         }
 
         // レポート
