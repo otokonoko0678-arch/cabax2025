@@ -711,7 +711,10 @@
                     </button>
                 </nav>
                 
-                <div class="border-t border-gray-800 p-4">
+                <div class="border-t border-gray-800 p-4 space-y-2">
+                    <button id="soundToggleBtn" onclick="orderNotification.toggleSound()" class="w-full px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 text-sm">
+                        🔔 通知音ON
+                    </button>
                     <button onclick="logout()" class="w-full bg-red-900/20 text-red-400 border border-red-800/30 py-3.5 rounded-xl hover:bg-red-900/30 transition text-sm font-medium">
                         ログアウト
                     </button>
@@ -1968,6 +1971,93 @@ const API_ENDPOINTS = {
     sessions: '/sessions',
     sessionsActive: '/sessions/active',
     orders: '/orders',
+};
+
+// ★ 注文通知システム
+const orderNotification = {
+    lastOrderIds: new Set(),
+    initialized: false,
+    soundEnabled: true,
+    
+    // 通知音を鳴らす
+    playSound() {
+        if (!this.soundEnabled) return;
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // 2回ピンポン音
+            oscillator.frequency.value = 880; // A5
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.3;
+            
+            oscillator.start();
+            
+            // 音程を変える（ピンポン）
+            setTimeout(() => { oscillator.frequency.value = 1100; }, 150);
+            setTimeout(() => { oscillator.frequency.value = 880; }, 300);
+            setTimeout(() => { oscillator.frequency.value = 1100; }, 450);
+            
+            setTimeout(() => {
+                oscillator.stop();
+                audioContext.close();
+            }, 600);
+        } catch (e) {
+            console.log('通知音の再生に失敗:', e);
+        }
+    },
+    
+    // 新しい注文をチェック
+    async checkNewOrders() {
+        try {
+            const sessions = await apiRequest(API_ENDPOINTS.sessionsActive);
+            if (!Array.isArray(sessions)) return;
+            
+            let hasNewOrder = false;
+            
+            for (const session of sessions) {
+                const orders = await apiRequest(`/sessions/${session.id}/orders`);
+                if (!Array.isArray(orders)) continue;
+                
+                for (const order of orders) {
+                    const orderId = `${session.id}-${order.id}`;
+                    if (!this.lastOrderIds.has(orderId)) {
+                        if (this.initialized) {
+                            hasNewOrder = true;
+                            console.log('[通知] 新しい注文:', order);
+                        }
+                        this.lastOrderIds.add(orderId);
+                    }
+                }
+            }
+            
+            if (hasNewOrder) {
+                this.playSound();
+                showNotification('🔔 新しい注文が入りました！', 'info');
+            }
+            
+            this.initialized = true;
+        } catch (e) {
+            console.error('注文チェックエラー:', e);
+        }
+    },
+    
+    // 通知音のON/OFF切り替え
+    toggleSound() {
+        this.soundEnabled = !this.soundEnabled;
+        const btn = document.getElementById('soundToggleBtn');
+        if (btn) {
+            btn.textContent = this.soundEnabled ? '🔔 通知音ON' : '🔕 通知音OFF';
+            btn.className = this.soundEnabled 
+                ? 'px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 text-sm'
+                : 'px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 text-sm';
+        }
+        showNotification(this.soundEnabled ? '通知音をONにしました' : '通知音をOFFにしました', 'info');
+    }
 };
 
 
@@ -3487,6 +3577,18 @@ function initializeApp() {
                 syncWithBackend();
             }
         }, 15000);
+    }
+    
+    // ★ 注文通知チェック（5秒間隔）
+    if (!window.__cabaxOrderCheckInterval) {
+        // 初回チェック
+        orderNotification.checkNewOrders();
+        
+        window.__cabaxOrderCheckInterval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                orderNotification.checkNewOrders();
+            }
+        }, 5000);
     }
 
     // ★ タブ復帰時に同期（二重登録防止）
