@@ -478,7 +478,7 @@ def get_db():
     finally:
         db.close()
 
-def get_store_id(x_store_id: Optional[str] = Header(None)) -> Optional[int]:
+def get_store_id(x_store_id: Optional[str] = Header(None, alias="X-Store-Id")) -> Optional[int]:
     """ヘッダーからstore_idを取得"""
     if x_store_id:
         try:
