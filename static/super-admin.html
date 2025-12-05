@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cabax Super Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -470,7 +470,7 @@
                             </button>
                         </div>
                         <div class="flex justify-center bg-white rounded-xl p-4">
-                            <canvas id="qrcode_${store.id}"></canvas>
+                            <div id="qrcode_${store.id}"></div>
                         </div>
                         <p class="text-gray-400 text-xs text-center mt-2">このQRコードをテーブルに設置してください</p>
                     </div>
@@ -535,10 +535,13 @@
             
             // QRコード生成
             setTimeout(() => {
-                const canvas = document.getElementById(`qrcode_${store.id}`);
-                if (canvas && typeof QRCode !== 'undefined') {
-                    QRCode.toCanvas(canvas, orderUrl, { width: 200, margin: 2 }, function(error) {
-                        if (error) console.error('QRCode error:', error);
+                const qrContainer = document.getElementById(`qrcode_${store.id}`);
+                if (qrContainer && typeof QRCode !== 'undefined') {
+                    qrContainer.innerHTML = '';
+                    new QRCode(qrContainer, {
+                        text: orderUrl,
+                        width: 200,
+                        height: 200
                     });
                 }
             }, 100);
