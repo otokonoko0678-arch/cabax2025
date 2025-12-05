@@ -3526,18 +3526,36 @@ function initializeApp() {
                     const data = await response.json();
                     console.log('ログイン成功！', data);
                     
+                    // JWTからstore_idとstore_nameを取得
+                    let storeId = data.store_id;
+                    let storeName = data.store_name;
+                    
+                    // レスポンスにない場合はJWTをデコード
+                    if (!storeId && data.access_token) {
+                        try {
+                            const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+                            storeId = payload.store_id;
+                            storeName = payload.store_name;
+                            console.log('JWT decoded:', payload);
+                        } catch (e) {
+                            console.log('JWT decode failed:', e);
+                        }
+                    }
+                    
                     sessionStorage.setItem('cabax_logged_in', 'true');
                     sessionStorage.setItem('cabax_user', username);
                     sessionStorage.setItem('cabax_token', data.access_token);
-                    sessionStorage.setItem('cabax_store_id', data.store_id || '');
-                    sessionStorage.setItem('cabax_store_name', data.store_name || '');
+                    sessionStorage.setItem('cabax_store_id', storeId || '');
+                    sessionStorage.setItem('cabax_store_name', storeName || '');
+                    
+                    console.log('Store ID saved:', storeId);
                     
                     errorDiv.classList.remove('active');
                     showMainApp();
                     initializeApp();
                     
-                    const storeName = data.store_name || 'Cabax';
-                    showNotification(`${storeName} にログインしました`, 'success');
+                    const displayName = storeName || 'Cabax';
+                    showNotification(`${displayName} にログインしました`, 'success');
                 } else {
                     const err = await response.json().catch(() => ({}));
                     console.log('ログイン失敗:', err.detail);
