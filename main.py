@@ -478,8 +478,12 @@ def get_db():
     finally:
         db.close()
 
-def get_store_id(x_store_id: Optional[str] = Header(None, alias="X-Store-Id")) -> Optional[int]:
+def get_store_id(request: Request) -> Optional[int]:
     """ヘッダーからstore_idを取得"""
+    # 複数のヘッダー名を試す（大文字小文字の違いに対応）
+    x_store_id = request.headers.get("x-store-id") or request.headers.get("X-Store-Id") or request.headers.get("X-STORE-ID")
+    print(f"[DEBUG] get_store_id: headers={dict(request.headers)}")
+    print(f"[DEBUG] get_store_id: x_store_id={x_store_id}")
     if x_store_id:
         try:
             return int(x_store_id)
@@ -963,6 +967,7 @@ def delete_table(table_id: int, db: Session = Depends(get_db), store_id: Optiona
 # セッション管理
 @app.post("/api/sessions", response_model=SessionResponse)
 def create_session(session: SessionCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    print(f"[DEBUG] create_session called with store_id={store_id}")
     db_session = SessionModel(**session.dict(), store_id=store_id)
     db.add(db_session)
     table = db.query(Table).filter(Table.id == session.table_id).first()
@@ -970,6 +975,7 @@ def create_session(session: SessionCreate, db: Session = Depends(get_db), store_
         table.status = "occupied"
     db.commit()
     db.refresh(db_session)
+    print(f"[DEBUG] session created: id={db_session.id}, store_id={db_session.store_id}")
     return db_session
 
 @app.get("/api/sessions/active", response_model=List[SessionResponse])
