@@ -1133,9 +1133,14 @@
 
                 <!-- 会計履歴タブ -->
                 <div id="checkout-history-tab" class="tab-content">
-                    <div class="mb-8">
-                        <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-3">会計履歴</h1>
-                        <p class="text-gray-400">本日の会計履歴を確認・修正できます</p>
+                    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 class="text-4xl md:text-5xl font-bold gold-accent mb-3">会計履歴</h1>
+                            <p class="text-gray-400">本日の会計履歴を確認・修正できます</p>
+                        </div>
+                        <button onclick="exportCheckoutHistoryCSV()" class="bg-gray-800 text-gray-300 px-6 py-3 rounded-xl text-sm hover:bg-gray-700 transition">
+                            📥 CSV出力
+                        </button>
                     </div>
                     
                     <div id="checkoutHistoryContent" class="space-y-4">
@@ -1172,6 +1177,9 @@
                                     <option value="12">12月</option>
                                 </select>
                             </div>
+                            <button onclick="exportReportCSV()" class="bg-gray-800 text-gray-300 px-6 py-3 rounded-xl text-sm hover:bg-gray-700 transition">
+                                📥 CSV
+                            </button>
                             <button onclick="printFullDailyReport()" class="luxury-btn px-6 py-3 rounded-xl text-sm">
                                 🖨️ 印刷
                             </button>
@@ -7285,8 +7293,195 @@ function populateCastSelects() {
             showNotification('DB一覧CSVを出力しました', 'success');
         }
 
-        function exportSalaryCSV() {
-            showNotification('給与明細CSVを出力しました', 'success');
+        // ===== CSVエクスポート機能 =====
+        function downloadCSV(filename, csvContent) {
+            const bom = '\uFEFF'; // Excelで日本語文字化け防止
+            const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+        
+        async function exportSalaryCSV() {
+            const year = document.getElementById('salaryYear')?.value || new Date().getFullYear();
+            const month = document.getElementById('salaryMonth')?.value || (new Date().getMonth() + 1);
+            
+            try {
+                let data;
+                if (appState.apiConnected) {
+                    data = await apiRequest(`/cast-payroll?year=${year}&month=${month}`);
+                } else {
+                    showNotification('API未接続のためデモデータを出力します', 'info');
+                    data = { payroll_list: appState.casts.map(c => ({
+                        cast_name: c.name || c.stage_name,
+                        salary_type: c.salaryType || 'hourly',
+                        work_days: 20,
+                        total_hours: 160,
+                        base_salary: 0,
+                        companion_back: 0,
+                        nomination_back: 0,
+                        drink_back: 0,
+                        sales_back: 0,
+                        total_payroll: 0
+                    }))};
+                }
+                
+                const headers = ['キャスト名', '給与体系', '出勤日数', '勤務時間', '基本給', '同伴バック', '指名バック', 'ドリンクバック', '売上バック', '総支給額'];
+                const rows = data.payroll_list.map(p => [
+                    p.cast_name,
+                    p.salary_type === 'monthly' ? '月給制' : '時給制',
+                    p.work_days,
+                    p.total_hours,
+                    p.base_salary,
+                    p.companion_back,
+                    p.nomination_back,
+                    p.drink_back,
+                    p.sales_back,
+                    p.total_payroll
+                ]);
+                
+                const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+                downloadCSV(`給与明細_${year}年${month}月.csv`, csvContent);
+                showNotification('給与明細CSVをダウンロードしました', 'success');
+            } catch (e) {
+                console.error('CSV出力エラー:', e);
+                showNotification('CSV出力に失敗しました', 'error');
+            }
+        }
+        
+        async function exportReportCSV() {
+            const isDailyMode = currentReportMode === 'daily';
+            
+            if (isDailyMode) {
+                // 日報CSV
+                const today = new Date().toISOString().split('T')[0];
+                try {
+                    let data;
+                    if (appState.apiConnected) {
+                        data = await apiRequest(`/daily-report?date=${today}`);
+                    } else {
+                        data = {
+                            date: today,
+                            total_sales: 0,
+                            total_cost: 0,
+                            gross_profit: 0,
+                            session_count: 0,
+                            total_guests: 0
+                        };
+                    }
+                    
+                    const csvContent = [
+                        ['日報', data.date],
+                        [''],
+                        ['項目', '金額'],
+                        ['総売上', data.total_sales],
+                        ['原価', data.total_cost],
+                        ['キャストバック合計', data.cast_payroll?.total || 0],
+                        ['  同伴バック', data.cast_payroll?.companion_back || 0],
+                        ['  指名バック', data.cast_payroll?.nomination_back || 0],
+                        ['  ドリンクバック', data.cast_payroll?.drink_back || 0],
+                        ['  売上バック', data.cast_payroll?.sales_back || 0],
+                        ['スタッフ人件費', data.staff_cost || 0],
+                        ['粗利', data.gross_profit],
+                        [''],
+                        ['来店組数', data.session_count],
+                        ['来客数', data.total_guests],
+                        ['客単価（組）', data.avg_per_group || 0],
+                        ['客単価（人）', data.avg_per_person || 0]
+                    ].map(row => row.join(',')).join('\n');
+                    
+                    downloadCSV(`日報_${today}.csv`, csvContent);
+                    showNotification('日報CSVをダウンロードしました', 'success');
+                } catch (e) {
+                    console.error('CSV出力エラー:', e);
+                    showNotification('CSV出力に失敗しました', 'error');
+                }
+            } else {
+                // 月報CSV
+                const year = document.getElementById('reportYear')?.value || new Date().getFullYear();
+                const month = document.getElementById('reportMonth')?.value || (new Date().getMonth() + 1);
+                
+                try {
+                    let data;
+                    if (appState.apiConnected) {
+                        data = await apiRequest(`/monthly-report?year=${year}&month=${month}`);
+                    } else {
+                        data = {
+                            period: `${year}年${month}月`,
+                            total_sales: 0,
+                            total_cost: 0,
+                            gross_profit: 0,
+                            session_count: 0,
+                            total_guests: 0,
+                            cast_payroll: {},
+                            daily_sales: []
+                        };
+                    }
+                    
+                    // サマリー部分
+                    const summaryRows = [
+                        ['月報', data.period],
+                        [''],
+                        ['項目', '金額'],
+                        ['月間売上', data.total_sales],
+                        ['原価', data.total_cost],
+                        ['キャストバック合計', data.cast_payroll?.total || 0],
+                        ['  同伴バック', data.cast_payroll?.companion_back || 0],
+                        ['  指名バック', data.cast_payroll?.nomination_back || 0],
+                        ['  ドリンクバック', data.cast_payroll?.drink_back || 0],
+                        ['  売上バック', data.cast_payroll?.sales_back || 0],
+                        ['スタッフ人件費', data.staff_cost || 0],
+                        ['粗利', data.gross_profit],
+                        ['粗利率', `${data.gross_profit_rate || 0}%`],
+                        [''],
+                        ['来店組数', data.session_count],
+                        ['来客数', data.total_guests],
+                        ['同伴数', data.companion_count || 0],
+                        ['指名数', data.nomination_count || 0],
+                        [''],
+                        ['日別売上'],
+                        ['日付', '売上']
+                    ];
+                    
+                    // 日別売上
+                    const dailyRows = (data.daily_sales || []).map(d => [d.date, d.sales]);
+                    
+                    const csvContent = [...summaryRows, ...dailyRows].map(row => row.join(',')).join('\n');
+                    downloadCSV(`月報_${year}年${month}月.csv`, csvContent);
+                    showNotification('月報CSVをダウンロードしました', 'success');
+                } catch (e) {
+                    console.error('CSV出力エラー:', e);
+                    showNotification('CSV出力に失敗しました', 'error');
+                }
+            }
+        }
+        
+        function exportCheckoutHistoryCSV() {
+            const history = appState.checkoutHistory || [];
+            
+            if (history.length === 0) {
+                showNotification('出力するデータがありません', 'info');
+                return;
+            }
+            
+            const headers = ['会計日時', 'テーブル', '担当キャスト', '人数', '指名タイプ', '同伴', '小計', '税込合計'];
+            const rows = history.map(s => [
+                s.checkoutTime || '',
+                s.tableName || `テーブル${s.tableId}`,
+                s.castName || s.cast_name || '',
+                s.guests || 0,
+                s.nomination_type || 'フリー',
+                s.has_companion ? 'あり' : 'なし',
+                s.subtotal || s.current_total || 0,
+                s.total || s.current_total || 0
+            ]);
+            
+            const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+            const today = new Date().toISOString().split('T')[0];
+            downloadCSV(`会計履歴_${today}.csv`, csvContent);
+            showNotification('会計履歴CSVをダウンロードしました', 'success');
         }
 　　　　　function getAllSessionsFromAppState(app) {
     if (!app) return [];
@@ -8908,10 +9103,6 @@ function renderMonthlyReport(data) {
             `;
         }
         
-        function exportReportCSV() {
-            showNotification('売上レポートCSVを出力しました', 'success');
-        }
-
         // ダッシュボード更新
         
         function updateDashboard() {
@@ -8952,7 +9143,30 @@ function setupCharts() {
         }
 
         function exportCSV() {
-            showNotification('CSVを出力しました', 'success');
+            // ダッシュボードの売上データをCSV出力
+            const allSessions = [...(appState.activeSessions || []), ...(appState.checkoutHistory || [])];
+            
+            if (allSessions.length === 0) {
+                showNotification('出力するデータがありません', 'info');
+                return;
+            }
+            
+            const headers = ['ID', '日時', 'テーブル', '担当', '人数', '指名', '同伴', '売上'];
+            const rows = allSessions.map(s => [
+                s.id || '',
+                s.start_time || s.startTime || s.checkoutTime || '',
+                s.tableName || `テーブル${s.tableId || s.table_id}`,
+                s.castName || s.cast_name || '',
+                s.guests || 0,
+                s.nomination_type || 'フリー',
+                s.has_companion ? 'あり' : 'なし',
+                s.current_total || s.currentTotal || s.total || 0
+            ]);
+            
+            const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+            const today = new Date().toISOString().split('T')[0];
+            downloadCSV(`売上データ_${today}.csv`, csvContent);
+            showNotification('売上データCSVをダウンロードしました', 'success');
         }
 
         // UI関数
