@@ -310,6 +310,7 @@ class SessionCreate(BaseModel):
     nomination_fee: int = 0
     shimei_casts: Optional[str] = None  # 指名キャスト名（カンマ区切り）
     tax_rate: int = 20  # TAX/サービス料率（%）
+    store_id: Optional[int] = None  # 店舗ID
 
 class SessionResponse(BaseModel):
     id: int
@@ -966,13 +967,13 @@ def delete_table(table_id: int, db: Session = Depends(get_db), store_id: Optiona
 
 # セッション管理
 @app.post("/api/sessions", response_model=SessionResponse)
-def create_session(session: SessionCreate, request: Request, db: Session = Depends(get_db)):
-    # 直接ヘッダーから取得
-    x_store_id = request.headers.get("x-store-id") or request.headers.get("X-Store-Id")
-    store_id = int(x_store_id) if x_store_id else None
-    print(f"[DEBUG] create_session: x_store_id={x_store_id}, store_id={store_id}")
+def create_session(session: SessionCreate, db: Session = Depends(get_db)):
+    # ボディからstore_idを取得
+    store_id = session.store_id
+    print(f"[DEBUG] create_session: store_id from body = {store_id}")
     
-    db_session = SessionModel(**session.dict(), store_id=store_id)
+    session_data = session.dict()
+    db_session = SessionModel(**session_data)
     db.add(db_session)
     table = db.query(Table).filter(Table.id == session.table_id).first()
     if table:

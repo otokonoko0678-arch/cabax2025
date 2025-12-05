@@ -3045,11 +3045,15 @@ async function createSessionForTable(tableId) {
         const castId = Number(document.getElementById('entryCastSelect')?.value || 1);
         const guests = Number(document.getElementById('entryGuests')?.value || 1);
         const catchStaff = (document.getElementById('entryCatchStaff')?.value || '').trim();
+        
+        // store_idを取得
+        const storeId = sessionStorage.getItem('cabax_store_id');
 
         const payload = {
             table_id: Number(tableId),
             cast_id: castId,
-            guests: guests
+            guests: guests,
+            store_id: storeId ? Number(storeId) : null
         };
         if (catchStaff) payload.catch_staff = catchStaff;
 
