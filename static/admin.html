@@ -9135,11 +9135,136 @@ function setupCharts() {
 }
 
 
-        function printDailyReport() {
-            showTab('daily-report');
+        async function printDailyReport() {
+            // ダッシュボードから直接日報を印刷
+            const today = new Date().toISOString().split('T')[0];
+            
+            let data;
+            try {
+                if (appState.apiConnected) {
+                    data = await apiRequest(`/daily-report?date=${today}`);
+                } else {
+                    // ローカルデータから生成
+                    const allSessions = [...(appState.activeSessions || []), ...(appState.checkoutHistory || [])];
+                    const todaySessions = allSessions.filter(s => {
+                        const time = s.checkoutTime || s.start_time;
+                        return time && time.startsWith(today);
+                    });
+                    const totalSales = todaySessions.reduce((sum, s) => sum + (s.current_total || s.total || 0), 0);
+                    data = {
+                        date: today,
+                        total_sales: totalSales,
+                        session_count: todaySessions.length,
+                        total_guests: todaySessions.reduce((sum, s) => sum + (s.guests || 1), 0),
+                        gross_profit: totalSales,
+                        cast_payroll: { total: 0 },
+                        staff_cost: 0
+                    };
+                }
+            } catch (e) {
+                console.error('日報取得エラー:', e);
+                showNotification('日報データの取得に失敗しました', 'error');
+                return;
+            }
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Cabax 日報 - ${data.date}</title>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                            padding: 20px; 
+                            max-width: 800px; 
+                            margin: 0 auto;
+                            color: #333;
+                        }
+                        h1 { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+                        .section { margin-bottom: 20px; }
+                        .section-title { font-weight: bold; font-size: 1.2em; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+                        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+                        .label { color: #666; }
+                        .value { font-weight: bold; }
+                        .highlight { font-size: 1.3em; color: #b8860b; }
+                        @media print { body { padding: 10px; } }
+                    </style>
+                </head>
+                <body>
+                    <h1>📊 日報 - ${data.date}</h1>
+                    
+                    <div class="section">
+                        <div class="section-title">売上サマリー</div>
+                        <div class="row">
+                            <span class="label">総売上</span>
+                            <span class="value highlight">¥${(data.total_sales || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">原価</span>
+                            <span class="value">¥${(data.total_cost || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">キャストバック</span>
+                            <span class="value">¥${(data.cast_payroll?.total || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">スタッフ人件費</span>
+                            <span class="value">¥${(data.staff_cost || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">粗利</span>
+                            <span class="value highlight">¥${(data.gross_profit || 0).toLocaleString()}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-title">来客情報</div>
+                        <div class="row">
+                            <span class="label">来店組数</span>
+                            <span class="value">${data.session_count || 0}組</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">来客数</span>
+                            <span class="value">${data.total_guests || 0}名</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">客単価（組）</span>
+                            <span class="value">¥${(data.avg_per_group || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">客単価（人）</span>
+                            <span class="value">¥${(data.avg_per_person || 0).toLocaleString()}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-title">キャストバック内訳</div>
+                        <div class="row">
+                            <span class="label">同伴バック</span>
+                            <span class="value">¥${(data.cast_payroll?.companion_back || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">指名バック</span>
+                            <span class="value">¥${(data.cast_payroll?.nomination_back || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">ドリンクバック</span>
+                            <span class="value">¥${(data.cast_payroll?.drink_back || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="row">
+                            <span class="label">売上バック</span>
+                            <span class="value">¥${(data.cast_payroll?.sales_back || 0).toLocaleString()}</span>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
             setTimeout(() => {
-                window.print();
-            }, 500);
+                printWindow.print();
+            }, 300);
         }
 
         function exportCSV() {
