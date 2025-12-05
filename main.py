@@ -1610,6 +1610,10 @@ def init_tables():
 # 静的ファイルディレクトリ
 STATIC_DIR = Path(__file__).parent / "static"
 
+# 静的ファイルをマウント
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_home():
     """トップページ（注文画面）"""
