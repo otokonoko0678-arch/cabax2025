@@ -1821,6 +1821,61 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
     db.commit()
     db.refresh(new_store)
     
+    # 初期データを追加
+    store_id = new_store.id
+    
+    # デフォルトテーブル
+    default_tables = [
+        {"name": "1番", "is_vip": False},
+        {"name": "2番", "is_vip": False},
+        {"name": "3番", "is_vip": False},
+        {"name": "4番", "is_vip": False},
+        {"name": "5番", "is_vip": False},
+        {"name": "VIP1", "is_vip": True},
+        {"name": "VIP2", "is_vip": True},
+    ]
+    for t in default_tables:
+        db.add(Table(name=t["name"], is_vip=t["is_vip"], status="available", store_id=store_id))
+    
+    # デフォルトメニュー
+    default_menu = [
+        # セット料金
+        {"name": "セット料金（60分）", "category": "tableset", "price": 7000, "cost": 0},
+        {"name": "延長（30分）", "category": "tableset", "price": 4000, "cost": 0},
+        {"name": "指名料", "category": "tableset", "price": 2000, "cost": 0},
+        {"name": "同伴料", "category": "tableset", "price": 3000, "cost": 0},
+        # ドリンク
+        {"name": "ビール", "category": "drink", "price": 800, "cost": 200},
+        {"name": "ハイボール", "category": "drink", "price": 700, "cost": 150},
+        {"name": "カクテル", "category": "drink", "price": 900, "cost": 200},
+        {"name": "ソフトドリンク", "category": "drink", "price": 500, "cost": 100},
+        {"name": "ウーロン茶", "category": "drink", "price": 500, "cost": 50},
+        # キャストドリンク
+        {"name": "キャストドリンク", "category": "castdrink", "price": 1000, "cost": 200},
+        {"name": "キャストドリンク（高）", "category": "castdrink", "price": 1500, "cost": 300},
+        # ボトル
+        {"name": "焼酎ボトル", "category": "bottle", "price": 5000, "cost": 1500},
+        {"name": "ウィスキーボトル", "category": "bottle", "price": 8000, "cost": 2500},
+        # シャンパン
+        {"name": "モエ・エ・シャンドン", "category": "champagne", "price": 15000, "cost": 5000},
+        {"name": "ドンペリニヨン", "category": "champagne", "price": 50000, "cost": 20000},
+        {"name": "ヴーヴ・クリコ", "category": "champagne", "price": 20000, "cost": 8000},
+        # フード
+        {"name": "フルーツ盛り合わせ", "category": "food", "price": 2000, "cost": 500},
+        {"name": "おつまみセット", "category": "food", "price": 1500, "cost": 400},
+        {"name": "チョコレート", "category": "food", "price": 800, "cost": 200},
+    ]
+    for m in default_menu:
+        db.add(MenuItem(
+            name=m["name"], 
+            category=m["category"], 
+            price=m["price"], 
+            cost=m["cost"],
+            store_id=store_id
+        ))
+    
+    db.commit()
+    
     return {
         "id": new_store.id,
         "name": new_store.name,
@@ -1828,7 +1883,7 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
         "username": new_store.username,
         "expires_at": new_store.expires_at.isoformat(),
         "status": new_store.status,
-        "message": "店舗を登録しました"
+        "message": "店舗を登録しました（初期データ含む）"
     }
 
 @app.put("/api/stores/{store_id}")
