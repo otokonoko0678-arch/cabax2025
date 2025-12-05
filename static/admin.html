@@ -1984,6 +1984,12 @@ async function apiRequest(endpointOrPath, options = {}) {
   if (!headers['Content-Type'] && options.body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
+  
+  // 店舗IDをヘッダーに追加
+  const storeId = sessionStorage.getItem('cabax_store_id');
+  if (storeId) {
+    headers['X-Store-Id'] = storeId;
+  }
 
   const res = await fetch(url, { ...options, headers });
   const text = await res.text();
@@ -3518,17 +3524,20 @@ function initializeApp() {
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('ログイン成功！');
+                    console.log('ログイン成功！', data);
                     
                     sessionStorage.setItem('cabax_logged_in', 'true');
                     sessionStorage.setItem('cabax_user', username);
                     sessionStorage.setItem('cabax_token', data.access_token);
+                    sessionStorage.setItem('cabax_store_id', data.store_id || '');
+                    sessionStorage.setItem('cabax_store_name', data.store_name || '');
                     
                     errorDiv.classList.remove('active');
                     showMainApp();
                     initializeApp();
                     
-                    showNotification('ログインしました', 'success');
+                    const storeName = data.store_name || 'Cabax';
+                    showNotification(`${storeName} にログインしました`, 'success');
                 } else {
                     const err = await response.json().catch(() => ({}));
                     console.log('ログイン失敗:', err.detail);

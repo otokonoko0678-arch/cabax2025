@@ -4,7 +4,7 @@ FastAPI + SQLAlchemy + JWT認証
 すべての機能に対応
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -59,7 +59,8 @@ class User(Base):
 class Table(Base):
     __tablename__ = "tables"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
+    name = Column(String, index=True)
     status = Column(String, default="available")
     is_vip = Column(Boolean, default=False)
     sessions = relationship("SessionModel", back_populates="table")
@@ -68,6 +69,7 @@ class StaffAttendance(Base):
     """スタッフの出勤記録"""
     __tablename__ = "staff_attendances"
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     staff_id = Column(Integer, ForeignKey("staff.id"))
     date = Column(String)  # YYYY-MM-DD
     clock_in = Column(String)  # HH:MM
@@ -80,7 +82,8 @@ class Cast(Base):
     # 源氏名を使用
     __tablename__ = "casts"
     id = Column(Integer, primary_key=True, index=True)
-    stage_name = Column(String, unique=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
+    stage_name = Column(String, index=True)
     rank = Column(String, default="regular")
     salary_type = Column(String, default="hourly")  # hourly or monthly
     hourly_rate = Column(Integer)
@@ -97,6 +100,7 @@ class Cast(Base):
 class MenuItem(Base):
     __tablename__ = "menu_items"
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     name = Column(String, index=True)
     category = Column(String, index=True)
     price = Column(Integer)
@@ -111,6 +115,7 @@ class MenuItem(Base):
 class SessionModel(Base):
     __tablename__ = "sessions"
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     table_id = Column(Integer, ForeignKey("tables.id"))
     cast_id = Column(Integer, ForeignKey("casts.id"))
     guests = Column(Integer)
@@ -134,6 +139,7 @@ class SessionModel(Base):
 class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"))
     menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
     quantity = Column(Integer)
@@ -149,6 +155,7 @@ class Order(Base):
 class Attendance(Base):
     __tablename__ = "attendances"
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     cast_id = Column(Integer, ForeignKey("casts.id"))
     date = Column(String, index=True)
     clock_in = Column(String)
@@ -159,6 +166,7 @@ class Attendance(Base):
 class Shift(Base):
     __tablename__ = "shifts"
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     cast_id = Column(Integer, ForeignKey("casts.id"))
     date = Column(String, index=True)
     start_time = Column(String)
@@ -167,6 +175,7 @@ class Shift(Base):
 class Staff(Base):
     __tablename__ = "staff"
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     name = Column(String, index=True)
     role = Column(String)  # waiter, kitchen, manager, catch, driver, other
     salary_type = Column(String, default="hourly")  # hourly, daily, monthly
@@ -468,6 +477,15 @@ def get_db():
     finally:
         db.close()
 
+def get_store_id(x_store_id: Optional[str] = Header(None)) -> Optional[int]:
+    """ヘッダーからstore_idを取得"""
+    if x_store_id:
+        try:
+            return int(x_store_id)
+        except ValueError:
+            return None
+    return None
+
 # ========================
 # FastAPI アプリケーション
 # ========================
@@ -617,31 +635,47 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
             raise HTTPException(status_code=403, detail="ライセンスの有効期限が切れています")
         
         access_token = create_access_token(data={"sub": request.username, "store_id": store.id, "store_name": store.name})
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "store_id": store.id,
+            "store_name": store.name
+        }
     
-    # 従来のUserテーブルで認証（後方互換性）
+    # 従来のUserテーブルで認証（後方互換性 - store_id=null）
     user = db.query(User).filter(User.username == request.username).first()
     if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザー名またはパスワードが正しくありません")
     access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "store_id": None,
+        "store_name": None
+    }
 
 # キャスト管理
 @app.get("/api/casts", response_model=List[CastResponse])
-def get_casts(db: Session = Depends(get_db), ):
-    return db.query(Cast).all()
+def get_casts(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Cast)
+    if store_id:
+        query = query.filter(Cast.store_id == store_id)
+    return query.all()
 
 @app.post("/api/casts", response_model=CastResponse)
-def create_cast(cast: CastCreate, db: Session = Depends(get_db), ):
-    db_cast = Cast(**cast.dict())
+def create_cast(cast: CastCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    db_cast = Cast(**cast.dict(), store_id=store_id)
     db.add(db_cast)
     db.commit()
     db.refresh(db_cast)
     return db_cast
 
 @app.put("/api/casts/{cast_id}", response_model=CastResponse)
-def update_cast(cast_id: int, cast: CastUpdate, db: Session = Depends(get_db), ):
-    db_cast = db.query(Cast).filter(Cast.id == cast_id).first()
+def update_cast(cast_id: int, cast: CastUpdate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Cast).filter(Cast.id == cast_id)
+    if store_id:
+        query = query.filter(Cast.store_id == store_id)
+    db_cast = query.first()
     if not db_cast:
         raise HTTPException(status_code=404, detail="Cast not found")
     for key, value in cast.dict(exclude_unset=True).items():
@@ -651,8 +685,11 @@ def update_cast(cast_id: int, cast: CastUpdate, db: Session = Depends(get_db), )
     return db_cast
 
 @app.delete("/api/casts/{cast_id}")
-def delete_cast(cast_id: int, db: Session = Depends(get_db), ):
-    db_cast = db.query(Cast).filter(Cast.id == cast_id).first()
+def delete_cast(cast_id: int, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Cast).filter(Cast.id == cast_id)
+    if store_id:
+        query = query.filter(Cast.store_id == store_id)
+    db_cast = query.first()
     if not db_cast:
         raise HTTPException(status_code=404, detail="Cast not found")
     db.delete(db_cast)
@@ -661,20 +698,26 @@ def delete_cast(cast_id: int, db: Session = Depends(get_db), ):
 
 # スタッフ管理
 @app.get("/api/staff", response_model=List[StaffResponse])
-def get_staff(db: Session = Depends(get_db)):
-    return db.query(Staff).filter(Staff.is_active == True).all()
+def get_staff(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Staff).filter(Staff.is_active == True)
+    if store_id:
+        query = query.filter(Staff.store_id == store_id)
+    return query.all()
 
 @app.post("/api/staff", response_model=StaffResponse)
-def create_staff(staff: StaffCreate, db: Session = Depends(get_db)):
-    db_staff = Staff(**staff.dict())
+def create_staff(staff: StaffCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    db_staff = Staff(**staff.dict(), store_id=store_id)
     db.add(db_staff)
     db.commit()
     db.refresh(db_staff)
     return db_staff
 
 @app.put("/api/staff/{staff_id}", response_model=StaffResponse)
-def update_staff(staff_id: int, staff: StaffUpdate, db: Session = Depends(get_db)):
-    db_staff = db.query(Staff).filter(Staff.id == staff_id).first()
+def update_staff(staff_id: int, staff: StaffUpdate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Staff).filter(Staff.id == staff_id)
+    if store_id:
+        query = query.filter(Staff.store_id == store_id)
+    db_staff = query.first()
     if not db_staff:
         raise HTTPException(status_code=404, detail="Staff not found")
     for key, value in staff.dict(exclude_unset=True).items():
@@ -684,8 +727,11 @@ def update_staff(staff_id: int, staff: StaffUpdate, db: Session = Depends(get_db
     return db_staff
 
 @app.delete("/api/staff/{staff_id}")
-def delete_staff(staff_id: int, db: Session = Depends(get_db)):
-    db_staff = db.query(Staff).filter(Staff.id == staff_id).first()
+def delete_staff(staff_id: int, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Staff).filter(Staff.id == staff_id)
+    if store_id:
+        query = query.filter(Staff.store_id == store_id)
+    db_staff = query.first()
     if not db_staff:
         raise HTTPException(status_code=404, detail="Staff not found")
     db_staff.is_active = False  # 論理削除
@@ -801,20 +847,26 @@ def get_today_staff_cost(db: Session = Depends(get_db)):
 
 # メニュー管理
 @app.get("/api/menu", response_model=List[MenuItemResponse])
-def get_menu(db: Session = Depends(get_db), ):
-    return db.query(MenuItem).all()
+def get_menu(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(MenuItem)
+    if store_id:
+        query = query.filter(MenuItem.store_id == store_id)
+    return query.all()
 
 @app.post("/api/menu", response_model=MenuItemResponse)
-def create_menu_item(item: MenuItemCreate, db: Session = Depends(get_db), ):
-    db_item = MenuItem(**item.dict())
+def create_menu_item(item: MenuItemCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    db_item = MenuItem(**item.dict(), store_id=store_id)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
     return db_item
 
 @app.put("/api/menu/{item_id}", response_model=MenuItemResponse)
-def update_menu_item(item_id: int, item: MenuItemUpdate, db: Session = Depends(get_db), ):
-    db_item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+def update_menu_item(item_id: int, item: MenuItemUpdate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(MenuItem).filter(MenuItem.id == item_id)
+    if store_id:
+        query = query.filter(MenuItem.store_id == store_id)
+    db_item = query.first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Menu item not found")
     for key, value in item.dict(exclude_unset=True).items():
@@ -824,8 +876,11 @@ def update_menu_item(item_id: int, item: MenuItemUpdate, db: Session = Depends(g
     return db_item
 
 @app.delete("/api/menu/{item_id}")
-def delete_menu_item(item_id: int, db: Session = Depends(get_db), ):
-    db_item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+def delete_menu_item(item_id: int, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(MenuItem).filter(MenuItem.id == item_id)
+    if store_id:
+        query = query.filter(MenuItem.store_id == store_id)
+    db_item = query.first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Menu item not found")
     db.delete(db_item)
@@ -834,30 +889,42 @@ def delete_menu_item(item_id: int, db: Session = Depends(get_db), ):
 
 # テーブル管理
 @app.get("/api/tables", response_model=List[TableResponse])
-def get_tables(db: Session = Depends(get_db), ):
-    return db.query(Table).all()
+def get_tables(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Table)
+    if store_id:
+        query = query.filter(Table.store_id == store_id)
+    return query.all()
 
 @app.post("/api/tables", response_model=TableResponse)
-def create_table(table: TableCreate, db: Session = Depends(get_db)):
-    # 同名テーブルチェック
-    existing = db.query(Table).filter(Table.name == table.name).first()
+def create_table(table: TableCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    # 同名テーブルチェック（同一店舗内）
+    query = db.query(Table).filter(Table.name == table.name)
+    if store_id:
+        query = query.filter(Table.store_id == store_id)
+    existing = query.first()
     if existing:
         raise HTTPException(status_code=400, detail="同じ名前のテーブルが既に存在します")
     
-    db_table = Table(name=table.name, is_vip=table.is_vip, status="available")
+    db_table = Table(name=table.name, is_vip=table.is_vip, status="available", store_id=store_id)
     db.add(db_table)
     db.commit()
     db.refresh(db_table)
     return db_table
 
 @app.put("/api/tables/{table_id}", response_model=TableResponse)
-def update_table(table_id: int, table: TableCreate, db: Session = Depends(get_db)):
-    db_table = db.query(Table).filter(Table.id == table_id).first()
+def update_table(table_id: int, table: TableCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Table).filter(Table.id == table_id)
+    if store_id:
+        query = query.filter(Table.store_id == store_id)
+    db_table = query.first()
     if not db_table:
         raise HTTPException(status_code=404, detail="テーブルが見つかりません")
     
-    # 同名テーブルチェック（自分以外）
-    existing = db.query(Table).filter(Table.name == table.name, Table.id != table_id).first()
+    # 同名テーブルチェック（自分以外、同一店舗内）
+    name_query = db.query(Table).filter(Table.name == table.name, Table.id != table_id)
+    if store_id:
+        name_query = name_query.filter(Table.store_id == store_id)
+    existing = name_query.first()
     if existing:
         raise HTTPException(status_code=400, detail="同じ名前のテーブルが既に存在します")
     
@@ -868,8 +935,11 @@ def update_table(table_id: int, table: TableCreate, db: Session = Depends(get_db
     return db_table
 
 @app.delete("/api/tables/{table_id}")
-def delete_table(table_id: int, db: Session = Depends(get_db)):
-    db_table = db.query(Table).filter(Table.id == table_id).first()
+def delete_table(table_id: int, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(Table).filter(Table.id == table_id)
+    if store_id:
+        query = query.filter(Table.store_id == store_id)
+    db_table = query.first()
     if not db_table:
         raise HTTPException(status_code=404, detail="テーブルが見つかりません")
     
@@ -891,8 +961,8 @@ def delete_table(table_id: int, db: Session = Depends(get_db)):
 
 # セッション管理
 @app.post("/api/sessions", response_model=SessionResponse)
-def create_session(session: SessionCreate, db: Session = Depends(get_db), ):
-    db_session = SessionModel(**session.dict())
+def create_session(session: SessionCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    db_session = SessionModel(**session.dict(), store_id=store_id)
     db.add(db_session)
     table = db.query(Table).filter(Table.id == session.table_id).first()
     if table:
@@ -902,8 +972,11 @@ def create_session(session: SessionCreate, db: Session = Depends(get_db), ):
     return db_session
 
 @app.get("/api/sessions/active", response_model=List[SessionResponse])
-def get_active_sessions(db: Session = Depends(get_db), ):
-    return db.query(SessionModel).filter(SessionModel.status == "active").all()
+def get_active_sessions(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    query = db.query(SessionModel).filter(SessionModel.status == "active")
+    if store_id:
+        query = query.filter(SessionModel.store_id == store_id)
+    return query.all()
 
 @app.get("/api/sessions/{session_id}/orders")
 def get_session_orders(session_id: int, db: Session = Depends(get_db)):
