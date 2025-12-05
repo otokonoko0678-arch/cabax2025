@@ -1033,12 +1033,43 @@ def extend_session(session_id: int, db: Session = Depends(get_db)):
     # 延長回数を増やす
     session.extension_count = (session.extension_count or 0) + 1
     
+    # 場内指名料を自動追加（既存の場内指名を探す）
+    nomination_orders = db.query(Order).filter(
+        Order.session_id == session_id,
+        Order.cast_name.like("場内指名料%")
+    ).all()
+    
+    added_nominations = []
+    for nom_order in nomination_orders:
+        # 同じ指名を延長分として追加（重複チェック：延長回数と同じ数だけ追加されるべき）
+        # 既に追加された指名の数をカウント
+        existing_count = db.query(Order).filter(
+            Order.session_id == session_id,
+            Order.cast_name == nom_order.cast_name
+        ).count()
+        
+        # 延長回数+1（最初の1回含む）より少なければ追加
+        if existing_count < (session.extension_count + 1):
+            new_order = Order(
+                session_id=session_id,
+                menu_item_id=None,
+                quantity=1,
+                price=nom_order.price,
+                is_drink_back=False,
+                is_served=True,
+                cast_name=nom_order.cast_name
+            )
+            db.add(new_order)
+            session.current_total = (session.current_total or 0) + nom_order.price
+            added_nominations.append(nom_order.cast_name)
+    
     db.commit()
     db.refresh(session)
     
     return {
         "message": "Session extended",
-        "extension_count": session.extension_count
+        "extension_count": session.extension_count,
+        "added_nominations": added_nominations
     }
 
 @app.put("/api/sessions/{session_id}/checkout")
