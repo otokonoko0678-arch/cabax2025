@@ -2515,7 +2515,7 @@ function renderTableDetailPanel(session) {
                 <span class="text-xs text-white/40">（複数可・バックは人数で等分）</span>
               </div>
               <div class="text-xs text-white/50 mb-2">※ 指名なしの場合は「フリー」扱い</div>
-              <div id="shimeiCastList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin">
+              <div id="shimeiCastList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-2" style="scrollbar-width: thin; scrollbar-color: rgba(214,179,106,0.5) rgba(0,0,0,0.2);">
                 ${castCheckboxes}
               </div>
               <div id="shimeiCastPreview" class="mt-2 text-sm text-amber-400"></div>
@@ -5662,8 +5662,14 @@ async function openTableDetail(tableId) {
   };
 
   const fetchJson = async (path, options = {}) => {
+    // ★ 認証ヘッダーを追加
+    const token = localStorage.getItem('cabax_token');
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
     const res = await fetch(`${API}${path}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       ...options,
     });
     const text = await res.text();
