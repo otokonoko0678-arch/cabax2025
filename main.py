@@ -979,6 +979,11 @@ def create_session(session: SessionCreate, db: Session = Depends(get_db)):
     print(f"[DEBUG] create_session: store_id from body = {store_id}")
     
     session_data = session.dict()
+    
+    # PostgreSQL対応: cast_id=0の場合はNoneに（外部キー制約対策）
+    if session_data.get('cast_id') == 0:
+        session_data['cast_id'] = None
+    
     db_session = SessionModel(**session_data)
     db.add(db_session)
     table = db.query(Table).filter(Table.id == session.table_id).first()
