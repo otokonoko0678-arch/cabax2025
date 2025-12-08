@@ -1296,30 +1296,7 @@
                             <div class="p-4 bg-black/20 rounded-xl border border-white/10">
                                 <label class="block text-white font-semibold mb-2">営業開始時間</label>
                                 <select id="settingBusinessStart" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
-                                    <option value="0">0:00</option>
-                                    <option value="1">1:00</option>
-                                    <option value="2">2:00</option>
-                                    <option value="3">3:00</option>
-                                    <option value="4">4:00</option>
-                                    <option value="5">5:00</option>
-                                    <option value="6">6:00</option>
-                                    <option value="7">7:00</option>
-                                    <option value="8">8:00</option>
-                                    <option value="9">9:00</option>
-                                    <option value="10">10:00</option>
-                                    <option value="11">11:00</option>
-                                    <option value="12">12:00</option>
-                                    <option value="13">13:00</option>
-                                    <option value="14">14:00</option>
-                                    <option value="15">15:00</option>
-                                    <option value="16">16:00</option>
-                                    <option value="17">17:00</option>
-                                    <option value="18" selected>18:00</option>
-                                    <option value="19">19:00</option>
-                                    <option value="20">20:00</option>
-                                    <option value="21">21:00</option>
-                                    <option value="22">22:00</option>
-                                    <option value="23">23:00</option>
+                                    <!-- JavaScriptで動的生成 -->
                                 </select>
                                 <p class="text-xs text-gray-500 mt-1">この時間から新しい営業日が始まります</p>
                             </div>
@@ -1327,30 +1304,7 @@
                             <div class="p-4 bg-black/20 rounded-xl border border-white/10">
                                 <label class="block text-white font-semibold mb-2">営業終了時間</label>
                                 <select id="settingBusinessEnd" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
-                                    <option value="0">0:00（翌日）</option>
-                                    <option value="1">1:00（翌日）</option>
-                                    <option value="2">2:00（翌日）</option>
-                                    <option value="3">3:00（翌日）</option>
-                                    <option value="4">4:00（翌日）</option>
-                                    <option value="5">5:00（翌日）</option>
-                                    <option value="6" selected>6:00（翌日）</option>
-                                    <option value="7">7:00（翌日）</option>
-                                    <option value="8">8:00（翌日）</option>
-                                    <option value="9">9:00（翌日）</option>
-                                    <option value="10">10:00（翌日）</option>
-                                    <option value="11">11:00（翌日）</option>
-                                    <option value="12">12:00（翌日）</option>
-                                    <option value="13">13:00（翌日）</option>
-                                    <option value="14">14:00（翌日）</option>
-                                    <option value="15">15:00（翌日）</option>
-                                    <option value="16">16:00（翌日）</option>
-                                    <option value="17">17:00（翌日）</option>
-                                    <option value="18">18:00（翌日）</option>
-                                    <option value="19">19:00（翌日）</option>
-                                    <option value="20">20:00（翌日）</option>
-                                    <option value="21">21:00（翌日）</option>
-                                    <option value="22">22:00（翌日）</option>
-                                    <option value="23">23:00（翌日）</option>
+                                    <!-- JavaScriptで動的生成 -->
                                 </select>
                                 <p class="text-xs text-gray-500 mt-1">この時間までが前日の営業として扱われます</p>
                             </div>
@@ -4227,41 +4181,86 @@ async function syncWithBackend() {
             showNotification('店舗設定を保存しました', 'success');
         }
         
+        // ★ 15分刻みのオプションを生成
+        function generateTimeOptions(isEnd = false) {
+            let options = '';
+            for (let h = 0; h < 24; h++) {
+                for (let m = 0; m < 60; m += 15) {
+                    const totalMinutes = h * 60 + m;
+                    const timeStr = `${h}:${m.toString().padStart(2, '0')}`;
+                    const label = isEnd ? `${timeStr}（翌日）` : timeStr;
+                    options += `<option value="${totalMinutes}">${label}</option>`;
+                }
+            }
+            return options;
+        }
+        
         // ★ 営業時間設定の読み込み
         async function loadBusinessHours() {
+            // 15分刻みのオプションを生成
+            const startSelect = document.getElementById('settingBusinessStart');
+            const endSelect = document.getElementById('settingBusinessEnd');
+            if (startSelect) startSelect.innerHTML = generateTimeOptions(false);
+            if (endSelect) endSelect.innerHTML = generateTimeOptions(true);
+            
             try {
                 const settings = await apiRequest('/store/settings');
-                appState.businessStartHour = settings.business_start_hour || 18;
-                appState.businessEndHour = settings.business_end_hour || 6;
+                // 分単位で保存されている場合はそのまま使う、時間単位の場合は変換
+                let startMinutes = settings.business_start_minutes;
+                let endMinutes = settings.business_end_minutes;
+                
+                // 旧形式（時間単位）からの変換
+                if (startMinutes === undefined || startMinutes === null) {
+                    startMinutes = (settings.business_start_hour || 18) * 60;
+                }
+                if (endMinutes === undefined || endMinutes === null) {
+                    endMinutes = (settings.business_end_hour || 6) * 60;
+                }
+                
+                appState.businessStartMinutes = startMinutes;
+                appState.businessEndMinutes = endMinutes;
+                
+                // 後方互換: 時間単位も設定
+                appState.businessStartHour = Math.floor(startMinutes / 60);
+                appState.businessEndHour = Math.floor(endMinutes / 60);
                 
                 // UIに反映
-                const startSelect = document.getElementById('settingBusinessStart');
-                const endSelect = document.getElementById('settingBusinessEnd');
-                if (startSelect) startSelect.value = appState.businessStartHour;
-                if (endSelect) endSelect.value = appState.businessEndHour;
+                if (startSelect) startSelect.value = startMinutes;
+                if (endSelect) endSelect.value = endMinutes;
                 
-                console.log(`✅ 営業時間設定: ${appState.businessStartHour}:00 〜 翌${appState.businessEndHour}:00`);
+                const startStr = `${Math.floor(startMinutes/60)}:${(startMinutes%60).toString().padStart(2,'0')}`;
+                const endStr = `${Math.floor(endMinutes/60)}:${(endMinutes%60).toString().padStart(2,'0')}`;
+                console.log(`✅ 営業時間設定: ${startStr} 〜 翌${endStr}`);
             } catch (e) {
                 console.warn('営業時間設定の読み込み失敗（デフォルト使用）:', e);
+                // デフォルト: 18:00〜6:00
+                appState.businessStartMinutes = 18 * 60;
+                appState.businessEndMinutes = 6 * 60;
+                appState.businessStartHour = 18;
+                appState.businessEndHour = 6;
+                if (startSelect) startSelect.value = 18 * 60;
+                if (endSelect) endSelect.value = 6 * 60;
             }
         }
         
         // ★ 営業時間設定の保存
         async function saveBusinessHours() {
-            const startHour = Number(document.getElementById('settingBusinessStart')?.value ?? 18);
-            const endHour = Number(document.getElementById('settingBusinessEnd')?.value ?? 6);
+            const startMinutes = Number(document.getElementById('settingBusinessStart')?.value ?? 18 * 60);
+            const endMinutes = Number(document.getElementById('settingBusinessEnd')?.value ?? 6 * 60);
             
             try {
                 await apiRequest('/store/settings', {
                     method: 'PUT',
                     body: JSON.stringify({
-                        business_start_hour: startHour,
-                        business_end_hour: endHour
+                        business_start_minutes: startMinutes,
+                        business_end_minutes: endMinutes
                     })
                 });
                 
-                appState.businessStartHour = startHour;
-                appState.businessEndHour = endHour;
+                appState.businessStartMinutes = startMinutes;
+                appState.businessEndMinutes = endMinutes;
+                appState.businessStartHour = Math.floor(startMinutes / 60);
+                appState.businessEndHour = Math.floor(endMinutes / 60);
                 
                 showNotification('営業時間を保存しました', 'success');
                 
@@ -4277,16 +4276,16 @@ async function syncWithBackend() {
         // ★ 営業日を計算（深夜でも前日の営業日として扱う）
         function getBusinessDate(dateTime = new Date()) {
             const d = new Date(dateTime);
-            const hour = d.getHours();
-            const startHour = appState.businessStartHour || 18;
-            const endHour = appState.businessEndHour || 6;
+            const currentMinutes = d.getHours() * 60 + d.getMinutes();
+            const startMinutes = appState.businessStartMinutes ?? (appState.businessStartHour || 18) * 60;
+            const endMinutes = appState.businessEndMinutes ?? (appState.businessEndHour || 6) * 60;
             
             // 深夜帯（0時〜営業終了時間）は前日の営業日
-            if (hour < endHour) {
+            if (currentMinutes < endMinutes) {
                 d.setDate(d.getDate() - 1);
             }
             // 営業開始前（営業終了〜営業開始）も前日扱い
-            else if (hour < startHour) {
+            else if (currentMinutes < startMinutes) {
                 d.setDate(d.getDate() - 1);
             }
             
@@ -4295,17 +4294,17 @@ async function syncWithBackend() {
         
         // ★ 営業日の開始・終了時刻を取得
         function getBusinessDayRange(businessDate) {
-            const startHour = appState.businessStartHour || 18;
-            const endHour = appState.businessEndHour || 6;
+            const startMinutes = appState.businessStartMinutes ?? (appState.businessStartHour || 18) * 60;
+            const endMinutes = appState.businessEndMinutes ?? (appState.businessEndHour || 6) * 60;
             
-            // 営業日の開始: businessDate の startHour:00
+            // 営業日の開始: businessDate の startMinutes
             const start = new Date(businessDate + 'T00:00:00');
-            start.setHours(startHour, 0, 0, 0);
+            start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
             
-            // 営業日の終了: businessDate + 1日 の endHour:00
+            // 営業日の終了: businessDate + 1日 の endMinutes
             const end = new Date(businessDate + 'T00:00:00');
             end.setDate(end.getDate() + 1);
-            end.setHours(endHour, 0, 0, 0);
+            end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
             
             return { start, end };
         }

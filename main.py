@@ -211,6 +211,12 @@ class Store(Base):
     email = Column(String, nullable=True)  # メール
     address = Column(String, nullable=True)  # 住所
     notes = Column(Text, nullable=True)  # メモ
+    # 営業時間設定（営業日の区切り）- 旧形式（時間単位）
+    business_start_hour = Column(Integer, default=18)  # 営業開始時間（0-23）
+    business_end_hour = Column(Integer, default=6)    # 営業終了時間（0-23、翌日）
+    # 営業時間設定（15分刻み・分単位）
+    business_start_minutes = Column(Integer, default=1080)  # 営業開始（分）デフォルト18:00=1080
+    business_end_minutes = Column(Integer, default=360)     # 営業終了（分）デフォルト6:00=360
     created_at = Column(DateTime, default=datetime.utcnow)
 
 Base.metadata.create_all(bind=engine)
@@ -863,6 +869,85 @@ def get_today_staff_cost(db: Session = Depends(get_db)):
         "date": today,
         "total_staff_cost": total_cost,
         "staff_count": len(attendances)
+    }
+
+# 店舗設定API
+class StoreSettingsResponse(BaseModel):
+    id: int
+    name: str
+    business_start_hour: int = 18
+    business_end_hour: int = 6
+    class Config:
+        from_attributes = True
+
+class StoreSettingsUpdate(BaseModel):
+    business_start_hour: Optional[int] = None
+    business_end_hour: Optional[int] = None
+    business_start_minutes: Optional[int] = None
+    business_end_minutes: Optional[int] = None
+
+@app.get("/api/store/settings")
+def get_store_settings(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    """店舗設定を取得"""
+    if not store_id:
+        return {
+            "business_start_hour": 18, 
+            "business_end_hour": 6,
+            "business_start_minutes": 1080,
+            "business_end_minutes": 360
+        }
+    
+    store = db.query(Store).filter(Store.id == store_id).first()
+    if not store:
+        return {
+            "business_start_hour": 18, 
+            "business_end_hour": 6,
+            "business_start_minutes": 1080,
+            "business_end_minutes": 360
+        }
+    
+    return {
+        "id": store.id,
+        "name": store.name,
+        "business_start_hour": store.business_start_hour or 18,
+        "business_end_hour": store.business_end_hour or 6,
+        "business_start_minutes": store.business_start_minutes if store.business_start_minutes is not None else (store.business_start_hour or 18) * 60,
+        "business_end_minutes": store.business_end_minutes if store.business_end_minutes is not None else (store.business_end_hour or 6) * 60
+    }
+
+@app.put("/api/store/settings")
+def update_store_settings(settings: StoreSettingsUpdate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    """店舗設定を更新"""
+    if not store_id:
+        raise HTTPException(status_code=400, detail="Store ID required")
+    
+    store = db.query(Store).filter(Store.id == store_id).first()
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
+    # 旧形式（時間単位）
+    if settings.business_start_hour is not None:
+        store.business_start_hour = settings.business_start_hour
+    if settings.business_end_hour is not None:
+        store.business_end_hour = settings.business_end_hour
+    
+    # 新形式（分単位・15分刻み）
+    if settings.business_start_minutes is not None:
+        store.business_start_minutes = settings.business_start_minutes
+        # 時間単位も同期
+        store.business_start_hour = settings.business_start_minutes // 60
+    if settings.business_end_minutes is not None:
+        store.business_end_minutes = settings.business_end_minutes
+        # 時間単位も同期
+        store.business_end_hour = settings.business_end_minutes // 60
+    
+    db.commit()
+    return {
+        "message": "設定を更新しました",
+        "business_start_hour": store.business_start_hour,
+        "business_end_hour": store.business_end_hour,
+        "business_start_minutes": store.business_start_minutes,
+        "business_end_minutes": store.business_end_minutes
     }
 
 # メニュー管理
