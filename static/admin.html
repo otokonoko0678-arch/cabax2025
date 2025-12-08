@@ -2813,15 +2813,34 @@ function renderTableDetailPanel(session) {
 
           <!-- 精算 -->
           <div class="p-4 rounded-2xl border border-white/10 bg-white/3">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <div class="font-bold text-white">精算</div>
-                <div class="text-xs text-white/45">※DB注文合計から再計算（checkout）</div>
+            ${s.is_settling && s.settling_by ? `
+              <div class="mb-3 p-3 rounded-xl bg-red-500/20 border border-red-500/30">
+                <div class="flex items-center gap-2 text-red-400">
+                  <span class="animate-pulse">🔒</span>
+                  <span class="font-bold">${s.settling_by}さんが精算中</span>
+                </div>
+                <div class="text-xs text-red-300/70 mt-1">他のスタッフが精算処理を行っています</div>
               </div>
-              <button id="btnCheckout" class="${btnPri}">
-                精算する
-              </button>
-            </div>
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="font-bold text-white">精算</div>
+                  <div class="text-xs text-white/45">ロック中（3分で自動解除）</div>
+                </div>
+                <button id="btnCancelSettling" class="px-4 py-2 rounded-xl font-semibold bg-red-600/30 text-red-400 hover:bg-red-500/40 border border-red-500/30">
+                  精算をキャンセル
+                </button>
+              </div>
+            ` : `
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="font-bold text-white">精算</div>
+                  <div class="text-xs text-white/45">※DB注文合計から再計算（checkout）</div>
+                </div>
+                <button id="btnCheckout" class="${btnPri}">
+                  精算する
+                </button>
+              </div>
+            `}
           </div>
           `
         }
@@ -2904,10 +2923,33 @@ function showTableDetailPanel({ tableId, session, orders }) {
 
 // ★ 清算ボタン：バックエンドで清算 → APIから最新状態を取り直して反映
 async function checkoutSession(sessionId) {
+    // スタッフ名を取得（なければ入力を求める）
+    let staffName = localStorage.getItem('cabax_staff_name');
+    if (!staffName) {
+        staffName = prompt('あなたの名前を入力してください（精算担当者として記録）');
+        if (!staffName) return;
+        localStorage.setItem('cabax_staff_name', staffName);
+    }
     
-    
+    // ★ 精算ロック取得
+    try {
+        await apiRequest(`/sessions/${sessionId}/settling/start`, {
+            method: 'POST',
+            body: JSON.stringify({ staff_name: staffName })
+        });
+    } catch (e) {
+        // 他の人がロック中
+        showNotification(e.message || '他のスタッフが精算中です', 'error');
+        return;
+    }
     
     if (!confirm('このテーブルを清算して空席に戻しますか？')) {
+        // キャンセル時はロック解除
+        try {
+            await apiRequest(`/sessions/${sessionId}/settling/cancel`, { method: 'POST' });
+        } catch (e) {
+            console.warn('ロック解除失敗:', e);
+        }
         return;
     }
 
@@ -2944,7 +2986,7 @@ async function checkoutSession(sessionId) {
             });
         }
         
-        // 1. バックエンド側で清算
+        // 1. バックエンド側で清算（ロックも自動解除）
         const result = await apiRequest(`${API_ENDPOINTS.sessions}/${sessionId}/checkout`, {
             method: 'PUT',
         });
@@ -3012,6 +3054,12 @@ async function checkoutSession(sessionId) {
 
     } catch (e) {
         console.error('[admin] checkoutSession error', e);
+        // エラー時はロック解除
+        try {
+            await apiRequest(`/sessions/${sessionId}/settling/cancel`, { method: 'POST' });
+        } catch (unlockErr) {
+            console.warn('ロック解除失敗:', unlockErr);
+        }
         alert('清算に失敗しました。APIやネットワークを確認してください。');
     }
 }
@@ -5927,7 +5975,38 @@ async function openTableDetail(tableId) {
       if (btnCheckout) {
         btnCheckout.onclick = async () => {
           try {
-            if (!confirm('精算しますか？（DB注文合計から再計算して確定）')) return;
+            // スタッフ名を取得
+            let staffName = localStorage.getItem('cabax_staff_name');
+            if (!staffName) {
+              staffName = prompt('あなたの名前を入力してください（精算担当者として記録）');
+              if (!staffName) return;
+              localStorage.setItem('cabax_staff_name', staffName);
+            }
+            
+            // ★ 精算ロック取得
+            try {
+              await fetchJson(`/sessions/${sessionId}/settling/start`, {
+                method: 'POST',
+                body: JSON.stringify({ staff_name: staffName })
+              });
+              // ロック取得後、画面を更新してキャンセルボタンを表示
+              await refreshPanel();
+            } catch (lockErr) {
+              msg(`${lockErr.message || '他のスタッフが精算中です'}`, true);
+              showNotification(lockErr.message || '他のスタッフが精算中です', 'error');
+              return;
+            }
+            
+            if (!confirm('精算しますか？（DB注文合計から再計算して確定）')) {
+              // キャンセル時はロック解除
+              try {
+                await fetchJson(`/sessions/${sessionId}/settling/cancel`, { method: 'POST' });
+                await refreshPanel();
+              } catch (e) {
+                console.warn('ロック解除失敗:', e);
+              }
+              return;
+            }
             
             // ★ 精算前にセッション情報を保存
             const sessionToCheckout = appState.activeSessions.find(s => 
@@ -6000,7 +6079,29 @@ async function openTableDetail(tableId) {
             
           } catch (e) {
             console.error(e);
+            // エラー時はロック解除
+            try {
+              await fetchJson(`/sessions/${sessionId}/settling/cancel`, { method: 'POST' });
+            } catch (unlockErr) {
+              console.warn('ロック解除失敗:', unlockErr);
+            }
             msg(`精算失敗: ${e.message}`, true);
+          }
+        };
+      }
+      
+      // 精算キャンセルボタン
+      const btnCancelSettling = document.getElementById('btnCancelSettling');
+      if (btnCancelSettling) {
+        btnCancelSettling.onclick = async () => {
+          try {
+            await fetchJson(`/sessions/${sessionId}/settling/cancel`, { method: 'POST' });
+            msg('精算をキャンセルしました');
+            showNotification('精算をキャンセルしました', 'info');
+            await refreshPanel();
+          } catch (e) {
+            console.error(e);
+            msg(`キャンセル失敗: ${e.message}`, true);
           }
         };
       }

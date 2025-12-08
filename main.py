@@ -137,6 +137,10 @@ class SessionModel(Base):
     shimei_casts = Column(String, nullable=True)  # 指名キャスト名（カンマ区切り）
     tax_rate = Column(Integer, default=20)  # TAX/サービス料率（%）
     status = Column(String, default="active")
+    # 精算ロック
+    is_settling = Column(Boolean, default=False)
+    settling_by = Column(String, nullable=True)
+    settling_at = Column(DateTime, nullable=True)
     
     table = relationship("Table", back_populates="sessions")
     cast = relationship("Cast", back_populates="sessions")
@@ -330,6 +334,10 @@ class SessionResponse(BaseModel):
     tax_rate: int = 20
     status: str
     store_id: Optional[int] = None
+    # 精算ロック
+    is_settling: bool = False
+    settling_by: Optional[str] = None
+    settling_at: Optional[datetime] = None
     class Config:
         from_attributes = True
 
@@ -1083,6 +1091,48 @@ def extend_session(session_id: int, db: Session = Depends(get_db)):
         "added_nominations": added_nominations
     }
 
+# 精算ロック
+class SettlingRequest(BaseModel):
+    staff_name: str
+
+@app.post("/api/sessions/{session_id}/settling/start")
+def start_settling(session_id: int, req: SettlingRequest, db: Session = Depends(get_db)):
+    """精算ロック開始"""
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    # 既にロック中で180秒以内なら拒否
+    if session.is_settling and session.settling_at:
+        elapsed = (datetime.utcnow() - session.settling_at).total_seconds()
+        if elapsed < 180:
+            raise HTTPException(
+                status_code=409, 
+                detail=f"{session.settling_by}さんが精算中です（残り{180 - int(elapsed)}秒）"
+            )
+    
+    # ロック設定
+    session.is_settling = True
+    session.settling_by = req.staff_name
+    session.settling_at = datetime.utcnow()
+    db.commit()
+    
+    return {"message": "精算ロック開始", "settling_by": req.staff_name}
+
+@app.post("/api/sessions/{session_id}/settling/cancel")
+def cancel_settling(session_id: int, db: Session = Depends(get_db)):
+    """精算ロック解除"""
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    session.is_settling = False
+    session.settling_by = None
+    session.settling_at = None
+    db.commit()
+    
+    return {"message": "精算ロック解除"}
+
 @app.put("/api/sessions/{session_id}/checkout")
 def checkout_session(session_id: int, db: Session = Depends(get_db), ):
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
@@ -1090,6 +1140,10 @@ def checkout_session(session_id: int, db: Session = Depends(get_db), ):
         raise HTTPException(status_code=404, detail="Session not found")
     session.status = "completed"
     session.end_time = datetime.utcnow()
+    # 精算ロック解除
+    session.is_settling = False
+    session.settling_by = None
+    session.settling_at = None
     if session.table:
         session.table.status = "available"
     db.commit()
