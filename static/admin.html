@@ -1296,7 +1296,30 @@
                             <div class="p-4 bg-black/20 rounded-xl border border-white/10">
                                 <label class="block text-white font-semibold mb-2">営業開始時間</label>
                                 <select id="settingBusinessStart" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
-                                    ${Array.from({length: 24}, (_, i) => `<option value="${i}">${i}:00</option>`).join('')}
+                                    <option value="0">0:00</option>
+                                    <option value="1">1:00</option>
+                                    <option value="2">2:00</option>
+                                    <option value="3">3:00</option>
+                                    <option value="4">4:00</option>
+                                    <option value="5">5:00</option>
+                                    <option value="6">6:00</option>
+                                    <option value="7">7:00</option>
+                                    <option value="8">8:00</option>
+                                    <option value="9">9:00</option>
+                                    <option value="10">10:00</option>
+                                    <option value="11">11:00</option>
+                                    <option value="12">12:00</option>
+                                    <option value="13">13:00</option>
+                                    <option value="14">14:00</option>
+                                    <option value="15">15:00</option>
+                                    <option value="16">16:00</option>
+                                    <option value="17">17:00</option>
+                                    <option value="18" selected>18:00</option>
+                                    <option value="19">19:00</option>
+                                    <option value="20">20:00</option>
+                                    <option value="21">21:00</option>
+                                    <option value="22">22:00</option>
+                                    <option value="23">23:00</option>
                                 </select>
                                 <p class="text-xs text-gray-500 mt-1">この時間から新しい営業日が始まります</p>
                             </div>
@@ -1304,7 +1327,30 @@
                             <div class="p-4 bg-black/20 rounded-xl border border-white/10">
                                 <label class="block text-white font-semibold mb-2">営業終了時間</label>
                                 <select id="settingBusinessEnd" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
-                                    ${Array.from({length: 24}, (_, i) => `<option value="${i}">${i}:00（翌日）</option>`).join('')}
+                                    <option value="0">0:00（翌日）</option>
+                                    <option value="1">1:00（翌日）</option>
+                                    <option value="2">2:00（翌日）</option>
+                                    <option value="3">3:00（翌日）</option>
+                                    <option value="4">4:00（翌日）</option>
+                                    <option value="5">5:00（翌日）</option>
+                                    <option value="6" selected>6:00（翌日）</option>
+                                    <option value="7">7:00（翌日）</option>
+                                    <option value="8">8:00（翌日）</option>
+                                    <option value="9">9:00（翌日）</option>
+                                    <option value="10">10:00（翌日）</option>
+                                    <option value="11">11:00（翌日）</option>
+                                    <option value="12">12:00（翌日）</option>
+                                    <option value="13">13:00（翌日）</option>
+                                    <option value="14">14:00（翌日）</option>
+                                    <option value="15">15:00（翌日）</option>
+                                    <option value="16">16:00（翌日）</option>
+                                    <option value="17">17:00（翌日）</option>
+                                    <option value="18">18:00（翌日）</option>
+                                    <option value="19">19:00（翌日）</option>
+                                    <option value="20">20:00（翌日）</option>
+                                    <option value="21">21:00（翌日）</option>
+                                    <option value="22">22:00（翌日）</option>
+                                    <option value="23">23:00（翌日）</option>
                                 </select>
                                 <p class="text-xs text-gray-500 mt-1">この時間までが前日の営業として扱われます</p>
                             </div>
