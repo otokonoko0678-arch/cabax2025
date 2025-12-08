@@ -295,8 +295,8 @@
     <div id="notificationArea"></div>
 
     <!-- テーブル選択画面 -->
-    <div id="tableSelectScreen" class="screen active min-h-screen p-4 sm:p-8 safe-area-top safe-area-bottom">
-        <div class="max-w-6xl mx-auto">
+    <div id="tableSelectScreen" class="screen active min-h-screen p-4 sm:p-8 safe-area-top safe-area-bottom flex items-center justify-center">
+        <div class="w-full max-w-4xl mx-auto">
             <div class="text-center mb-8 sm:mb-12">
                 <h1 class="text-4xl sm:text-6xl font-bold gold-accent mb-3 sm:mb-4">Cabax</h1>
                 <div class="w-16 sm:w-20 h-1 bg-gradient-to-r from-transparent via-yellow-600 to-transparent mx-auto mb-4 sm:mb-6"></div>
@@ -475,6 +475,12 @@ async function apiRequest(url, options = {}) {
     const storeId = getStoreId();
     if (storeId) {
         headers['X-Store-Id'] = storeId;
+    }
+    
+    // ★ JWTトークンを追加
+    const token = localStorage.getItem('cabax_token');
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
     }
     
     return fetch(url, { ...options, headers });
@@ -802,6 +808,18 @@ async function loadTables() {
         
         grid.innerHTML = tables
             .filter(t => t.status === 'available' || t.status === 'occupied' || !t.status)
+            // ★ テーブル名でソート（数字として比較）
+            .sort((a, b) => {
+                const nameA = a.table_name || a.table_number || a.name || '';
+                const nameB = b.table_name || b.table_number || b.name || '';
+                // 数字部分を抽出して比較
+                const numA = parseInt(nameA.replace(/\D/g, '')) || 0;
+                const numB = parseInt(nameB.replace(/\D/g, '')) || 0;
+                // VIPは後ろに
+                if (a.is_vip && !b.is_vip) return 1;
+                if (!a.is_vip && b.is_vip) return -1;
+                return numA - numB;
+            })
             .map(table => {
                 const status = table.status || 'available';
                 const statusClass = status === 'available'
@@ -822,7 +840,7 @@ async function loadTables() {
 
                 return `
                     <div onclick="selectTable('${table.id}')"
-                         class="luxury-card ${statusClass} rounded-3xl p-12 cursor-pointer text-center">
+                         class="luxury-card ${statusClass} rounded-3xl p-12 cursor-pointer text-center w-full">
                         ${table.is_vip ? '<div class="text-sm gold-accent font-bold mb-3">⭐ VIP</div>' : ''}
                         <div class="text-5xl font-bold text-gray-100 mb-2">
                             ${table.table_name || table.table_number || table.name || 'テーブル'}
@@ -838,7 +856,7 @@ async function loadTables() {
         const grid = document.getElementById('tablesGrid');
         grid.innerHTML = STATIC_TABLES.map(table => `
             <div onclick="selectTable('${table.id}')"
-                 class="luxury-card bg-green-900/20 border-green-700/40 rounded-3xl p-12 cursor-pointer text-center">
+                 class="luxury-card bg-green-900/20 border-green-700/40 rounded-3xl p-12 cursor-pointer text-center w-full">
                 ${table.is_vip ? '<div class="text-sm gold-accent font-bold mb-3">⭐ VIP</div>' : ''}
                 <div class="text-5xl font-bold text-gray-100 mb-2">
                     ${table.table_name}
