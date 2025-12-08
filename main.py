@@ -29,6 +29,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./cabax.db")
 
+# PostgreSQLの場合はpostgresql://をpostgresql+psycopg2://に変換
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "+psycopg2" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 # DBリセットフラグ（環境変数で制御）
 RESET_DB = os.getenv("RESET_DB", "false").lower() == "true"
 
