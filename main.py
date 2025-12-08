@@ -321,7 +321,7 @@ class SessionCreate(BaseModel):
 class SessionResponse(BaseModel):
     id: int
     table_id: int
-    cast_id: int
+    cast_id: Optional[int] = None
     guests: int
     catch_staff: Optional[str]
     start_time: datetime
