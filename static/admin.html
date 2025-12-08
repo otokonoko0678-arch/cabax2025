@@ -5709,11 +5709,13 @@ async function openTableDetail(tableId) {
 
   // ★ 全API並列取得（高速化）
   try {
-    const [activeSessions, menu, casts] = await Promise.all([
+    const [activeSessions, menu] = await Promise.all([
       fetchJson('/sessions/active', { method: 'GET' }).catch(() => []),
       fetchJson('/menu', { method: 'GET' }).catch(() => []),
-      fetchJson('/casts', { method: 'GET' }).catch(() => []),
     ]);
+    
+    // ★ キャストはappStateから取得（認証済みデータを使用）
+    const casts = Array.isArray(appState.casts) ? appState.casts : [];
     
     const list = Array.isArray(activeSessions) ? activeSessions : (activeSessions.sessions || []);
     const session = list.find(s => Number(s.table_id) === tId);
@@ -5747,11 +5749,13 @@ async function openTableDetail(tableId) {
 
     async function refreshPanel() {
       try {
-        const [active2, menu2, casts2] = await Promise.all([
+        const [active2, menu2] = await Promise.all([
           fetchJson('/sessions/active', { method: 'GET' }).catch(() => []),
           fetchJson('/menu', { method: 'GET' }).catch(() => []),
-          fetchJson('/casts', { method: 'GET' }).catch(() => []),
         ]);
+        
+        // ★ キャストはappStateから取得
+        const casts2 = Array.isArray(appState.casts) ? appState.casts : [];
         
         const list2 = Array.isArray(active2) ? active2 : (active2.sessions || []);
         const s2 = list2.find(s => Number(s.table_id) === tId);
@@ -6309,7 +6313,7 @@ async function openTableDetail(tableId) {
   } catch (e) {
     console.error(e);
     // 失敗しても“閉じる”だけは押せる状態にする
-    renderTableDetailPanel({ id:'-', table_id:tId, _casts:[], _menu:[], _orders:[] });
+    renderTableDetailPanel({ id:'-', table_id:tId, _casts:(appState.casts || []), _menu:(appState.menuItems || []), _orders:[] });
     msg(`テーブル詳細の取得に失敗: ${e.message}`, true);
 
     const btnClose = document.getElementById('btnCloseTableDetail');
