@@ -4758,40 +4758,52 @@ function getCastNameById(castId) {
 
 // オーダーステータスを切り替え（未提供⇔提供済み）
 async function toggleOrderStatus(sessionId, orderId, setServed) {
+    // ★ 楽観的更新：先にローカル状態を更新
+    const session = appState.activeSessions.find(s => Number(s.id) === Number(sessionId));
+    if (session && session.orders) {
+        const order = session.orders.find(o => Number(o.id) === Number(orderId));
+        if (order) {
+            order.is_served = setServed;
+            order.status = setServed ? 'served' : 'pending';
+        }
+    }
+    
+    // 即座にボタンの見た目を更新
+    const btn = document.querySelector(`[data-order-id="${orderId}"] button`);
+    if (btn) {
+        if (setServed) {
+            btn.textContent = '未提供に戻す';
+            btn.className = btn.className.replace('bg-green-600/30 text-green-400', 'bg-gray-600/50 text-gray-400');
+        } else {
+            btn.textContent = '提供済みにする';
+            btn.className = btn.className.replace('bg-gray-600/50 text-gray-400', 'bg-green-600/30 text-green-400');
+        }
+    }
+    
+    showNotification(setServed ? '✓ 提供済み' : '↩ 未提供に戻し', 'success');
+    
+    // バックグラウンドでAPI呼び出し
     try {
-        // APIでステータスを更新
         await apiRequest(`/sessions/${sessionId}/orders/${orderId}/status`, {
             method: 'PUT',
             body: JSON.stringify({ is_served: setServed })
         });
-        
-        // テーブル詳細を再読み込み
-        const tableId = appState.currentTableId;
-        if (tableId && typeof openTableDetail === 'function') {
-            await openTableDetail(tableId);
-        }
-        
-        showNotification(setServed ? '提供済みにしました' : '未提供に戻しました', 'success');
     } catch (e) {
-        console.error('[toggleOrderStatus] error:', e);
-        
-        // APIがなくてもフロントで状態を更新（デモ用）
-        const session = appState.activeSessions.find(s => Number(s.id) === Number(sessionId));
+        console.error('[toggleOrderStatus] API error:', e);
+        // 失敗したら元に戻す
         if (session && session.orders) {
             const order = session.orders.find(o => Number(o.id) === Number(orderId));
             if (order) {
-                order.is_served = setServed;
-                order.status = setServed ? 'served' : 'pending';
+                order.is_served = !setServed;
+                order.status = !setServed ? 'served' : 'pending';
             }
         }
-        
-        // 詳細パネルを再描画
+        // パネル再描画
         const tableId = appState.currentTableId;
         if (tableId && typeof openTableDetail === 'function') {
             await openTableDetail(tableId);
         }
-        
-        showNotification(setServed ? '提供済みにしました（ローカル）' : '未提供に戻しました（ローカル）', 'info');
+        showNotification('更新に失敗しました', 'error');
     }
 }
 
@@ -4999,32 +5011,28 @@ function renderOrders() {
 }
 
 async function toggleOrderStatusFromList(sessionId, orderId, setServed) {
+    // ★ 楽観的更新：先にUIを更新
+    const order = allOrders.find(o => o.id === orderId);
+    if (order) {
+        order.is_served = setServed;
+    }
+    renderOrders();
+    showNotification(setServed ? '✓ 提供済み' : '↩ 未提供に戻し', 'success');
+    
+    // バックグラウンドでAPI呼び出し（エラー時のみ戻す）
     try {
         await apiRequest(`/sessions/${sessionId}/orders/${orderId}/status`, {
             method: 'PUT',
             body: JSON.stringify({ is_served: setServed })
         });
-        
-        // リストを更新
-        await loadOrdersFromApi();
-        
-        // テーブル設定も更新
-        if (typeof loadActiveSessionsFromApi === 'function') {
-            await loadActiveSessionsFromApi();
-        }
-        
-        showNotification(setServed ? '提供済みにしました' : '未提供に戻しました', 'success');
     } catch (e) {
-        console.error('[toggleOrderStatusFromList] error:', e);
-        
-        // ローカルで更新
-        const order = allOrders.find(o => o.id === orderId);
+        console.error('[toggleOrderStatusFromList] API error:', e);
+        // 失敗したら元に戻す
         if (order) {
-            order.is_served = setServed;
+            order.is_served = !setServed;
         }
         renderOrders();
-        
-        showNotification(setServed ? '提供済みにしました（ローカル）' : '未提供に戻しました（ローカル）', 'info');
+        showNotification('更新に失敗しました', 'error');
     }
 }
 
