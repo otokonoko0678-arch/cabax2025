@@ -2994,8 +2994,14 @@ async function checkoutSession(sessionId) {
 
         // ★ checkoutHistoryに追加（精算済みセッションを保持）
         if (sessionToCheckout) {
+            // テーブル名を取得
+            const tableId = sessionToCheckout.table_id || sessionToCheckout.tableId;
+            const tableInfo = appState.tables?.find(t => t.id === Number(tableId));
+            const tableName = tableInfo?.name || `T${tableId}`;
+            
             const checkoutRecord = {
                 ...sessionToCheckout,
+                tableName: tableName,  // テーブル名を明示的に追加
                 checkoutTime: new Date().toISOString(),
                 totalAmount: totalWithTax,
                 orders: ordersForReceipt, // 注文履歴を保存
@@ -6043,8 +6049,14 @@ async function openTableDetail(tableId) {
             
             // ★ checkoutHistoryに追加
             if (sessionToCheckout) {
+              // テーブル名を取得
+              const checkoutTableId = sessionToCheckout.table_id || sessionToCheckout.tableId || tId;
+              const checkoutTableInfo = appState.tables?.find(t => t.id === Number(checkoutTableId));
+              const checkoutTableName = checkoutTableInfo?.name || tableName || `T${checkoutTableId}`;
+              
               const checkoutRecord = {
                 ...sessionToCheckout,
+                tableName: checkoutTableName,  // テーブル名を明示的に追加
                 checkoutTime: new Date().toISOString(),
                 totalAmount: totalWithTax,
                 orders: ordersForReceipt, // 注文履歴を保存
@@ -7927,7 +7939,15 @@ function renderCheckoutHistory() {
     container.innerHTML = todayHistory.map((session, index) => {
         const checkoutTime = new Date(session.checkoutTime);
         const timeStr = checkoutTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-        const tableName = session.tableName || session.table_name || session.tableId || '?';
+        
+        // テーブル名を取得（IDからも変換試行）
+        let tableName = session.tableName || session.table_name;
+        if (!tableName) {
+            const tableId = session.tableId || session.table_id;
+            const tableInfo = appState.tables?.find(t => t.id === Number(tableId));
+            tableName = tableInfo?.name || `T${tableId}`;
+        }
+        
         const guests = session.guests || 0;
         const castName = session.castName || session.cast_name || '未設定';
         const total = session.totalAmount || session.currentTotal || session.current_total || 0;
