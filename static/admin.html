@@ -8529,16 +8529,16 @@ function renderDailyReport() {
         }
 
         // ===== 日次売上集計 =====
-        const totalSales = allSessions.reduce((sum, s) => {
+        const totalSales = filteredSessions.reduce((sum, s) => {
             return sum + getSessionTotal(s);
         }, 0);
 
-        const totalCustomers = allSessions.length;
+        const totalCustomers = filteredSessions.length;
         const averageSpend   = totalCustomers > 0
             ? Math.floor(totalSales / totalCustomers)
             : 0;
 
-        const totalOrdersAmount = allSessions.reduce((sum, s) => {
+        const totalOrdersAmount = filteredSessions.reduce((sum, s) => {
             if (!s || !Array.isArray(s.orders)) return sum;
             const orderTotal = s.orders.reduce((os, o) => {
                 const price = Number(o?.price) || 0;
@@ -8554,7 +8554,7 @@ function renderDailyReport() {
         let totalCost = 0;
         let totalGuestCount = 0;
         
-        allSessions.forEach(session => {
+        filteredSessions.forEach(session => {
             // 来客数を集計
             totalGuestCount += Number(session.guests) || 0;
             
@@ -8586,7 +8586,7 @@ function renderDailyReport() {
         
         // キャストごとの売上を集計
         const castSales = {};
-        allSessions.forEach(session => {
+        filteredSessions.forEach(session => {
             if (!session) return;
             const castName = session.castName || session.cast_name;
             if (castName) {
@@ -8645,16 +8645,16 @@ function renderDailyReport() {
             : 0;
 
         // ===== 指名・同伴・延長集計 =====
-        const companionCount = allSessions.filter(s => s && s.hasCompanion).length;
-        const mainNominationCount = allSessions.filter(
+        const companionCount = filteredSessions.filter(s => s && s.hasCompanion).length;
+        const mainNominationCount = filteredSessions.filter(
             s => s && s.nomination && s.nomination.type === 'main'
         ).length;
-        const inHouseNominationCount = allSessions.filter(
+        const inHouseNominationCount = filteredSessions.filter(
             s => s && s.nomination && s.nomination.type === 'in-house'
         ).length;
         const totalNominations = mainNominationCount + inHouseNominationCount;
 
-        const totalExtensions = allSessions.reduce((sum, s) => {
+        const totalExtensions = filteredSessions.reduce((sum, s) => {
             const v = s && s.extensionCount ? Number(s.extensionCount) : 0;
             return sum + (isNaN(v) ? 0 : v);
         }, 0);
@@ -8662,7 +8662,7 @@ function renderDailyReport() {
         // ===== キャスト別集計 =====
         const castData = {};
 
-        allSessions.forEach(session => {
+        filteredSessions.forEach(session => {
             if (!session) return;
             const castName = session.castName || '未設定';
 
