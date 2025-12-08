@@ -5371,6 +5371,43 @@ async function openTableDetail(tableId) {
   if (panel) {
     panel.dataset.tableId = String(tId);
     panel.classList.remove('hidden');
+    
+    // ★ 即座にローディング表示
+    panel.innerHTML = `
+      <div id="tableDetailOverlay" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="w-full max-w-2xl rounded-2xl bg-gradient-to-b from-[#0b0f14] to-[#070a0d] border border-amber-500/20 p-8">
+          <div class="flex items-center justify-between mb-6">
+            <div class="text-xl font-bold text-white">テーブル ${tId}</div>
+            <button id="btnCloseLoading" class="text-white/50 hover:text-white text-2xl">&times;</button>
+          </div>
+          <div class="space-y-4 animate-pulse">
+            <div class="h-6 bg-white/10 rounded w-3/4"></div>
+            <div class="h-4 bg-white/10 rounded w-1/2"></div>
+            <div class="h-20 bg-white/10 rounded"></div>
+            <div class="h-4 bg-white/10 rounded w-2/3"></div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="h-10 bg-white/10 rounded"></div>
+              <div class="h-10 bg-white/10 rounded"></div>
+            </div>
+          </div>
+          <div class="text-center text-white/50 mt-4">読み込み中...</div>
+        </div>
+      </div>
+    `;
+    
+    // ローディング中でも閉じれるように
+    document.getElementById('btnCloseLoading')?.addEventListener('click', () => {
+      appState.isTableDetailOpen = false;
+      panel.innerHTML = '';
+      panel.classList.add('hidden');
+    });
+    document.getElementById('tableDetailOverlay')?.addEventListener('click', (e) => {
+      if (e.target.id === 'tableDetailOverlay') {
+        appState.isTableDetailOpen = false;
+        panel.innerHTML = '';
+        panel.classList.add('hidden');
+      }
+    });
   }
 
   const API = API_BASE_URL;
@@ -5420,12 +5457,19 @@ async function openTableDetail(tableId) {
     return await fetchJson('/casts', { method: 'GET' }).catch(() => []);
   };
 
+  // ★ 全API並列取得（高速化）
   try {
-    const session = await fetchActiveForTable();
+    const [activeSessions, menu, casts] = await Promise.all([
+      fetchJson('/sessions/active', { method: 'GET' }).catch(() => []),
+      fetchJson('/menu', { method: 'GET' }).catch(() => []),
+      fetchJson('/casts', { method: 'GET' }).catch(() => []),
+    ]);
+    
+    const list = Array.isArray(activeSessions) ? activeSessions : (activeSessions.sessions || []);
+    const session = list.find(s => Number(s.table_id) === tId);
 
-    // セッション無し → “管理から開始”UIを出す
+    // セッション無し → "管理から開始"UIを出す
     if (!session) {
-      const casts = await fetchCastsOnly();
       renderTableDetailPanel({
         id: '-',
         table_id: tId,
@@ -5438,36 +5482,42 @@ async function openTableDetail(tableId) {
         start_time: null,
         check_due_at: null,
         extension_count: 0,
-        _menu: [],
+        _menu: menu,
         _orders: [],
         _casts: casts,
       });
-      msg('このテーブルは未開始です。管理から開始できます。');
       wireTableDetailEvents(null);
       return;
     }
 
-    // セッションあり → 詳細一式表示
-    const b = await fetchBundle(session.id);
-    renderTableDetailPanel({ ...session, _menu: b.menu, _orders: b.orders, _casts: b.casts });
-    msg('読み込みOK');
+    // セッションあり → 注文も取得して表示
+    const orders = await fetchJson(`/sessions/${session.id}/orders`, { method: 'GET' }).catch(() => []);
+    renderTableDetailPanel({ ...session, _menu: menu, _orders: orders, _casts: casts });
     wireTableDetailEvents(session.id);
 
     async function refreshPanel() {
-      const s2 = await fetchActiveForTable();
-      if (!s2) {
-        // 途中で精算などで消えた
-        const casts = await fetchCastsOnly();
-        renderTableDetailPanel({ id:'-', table_id:tId, _casts:casts, _menu:[], _orders:[] });
-        msg('セッションがありません。', true);
-        wireTableDetailEvents(null);
-        return;
+      try {
+        const [active2, menu2, casts2] = await Promise.all([
+          fetchJson('/sessions/active', { method: 'GET' }).catch(() => []),
+          fetchJson('/menu', { method: 'GET' }).catch(() => []),
+          fetchJson('/casts', { method: 'GET' }).catch(() => []),
+        ]);
+        
+        const list2 = Array.isArray(active2) ? active2 : (active2.sessions || []);
+        const s2 = list2.find(s => Number(s.table_id) === tId);
+        
+        if (!s2) {
+          renderTableDetailPanel({ id:'-', table_id:tId, _casts:casts2, _menu:menu2, _orders:[] });
+          wireTableDetailEvents(null);
+          return;
+        }
+        
+        const orders2 = await fetchJson(`/sessions/${s2.id}/orders`, { method: 'GET' }).catch(() => []);
+        renderTableDetailPanel({ ...s2, _menu: menu2, _orders: orders2, _casts: casts2 });
+        wireTableDetailEvents(s2.id);
+      } catch (e) {
+        console.error('[refreshPanel] error:', e);
       }
-      const b2 = await fetchBundle(s2.id);
-      renderTableDetailPanel({ ...s2, _menu: b2.menu, _orders: b2.orders, _casts: b2.casts });
-      wireTableDetailEvents(s2.id);
-
-      if (typeof syncWithBackend === 'function') await syncWithBackend();
     }
 
     function wireTableDetailEvents(sessionId) {
