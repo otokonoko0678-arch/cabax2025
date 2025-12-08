@@ -8351,9 +8351,10 @@ function deleteCheckoutRecord(historyIndex) {
     closeEditCheckoutModal();
     renderCheckoutHistory();
     
-    // 日報・ダッシュボードも更新
+    // 日報・ダッシュボード・レポートも更新
     if (typeof renderDailyReport === 'function') renderDailyReport();
     if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof renderReports === 'function') renderReports();
     
     showNotification('伝票を削除しました', 'info');
 }
@@ -8426,8 +8427,10 @@ function saveEditCheckout(historyIndex) {
     closeEditCheckoutModal();
     renderCheckoutHistory();
     
-    // 日報も更新
+    // 日報・ダッシュボード・レポートも更新
     if (typeof renderDailyReport === 'function') renderDailyReport();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof renderReports === 'function') renderReports();
     
     showNotification('会計情報を修正しました', 'success');
 }
