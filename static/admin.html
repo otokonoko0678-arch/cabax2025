@@ -2180,7 +2180,20 @@ function renderTables() {
     const active = Array.isArray(appState.activeSessions) ? appState.activeSessions : [];
     const tables = Array.isArray(appState.tables) ? appState.tables : [];
 
-    grid.innerHTML = tables.map(table => {
+    // ★ テーブルをソート（番号順、VIPは後ろ）
+    const sortedTables = [...tables].sort((a, b) => {
+        const nameA = a.name || a.table_name || '';
+        const nameB = b.name || b.table_name || '';
+        // 数字部分を抽出
+        const numA = parseInt(nameA.replace(/\D/g, '')) || 0;
+        const numB = parseInt(nameB.replace(/\D/g, '')) || 0;
+        // VIPは後ろに
+        if (a.is_vip && !b.is_vip) return 1;
+        if (!a.is_vip && b.is_vip) return -1;
+        return numA - numB;
+    });
+
+    grid.innerHTML = sortedTables.map(table => {
         const tId = Number(table.id);
 
         const session = active.find(s => Number(s.tableId ?? s.table_id) === tId) || null;
