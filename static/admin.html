@@ -2309,6 +2309,11 @@ function renderTableDetailPanel(session) {
   const s = session || {};
   const hasSession = !!s?.id && s.id !== '-' && s.id !== null && s.id !== undefined;
 
+  // テーブル名を取得（IDから名前に変換）
+  const tableId = s.table_id ?? s.tableId;
+  const tableInfo = appState.tables?.find(t => t.id === Number(tableId));
+  const tableName = tableInfo?.name || `T${tableId}`;
+
   const menu = Array.isArray(s._menu) ? s._menu : [];
   const orders = Array.isArray(s._orders) ? s._orders : [];
   const casts = Array.isArray(s._casts) ? s._casts : [];
@@ -2429,7 +2434,7 @@ function renderTableDetailPanel(session) {
           <div>
             <div class="text-[11px] tracking-widest uppercase text-white/50">Table Detail</div>
             <div class="text-2xl font-extrabold text-white">
-              テーブル <span class="${gold}">${s.table_id ?? '—'}</span>
+              テーブル <span class="${gold}">${tableName}</span>
             </div>
             <div class="text-xs text-white/50 mt-1">
               Session: <span class="text-white/80">${hasSession ? s.id : 'なし'}</span>
@@ -5373,11 +5378,15 @@ async function openTableDetail(tableId) {
     panel.classList.remove('hidden');
     
     // ★ 即座にローディング表示
+    // テーブル名をキャッシュから取得
+    const tableInfo = appState.tables?.find(t => t.id === Number(tId));
+    const tableName = tableInfo?.name || `T${tId}`;
+    
     panel.innerHTML = `
       <div id="tableDetailOverlay" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3">
         <div class="w-full max-w-2xl rounded-2xl bg-gradient-to-b from-[#0b0f14] to-[#070a0d] border border-amber-500/20 p-8">
           <div class="flex items-center justify-between mb-6">
-            <div class="text-xl font-bold text-white">テーブル ${tId}</div>
+            <div class="text-xl font-bold text-white">テーブル ${tableName}</div>
             <button id="btnCloseLoading" class="text-white/50 hover:text-white text-2xl">&times;</button>
           </div>
           <div class="space-y-4 animate-pulse">
