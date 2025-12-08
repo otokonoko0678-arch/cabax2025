@@ -1361,10 +1361,9 @@
                         <h1 class="text-4xl md:text-5xl font-bold gold-accent">売上レポート</h1>
                         <div class="flex gap-3">
                             <select id="reportPeriod" class="px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-200" onchange="renderReports()">
-                                <option value="today">本日</option>
+                                <option value="today" selected>本日</option>
                                 <option value="week">今週</option>
-                                <option value="month" selected>今月</option>
-                                <option value="year">今年</option>
+                                <option value="month">今月</option>
                             </select>
                             <button onclick="exportReportCSV()" class="luxury-btn px-6 py-3 rounded-xl text-sm">
                                 📥 CSV出力
@@ -9262,17 +9261,71 @@ function renderMonthlyReport(data) {
         let hourlyChart = null;
         
         function renderReports() {
-            const period = document.getElementById('reportPeriod')?.value || 'month';
+            const period = document.getElementById('reportPeriod')?.value || 'today';
+            
+            // 全セッション
+            const allSessions = [...(appState.activeSessions || []), ...(appState.checkoutHistory || [])];
+            
+            // ★ 期間でフィルタ
+            let filteredSessions = [];
+            const now = new Date();
+            
+            if (period === 'today') {
+                // 営業日フィルタを適用
+                const businessDate = (typeof getBusinessDate === 'function') ? getBusinessDate() : now.toISOString().split('T')[0];
+                let businessStart, businessEnd;
+                if (typeof getBusinessDayRange === 'function') {
+                    const range = getBusinessDayRange(businessDate);
+                    businessStart = range.start;
+                    businessEnd = range.end;
+                } else {
+                    businessStart = new Date(businessDate + 'T00:00:00');
+                    businessEnd = new Date(businessDate + 'T00:00:00');
+                    businessEnd.setDate(businessEnd.getDate() + 1);
+                }
+                
+                filteredSessions = allSessions.filter(s => {
+                    const sessionTime = s.start_time || s.startTime || s.checkoutTime || s.created_at;
+                    if (!sessionTime) return false;
+                    const d = new Date(sessionTime);
+                    return d >= businessStart && d < businessEnd;
+                });
+            } else if (period === 'week') {
+                // 過去7日
+                const weekAgo = new Date(now);
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                filteredSessions = allSessions.filter(s => {
+                    const sessionTime = s.start_time || s.startTime || s.checkoutTime || s.created_at;
+                    if (!sessionTime) return false;
+                    return new Date(sessionTime) >= weekAgo;
+                });
+            } else {
+                // month: 過去30日
+                const monthAgo = new Date(now);
+                monthAgo.setDate(monthAgo.getDate() - 30);
+                filteredSessions = allSessions.filter(s => {
+                    const sessionTime = s.start_time || s.startTime || s.checkoutTime || s.created_at;
+                    if (!sessionTime) return false;
+                    return new Date(sessionTime) >= monthAgo;
+                });
+            }
             
             // データ集計
-            const allSessions = [...(appState.activeSessions || []), ...(appState.checkoutHistory || [])];
-            const totalSales = allSessions.reduce((sum, s) => {
+            const totalSales = filteredSessions.reduce((sum, s) => {
                 const total = s.currentTotal || s.current_total || s.totalAmount || s.total_amount || 0;
                 return sum + Number(total);
             }, 0);
-            const totalCustomers = allSessions.length;
+            const totalCustomers = filteredSessions.length;
             const avgSpend = totalCustomers > 0 ? Math.floor(totalSales / totalCustomers) : 0;
             const grossProfit = Math.floor(totalSales * 0.6); // 粗利率60%
+            
+            // 期間ラベル
+            const periodLabels = {
+                'today': '本日',
+                'week': '週間',
+                'month': '月間'
+            };
+            const periodLabel = periodLabels[period] || '本日';
             
             // サマリー更新
             document.getElementById('reportTotalSales').textContent = `¥${totalSales.toLocaleString()}`;
@@ -9280,19 +9333,19 @@ function renderMonthlyReport(data) {
             document.getElementById('reportAvgSpend').textContent = `¥${avgSpend.toLocaleString()}`;
             document.getElementById('reportGrossProfit').textContent = `¥${grossProfit.toLocaleString()}`;
             
-            // 前月比（デモ）
-            document.getElementById('reportSalesChange').textContent = '前月比 +15.3%';
-            document.getElementById('reportCustomersChange').textContent = '前月比 +8.5%';
-            document.getElementById('reportAvgChange').textContent = '前月比 +6.2%';
+            // 比較ラベル
+            document.getElementById('reportSalesChange').textContent = `${periodLabel}売上`;
+            document.getElementById('reportCustomersChange').textContent = `${periodLabel}来店`;
+            document.getElementById('reportAvgChange').textContent = `${periodLabel}単価`;
             document.getElementById('reportProfitRate').textContent = '粗利率 60%';
             
             // グラフ描画
             renderSalesTrendChart(period);
-            renderCategorySalesChart(allSessions);
+            renderCategorySalesChart(filteredSessions);
             renderHourlyChart();
             renderCostRateList();
-            renderCatchStaffTable(allSessions);
-            renderTopProducts(allSessions);
+            renderCatchStaffTable(filteredSessions);
+            renderTopProducts(filteredSessions);
         }
         
         function renderSalesTrendChart(period) {
