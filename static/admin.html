@@ -8202,13 +8202,17 @@ function openEditCheckoutModal(historyIndex) {
         const price = o.price || 0;
         const qty = o.quantity || 1;
         return `
-            <div class="flex items-center gap-2 py-2 border-b border-gray-700">
+            <div id="editOrderRow_${idx}" class="flex items-center gap-2 py-2 border-b border-gray-700">
                 <input type="text" id="editOrderName_${idx}" value="${itemName}" 
                        class="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm">
                 <input type="number" id="editOrderQty_${idx}" value="${qty}" min="0"
                        class="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm text-center">
                 <input type="number" id="editOrderPrice_${idx}" value="${price}" 
                        class="w-24 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm text-right">
+                <button type="button" onclick="deleteEditOrder(${idx})" 
+                        class="px-2 py-1 bg-red-600/30 text-red-400 rounded hover:bg-red-600/50 text-sm">
+                    🗑
+                </button>
             </div>
         `;
     }).join('') : '<p class="text-gray-500 text-sm">注文データなし</p>';
@@ -8295,17 +8299,23 @@ function addEditOrderRow(historyIndex) {
     const container = document.getElementById('editOrdersList');
     if (!container) return;
     
-    const idx = container.querySelectorAll('.flex.items-center').length;
+    // ユニークなIDを生成
+    const idx = 'new_' + Date.now();
     const newRow = document.createElement('div');
+    newRow.id = `editOrderRow_${idx}`;
     newRow.className = 'flex items-center gap-2 py-2 border-b border-gray-700';
     newRow.innerHTML = `
-        <input type="text" id="editOrderName_${idx}" value="" 
+        <input type="text" value="" 
                class="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm"
                placeholder="品名">
-        <input type="number" id="editOrderQty_${idx}" value="1" min="0"
+        <input type="number" value="1" min="0"
                class="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm text-center">
-        <input type="number" id="editOrderPrice_${idx}" value="0" 
+        <input type="number" value="0" 
                class="w-24 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm text-right">
+        <button type="button" onclick="this.closest('div').remove()" 
+                class="px-2 py-1 bg-red-600/30 text-red-400 rounded hover:bg-red-600/50 text-sm">
+            🗑
+        </button>
     `;
     container.appendChild(newRow);
 }
@@ -8313,6 +8323,14 @@ function addEditOrderRow(historyIndex) {
 function closeEditCheckoutModal() {
     const modal = document.getElementById('editCheckoutModal');
     if (modal) modal.remove();
+}
+
+// 注文行を削除
+function deleteEditOrder(idx) {
+    const row = document.getElementById(`editOrderRow_${idx}`);
+    if (row) {
+        row.remove();
+    }
 }
 
 function saveEditCheckout(historyIndex) {
@@ -8325,15 +8343,17 @@ function saveEditCheckout(historyIndex) {
     const newShimeiCasts = document.getElementById('editShimeiCasts').value || '';
     const newCatchStaff = document.getElementById('editCatchStaff').value || '';
     
-    // 注文明細を収集
-    const orderRows = document.querySelectorAll('#editOrdersList .flex.items-center');
+    // 注文明細を収集（削除されていない行のみ）
+    const orderRows = document.querySelectorAll('#editOrdersList > div[id^="editOrderRow_"]');
     const newOrders = [];
     let subtotal = 0;
     
-    orderRows.forEach((row, idx) => {
-        const name = document.getElementById(`editOrderName_${idx}`)?.value || '';
-        const qty = parseInt(document.getElementById(`editOrderQty_${idx}`)?.value) || 0;
-        const price = parseInt(document.getElementById(`editOrderPrice_${idx}`)?.value) || 0;
+    orderRows.forEach((row) => {
+        // 各行の中のinputを直接取得
+        const inputs = row.querySelectorAll('input');
+        const name = inputs[0]?.value || '';
+        const qty = parseInt(inputs[1]?.value) || 0;
+        const price = parseInt(inputs[2]?.value) || 0;
         
         if (name && qty > 0) {
             newOrders.push({
