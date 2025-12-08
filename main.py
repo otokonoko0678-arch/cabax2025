@@ -2070,11 +2070,11 @@ async def delete_store(store_id: int, admin_key: str, db: Session = Depends(get_
     # 6. スタッフ削除
     db.query(Staff).filter(Staff.store_id == store_id).delete()
     
-    # 7. 日報削除
-    db.query(DailyReport).filter(DailyReport.store_id == store_id).delete()
-    
-    # 8. 勤怠削除
+    # 7. 勤怠削除
     db.query(Attendance).filter(Attendance.store_id == store_id).delete()
+    
+    # 8. スタッフ勤怠削除
+    db.query(StaffAttendance).filter(StaffAttendance.store_id == store_id).delete()
     
     # 最後に店舗削除
     db.delete(db_store)
