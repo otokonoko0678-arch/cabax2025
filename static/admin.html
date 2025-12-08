@@ -3641,11 +3641,16 @@ function initializeApp() {
         if (saved) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed)) {
-                // 今日の分だけ復元（日付でフィルタ）
-                const today = new Date().toISOString().split('T')[0];
+                // ★ 営業日でフィルタ（過去3日分を保持）
+                const now = new Date();
+                const threeDaysAgo = new Date(now);
+                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                
                 appState.checkoutHistory = parsed.filter(s => {
                     const checkoutDate = s.checkoutTime || s.end_time || s.startTime || s.start_time;
-                    return checkoutDate && checkoutDate.startsWith(today);
+                    if (!checkoutDate) return false;
+                    const d = new Date(checkoutDate);
+                    return d >= threeDaysAgo;  // 過去3日分を保持
                 });
                 console.log('✅ checkoutHistory復元:', appState.checkoutHistory.length, '件');
             }
