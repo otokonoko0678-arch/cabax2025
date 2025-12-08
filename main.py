@@ -1904,14 +1904,14 @@ async def create_store(store: StoreCreate, admin_key: str, db: Session = Depends
         {"name": "ウイスキー", "category": "castdrink", "price": 1000, "cost": 0, "premium": False},
         # tableset - 卓セット（無料・管理用）
         {"name": "アイスセット", "category": "tableset", "price": 0, "cost": 0, "premium": False},
-        {"name": "アイス追加", "category": "tableset", "price": 0, "cost": 0, "premium": False},
-        {"name": "グラス追加", "category": "tableset", "price": 0, "cost": 0, "premium": False},
-        {"name": "ウーロン茶", "category": "tableset", "price": 0, "cost": 0, "premium": False},
-        {"name": "緑茶", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "アイス（追加）", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "グラス（追加）", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "ウーロン茶ピッチャー", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "緑茶ピッチャー", "category": "tableset", "price": 0, "cost": 0, "premium": False},
         {"name": "炭酸水", "category": "tableset", "price": 0, "cost": 0, "premium": False},
-        {"name": "紅茶", "category": "tableset", "price": 0, "cost": 0, "premium": False},
-        {"name": "ジャスミン茶", "category": "tableset", "price": 0, "cost": 0, "premium": False},
-        {"name": "コーヒー", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "紅茶ピッチャー", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "ジャスミン茶ピッチャー", "category": "tableset", "price": 0, "cost": 0, "premium": False},
+        {"name": "コーヒーピッチャー", "category": "tableset", "price": 0, "cost": 0, "premium": False},
         {"name": "ミネラルウォーター", "category": "tableset", "price": 0, "cost": 0, "premium": False},
         # champagne - シャンパン
         {"name": "アルマンド ブリュット", "category": "champagne", "price": 120000, "cost": 0, "premium": True},
@@ -2042,13 +2042,41 @@ async def activate_store(store_id: int, admin_key: str, db: Session = Depends(ge
 
 @app.delete("/api/stores/{store_id}")
 async def delete_store(store_id: int, admin_key: str, db: Session = Depends(get_db)):
-    """店舗削除"""
+    """店舗削除（関連データも全て削除）"""
     verify_super_admin(admin_key)
     
     db_store = db.query(Store).filter(Store.id == store_id).first()
     if not db_store:
         raise HTTPException(status_code=404, detail="Store not found")
     
+    # 関連データを先に削除（外部キー制約対策）
+    # 1. セッションに紐づく注文を削除
+    sessions = db.query(SessionModel).filter(SessionModel.store_id == store_id).all()
+    for session in sessions:
+        db.query(Order).filter(Order.session_id == session.id).delete()
+    
+    # 2. セッション削除
+    db.query(SessionModel).filter(SessionModel.store_id == store_id).delete()
+    
+    # 3. テーブル削除
+    db.query(Table).filter(Table.store_id == store_id).delete()
+    
+    # 4. メニュー削除
+    db.query(MenuItem).filter(MenuItem.store_id == store_id).delete()
+    
+    # 5. キャスト削除
+    db.query(Cast).filter(Cast.store_id == store_id).delete()
+    
+    # 6. スタッフ削除
+    db.query(Staff).filter(Staff.store_id == store_id).delete()
+    
+    # 7. 日報削除
+    db.query(DailyReport).filter(DailyReport.store_id == store_id).delete()
+    
+    # 8. 勤怠削除
+    db.query(Attendance).filter(Attendance.store_id == store_id).delete()
+    
+    # 最後に店舗削除
     db.delete(db_store)
     db.commit()
     return {"message": "削除しました"}
