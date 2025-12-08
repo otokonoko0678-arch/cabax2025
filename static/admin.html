@@ -8273,7 +8273,7 @@ function openEditCheckoutModal(historyIndex) {
                     </div>
                 </div>
                 
-                <div class="flex gap-2">
+                <div class="flex gap-2 mb-3">
                     <button onclick="saveEditCheckout(${historyIndex})" 
                             class="flex-1 luxury-btn py-3 rounded-xl font-bold">
                         保存
@@ -8281,6 +8281,13 @@ function openEditCheckoutModal(historyIndex) {
                     <button onclick="closeEditCheckoutModal()" 
                             class="flex-1 bg-gray-700 text-white py-3 rounded-xl font-bold">
                         キャンセル
+                    </button>
+                </div>
+                
+                <div class="pt-3 border-t border-gray-700">
+                    <button onclick="deleteCheckoutRecord(${historyIndex})" 
+                            class="w-full py-2 bg-red-600/20 text-red-400 border border-red-600/30 rounded-xl hover:bg-red-600/30 transition text-sm">
+                        🗑 この伝票を削除
                     </button>
                 </div>
             </div>
@@ -8323,6 +8330,32 @@ function addEditOrderRow(historyIndex) {
 function closeEditCheckoutModal() {
     const modal = document.getElementById('editCheckoutModal');
     if (modal) modal.remove();
+}
+
+// 伝票を削除
+function deleteCheckoutRecord(historyIndex) {
+    if (!confirm('この伝票を削除しますか？\n※この操作は取り消せません')) {
+        return;
+    }
+    
+    // 配列から削除
+    appState.checkoutHistory.splice(historyIndex, 1);
+    
+    // localStorageに保存
+    try {
+        localStorage.setItem('cabax_checkoutHistory', JSON.stringify(appState.checkoutHistory));
+    } catch (e) {
+        console.warn('localStorage保存失敗:', e);
+    }
+    
+    closeEditCheckoutModal();
+    renderCheckoutHistory();
+    
+    // 日報・ダッシュボードも更新
+    if (typeof renderDailyReport === 'function') renderDailyReport();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    
+    showNotification('伝票を削除しました', 'info');
 }
 
 // 注文行を削除
