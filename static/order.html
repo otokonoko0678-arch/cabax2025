@@ -1159,6 +1159,11 @@ function renderMenu() {
 
 // 注文送信
 async function submitOrder() {
+    const btn = document.getElementById('orderButton');
+    
+    // 連打防止
+    if (btn.disabled) return;
+    
     // テーブルとカートのチェック
     if (appState.selectedTable == null) {
         alert('テーブルが選択されていません');
@@ -1168,6 +1173,10 @@ async function submitOrder() {
         alert('カートが空です');
         return;
     }
+
+    // ボタンを無効化
+    btn.disabled = true;
+    btn.textContent = '送信中...';
 
     try {
         // 最新のアクティブセッションを取得
@@ -1221,10 +1230,14 @@ async function submitOrder() {
         appState.cart = [];
         renderCart();
 
-        alert('注文を送信しました');
+        showNotification('注文を送信しました', 'success');
     } catch (e) {
         console.error('[order] submitOrder error', e);
         alert('注文の送信に失敗しました。APIかネットワークを確認してください。');
+    } finally {
+        // ボタンを再有効化
+        btn.disabled = false;
+        btn.textContent = '注文する';
     }
 }
 
@@ -1236,25 +1249,28 @@ async function showHistory() {
 async function loadOrderHistory() {
     console.log('[order] loadOrderHistory sessionId', appState.sessionId);
     
-    // ローカルモード：履歴は既にappState.ordersにある
-    renderHistory();
+    if (!appState.sessionId) {
+        console.log('[order] No sessionId, skip loading history');
+        return;
+    }
     
-    /* API呼び出しはコメントアウト
     try {
         const response = await apiRequest(`${API_BASE}/sessions/${appState.sessionId}/orders`);
-        const data = await response.json();
-        appState.orders = Array.isArray(data) ? data : [];
-        renderHistory();
+        if (response.ok) {
+            const data = await response.json();
+            appState.orders = Array.isArray(data) ? data : [];
+            console.log('[order] 注文履歴取得:', appState.orders.length, '件');
+            renderHistory();
+        }
     } catch (error) {
         console.error('履歴取得エラー:', error);
     }
-    */
 }
 
 
         function renderHistory() {
     const container = document.getElementById('historyList');
-    const total = appState.orders.reduce((sum, order) => sum + (order.subtotal || 0), 0);
+    const total = appState.orders.reduce((sum, order) => sum + ((order.price || 0) * (order.quantity || 1)), 0);
     
     document.getElementById('historyTotal').textContent = `¥${total.toLocaleString()}`;
     
@@ -1264,29 +1280,24 @@ async function loadOrderHistory() {
     }
     
     container.innerHTML = appState.orders.map(order => {
-        const menuItem = appState.menuItems.find(m => m.id === order.menu_item_id) || {};
-        const itemName = menuItem.name || 'メニュー';
+        const itemName = order.item_name || 'メニュー';
+        const subtotal = (order.price || 0) * (order.quantity || 1);
         
         return `
             <div class="luxury-card rounded-2xl p-6">
                 <div class="flex justify-between items-start mb-4">
                     <div>
-                        <p class="text-sm text-gray-400">${new Date(order.created_at || order.ordered_at || Date.now()).toLocaleTimeString('ja-JP')}</p>
-                        <p class="text-xs text-gray-500 mt-1">注文ID: ${order.id}</p>
+                        <p class="text-sm text-gray-400">${order.created_at ? new Date(order.created_at).toLocaleTimeString('ja-JP') : ''}</p>
                     </div>
-                    <span class="px-4 py-2 rounded-full text-sm font-semibold bg-green-900/30 text-green-400">
-                        承認済み
+                    <span class="px-4 py-2 rounded-full text-sm font-semibold ${order.is_served ? 'bg-green-900/30 text-green-400' : 'bg-yellow-900/30 text-yellow-400'}">
+                        ${order.is_served ? '提供済み' : '準備中'}
                     </span>
                 </div>
                 <div class="space-y-2 mb-4">
                     <div class="flex justify-between text-gray-300">
                         <span>${itemName} × ${order.quantity}</span>
-                        <span>¥${((order.unit_price || 0) * order.quantity).toLocaleString()}</span>
+                        <span>¥${subtotal.toLocaleString()}</span>
                     </div>
-                </div>
-                <div class="border-t border-gray-700 pt-3 flex justify-between items-center">
-                    <span class="font-semibold text-gray-300">小計</span>
-                    <span class="text-2xl font-bold gold-accent">¥${(order.subtotal || 0).toLocaleString()}</span>
                 </div>
             </div>
         `;
@@ -1621,15 +1632,22 @@ function exitTable() {
         }
         
         // 場内指名を確定
+        // 場内指名を確定
+        let nominationProcessing = false;
         async function confirmNomination(castId, castName) {
             if (!appState.sessionId) {
                 alert('セッションが見つかりません');
                 return;
             }
             
+            // 連打防止
+            if (nominationProcessing) return;
+            
             if (!confirm(`${castName}さんを場内指名しますか？\n指名料：¥${NOMINATION_FEE.toLocaleString()}`)) {
                 return;
             }
+            
+            nominationProcessing = true;
             
             try {
                 // 場内指名料を注文として追加
@@ -1657,6 +1675,8 @@ function exitTable() {
             } catch (e) {
                 console.error('場内指名エラー:', e);
                 alert('指名に失敗しました');
+            } finally {
+                nominationProcessing = false;
             }
         }
         

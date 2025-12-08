@@ -820,37 +820,37 @@
 
                 <!-- オーダー管理タブ -->
                 <div id="orders-tab" class="tab-content hidden">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-                        <h1 class="text-4xl md:text-5xl font-bold gold-accent">オーダー管理</h1>
-                        <div class="flex gap-2">
-                            <button onclick="filterOrders('all')" id="orderFilterAll" class="order-filter-btn active px-4 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 md:mb-8">
+                        <h1 class="text-2xl md:text-4xl lg:text-5xl font-bold gold-accent">オーダー管理</h1>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="filterOrders('all')" id="orderFilterAll" class="order-filter-btn active px-3 py-2 rounded-xl text-xs md:text-sm font-semibold bg-amber-600 text-white">
                                 すべて
                             </button>
-                            <button onclick="filterOrders('pending')" id="orderFilterPending" class="order-filter-btn px-4 py-2 rounded-xl text-sm font-semibold bg-gray-700 text-gray-300 hover:bg-gray-600">
+                            <button onclick="filterOrders('pending')" id="orderFilterPending" class="order-filter-btn px-3 py-2 rounded-xl text-xs md:text-sm font-semibold bg-gray-700 text-gray-300 hover:bg-gray-600">
                                 ⏳ 未提供
                             </button>
-                            <button onclick="filterOrders('served')" id="orderFilterServed" class="order-filter-btn px-4 py-2 rounded-xl text-sm font-semibold bg-gray-700 text-gray-300 hover:bg-gray-600">
+                            <button onclick="filterOrders('served')" id="orderFilterServed" class="order-filter-btn px-3 py-2 rounded-xl text-xs md:text-sm font-semibold bg-gray-700 text-gray-300 hover:bg-gray-600">
                                 ✓ 提供済
                             </button>
-                            <button onclick="loadOrdersFromApi()" class="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-500">
+                            <button onclick="loadOrdersFromApi()" class="px-3 py-2 rounded-xl text-xs md:text-sm font-semibold bg-blue-600 text-white hover:bg-blue-500">
                                 🔄 更新
                             </button>
                         </div>
                     </div>
 
                     <!-- 未提供オーダーサマリー -->
-                    <div id="pendingOrdersSummary" class="mb-6 p-4 rounded-xl bg-red-900/20 border border-red-800/30 hidden">
+                    <div id="pendingOrdersSummary" class="mb-4 md:mb-6 p-3 md:p-4 rounded-xl bg-red-900/20 border border-red-800/30 hidden">
                         <div class="flex items-center gap-3">
-                            <span class="text-3xl">⚠️</span>
+                            <span class="text-2xl md:text-3xl">⚠️</span>
                             <div>
-                                <div class="text-lg font-bold text-red-400">未提供オーダーがあります</div>
-                                <div id="pendingOrdersCount" class="text-sm text-red-300"></div>
+                                <div class="text-base md:text-lg font-bold text-red-400">未提供オーダーがあります</div>
+                                <div id="pendingOrdersCount" class="text-xs md:text-sm text-red-300"></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- オーダー一覧 -->
-                    <div id="ordersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- オーダー一覧（モバイルでスクロール可能） -->
+                    <div id="ordersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 max-h-[75vh] overflow-y-auto pb-4">
                         <!-- オーダーカードがここに入る -->
                     </div>
 
@@ -4903,8 +4903,8 @@ function renderOrders() {
             ? 'border-green-500/30 bg-green-900/10' 
             : 'border-amber-500/30 bg-amber-900/10';
         const statusBadge = isServed 
-            ? '<span class="px-2 py-1 text-xs font-bold rounded-full bg-green-500/20 text-green-400 border border-green-500/30">✓ 提供済</span>'
-            : '<span class="px-2 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">⏳ 未提供</span>';
+            ? '<span class="px-1.5 py-0.5 text-[10px] md:text-xs font-bold rounded-full bg-green-500/20 text-green-400 border border-green-500/30">✓</span>'
+            : '<span class="px-1.5 py-0.5 text-[10px] md:text-xs font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">⏳</span>';
         
         // created_atをパース（UTCとして解釈されるのでJSTに変換）
         let createdAt = null;
@@ -4929,11 +4929,11 @@ function renderOrders() {
             // 負の値や異常な値は表示しない
             if (elapsed >= 0 && elapsed < 1440) { // 24時間以内
                 if (elapsed >= 10) {
-                    elapsedStr = `<span class="text-red-400 font-bold">${elapsed}分経過</span>`;
+                    elapsedStr = `<span class="text-red-400 font-bold text-[10px]">${elapsed}分</span>`;
                 } else if (elapsed >= 5) {
-                    elapsedStr = `<span class="text-amber-400">${elapsed}分経過</span>`;
+                    elapsedStr = `<span class="text-amber-400 text-[10px]">${elapsed}分</span>`;
                 } else {
-                    elapsedStr = `<span class="text-gray-400">${elapsed}分経過</span>`;
+                    elapsedStr = `<span class="text-gray-400 text-[10px]">${elapsed}分</span>`;
                 }
             }
         }
@@ -4944,32 +4944,54 @@ function renderOrders() {
         };
         const emoji = categoryEmoji[order.category] || '📦';
         
+        // モバイル: コンパクトな1行表示、デスクトップ: カード表示
         return `
-            <div class="luxury-card rounded-xl p-4 border ${statusClass}">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                        <span class="text-2xl font-bold text-amber-400">T${order.table_name}</span>
-                        ${statusBadge}
-                    </div>
-                    <span class="text-xs text-gray-500">${timeStr}</span>
-                </div>
-                
-                <div class="flex items-center gap-3 mb-3">
-                    <span class="text-2xl">${emoji}</span>
+            <div class="luxury-card rounded-lg md:rounded-xl p-2 md:p-4 border ${statusClass}">
+                <!-- モバイル: 1行コンパクト表示 -->
+                <div class="flex md:hidden items-center gap-2">
+                    <span class="text-lg font-bold text-amber-400 w-8">T${order.table_name}</span>
+                    ${statusBadge}
+                    <span class="text-base">${emoji}</span>
                     <div class="flex-1 min-w-0">
-                        <div class="text-white font-semibold truncate">${order.item_name || '?'}</div>
-                        <div class="text-sm text-gray-400">×${order.quantity} / ¥${(order.price * order.quantity).toLocaleString()}</div>
+                        <span class="text-white text-sm truncate block">${order.item_name || '?'}</span>
                     </div>
-                </div>
-                
-                <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-500">${elapsedStr}</div>
+                    <span class="text-[10px] text-gray-500">${timeStr}</span>
+                    ${elapsedStr}
                     <button 
                         onclick="toggleOrderStatusFromList(${order.session_id}, ${order.id}, ${isServed ? 'false' : 'true'})"
-                        class="px-3 py-1.5 text-sm rounded-lg font-semibold transition ${isServed 
-                            ? 'bg-gray-600/50 text-gray-400 hover:bg-red-500/30 hover:text-red-400' 
-                            : 'bg-green-600/30 text-green-400 hover:bg-green-500/50'}"
-                    >${isServed ? '未提供に戻す' : '提供済みにする'}</button>
+                        class="px-2 py-1 text-[10px] rounded font-bold ${isServed 
+                            ? 'bg-gray-600/50 text-gray-400' 
+                            : 'bg-green-600/30 text-green-400'}"
+                    >${isServed ? '戻す' : '済み'}</button>
+                </div>
+                
+                <!-- デスクトップ: カード表示 -->
+                <div class="hidden md:block">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-bold text-amber-400">T${order.table_name}</span>
+                            ${statusBadge}
+                        </div>
+                        <span class="text-xs text-gray-500">${timeStr}</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-2xl">${emoji}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-white font-semibold truncate">${order.item_name || '?'}</div>
+                            <div class="text-sm text-gray-400">×${order.quantity} / ¥${(order.price * order.quantity).toLocaleString()}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="text-xs text-gray-500">${elapsedStr}</div>
+                        <button 
+                            onclick="toggleOrderStatusFromList(${order.session_id}, ${order.id}, ${isServed ? 'false' : 'true'})"
+                            class="px-3 py-1.5 text-sm rounded-lg font-semibold transition ${isServed 
+                                ? 'bg-gray-600/50 text-gray-400 hover:bg-red-500/30 hover:text-red-400' 
+                                : 'bg-green-600/30 text-green-400 hover:bg-green-500/50'}"
+                        >${isServed ? '未提供に戻す' : '提供済みにする'}</button>
+                    </div>
                 </div>
             </div>
         `;
@@ -5455,6 +5477,12 @@ async function openTableDetail(tableId) {
       if (!sessionId) {
         if (btnStart) {
           btnStart.onclick = async () => {
+            // 連打防止
+            if (btnStart.disabled) return;
+            btnStart.disabled = true;
+            const originalText = btnStart.textContent;
+            btnStart.textContent = '処理中...';
+            
             try {
               msg('セッション開始中...');
               const guests = Number(document.getElementById('inpStartGuests')?.value ?? 1);
@@ -5518,6 +5546,10 @@ async function openTableDetail(tableId) {
             } catch (e) {
               console.error(e);
               msg(`開始失敗: ${e.message}`, true);
+            } finally {
+              // ボタンを再有効化
+              btnStart.disabled = false;
+              btnStart.textContent = originalText;
             }
           };
         }
@@ -5726,6 +5758,12 @@ async function openTableDetail(tableId) {
 
       if (btnAddOrder) {
         btnAddOrder.onclick = async () => {
+          // 連打防止
+          if (btnAddOrder.disabled) return;
+          btnAddOrder.disabled = true;
+          const originalText = btnAddOrder.textContent;
+          btnAddOrder.textContent = '処理中...';
+          
           try {
             msg('注文追加中...');
             const itemId = Number(document.getElementById('selAddOrderItem')?.value);
@@ -5811,6 +5849,10 @@ async function openTableDetail(tableId) {
           } catch (e) {
             console.error(e);
             msg(`注文追加失敗: ${e.message}`, true);
+          } finally {
+            // ボタンを再有効化
+            btnAddOrder.disabled = false;
+            btnAddOrder.textContent = originalText;
           }
         };
       }
@@ -9665,15 +9707,21 @@ function setupCharts() {
     }
 
     // 場内指名を確定
+    let nominationProcessing = false;
     async function confirmAdminNomination(castId, castName) {
         if (!nominationSessionId) {
             alert('セッションが見つかりません');
             return;
         }
         
+        // 連打防止
+        if (nominationProcessing) return;
+        
         if (!confirm(`${castName}さんを場内指名しますか？\n指名料：¥${NOMINATION_FEE.toLocaleString()}`)) {
             return;
         }
+        
+        nominationProcessing = true;
         
         try {
             const res = await apiRequest(`/sessions/${nominationSessionId}/add-charge`, {
@@ -9697,6 +9745,8 @@ function setupCharts() {
         } catch (e) {
             console.error('場内指名エラー:', e);
             alert('指名に失敗しました');
+        } finally {
+            nominationProcessing = false;
         }
     }
     </script>
