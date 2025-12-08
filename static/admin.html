@@ -773,7 +773,7 @@
                     
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8 md:mb-10">
                         <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl">
-                            <p class="text-xs md:text-sm text-gray-400 mb-2 md:mb-3 uppercase tracking-wide">本日の売上</p>
+                            <p class="text-xs md:text-sm text-gray-400 mb-2 md:mb-3 uppercase tracking-wide" id="salesLabel">本日の売上</p>
                             <p class="text-2xl md:text-4xl font-bold gold-accent" id="totalSales">¥0</p>
                         </div>
                         <div class="luxury-card rounded-2xl p-4 md:p-8 shadow-xl">
@@ -1283,6 +1283,43 @@
                         <div class="mt-6 flex justify-end">
                             <button onclick="saveStoreSettings()" class="luxury-btn px-6 py-3 rounded-xl">
                                 設定を保存
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 営業時間設定 -->
+                    <div class="glass-effect rounded-2xl p-6 mb-6">
+                        <h2 class="text-xl font-bold text-white mb-4">🕐 営業時間設定</h2>
+                        <p class="text-gray-400 text-sm mb-4">営業日の区切り時間を設定します。深夜営業の場合、日付をまたいでも同じ営業日として扱います。</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="p-4 bg-black/20 rounded-xl border border-white/10">
+                                <label class="block text-white font-semibold mb-2">営業開始時間</label>
+                                <select id="settingBusinessStart" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
+                                    ${Array.from({length: 24}, (_, i) => `<option value="${i}">${i}:00</option>`).join('')}
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">この時間から新しい営業日が始まります</p>
+                            </div>
+                            
+                            <div class="p-4 bg-black/20 rounded-xl border border-white/10">
+                                <label class="block text-white font-semibold mb-2">営業終了時間</label>
+                                <select id="settingBusinessEnd" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
+                                    ${Array.from({length: 24}, (_, i) => `<option value="${i}">${i}:00（翌日）</option>`).join('')}
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">この時間までが前日の営業として扱われます</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 p-4 bg-blue-900/20 rounded-xl border border-blue-800/30">
+                            <div class="text-blue-300 text-sm">
+                                <strong>例：</strong> 18:00開始、6:00終了の場合<br>
+                                12/8 18:00 〜 12/9 6:00 → <span class="text-amber-400">12/8の売上</span>として計上
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 flex justify-end">
+                            <button onclick="saveBusinessHours()" class="luxury-btn px-6 py-3 rounded-xl">
+                                営業時間を保存
                             </button>
                         </div>
                     </div>
@@ -1940,6 +1977,10 @@ const appState = {
   currentTableSession: null,
 
   currentEditingMenuId: null,
+  
+  // ★ 営業時間設定
+  businessStartHour: 18,  // 営業開始（デフォルト18時）
+  businessEndHour: 6,     // 営業終了（デフォルト翌6時）
 };
 
 // デバッグ用にグローバル公開
@@ -3961,7 +4002,8 @@ async function syncWithBackend() {
             (typeof loadCastsFromApi === 'function') ? loadCastsFromApi() : Promise.resolve(),
             (typeof loadTablesFromApi === 'function') ? loadTablesFromApi() : Promise.resolve(),
             (typeof loadActiveSessionsFromApi === 'function') ? loadActiveSessionsFromApi() : Promise.resolve(),
-            (typeof loadStaffFromApi === 'function') ? loadStaffFromApi() : Promise.resolve()
+            (typeof loadStaffFromApi === 'function') ? loadStaffFromApi() : Promise.resolve(),
+            (typeof loadBusinessHours === 'function') ? loadBusinessHours() : Promise.resolve()
         ]);
 
         appState.apiConnected = true;
@@ -4137,6 +4179,96 @@ async function syncWithBackend() {
         function saveStoreSettings() {
             localStorage.setItem('cabax_store_settings', JSON.stringify(appState.backSettings));
             showNotification('店舗設定を保存しました', 'success');
+        }
+        
+        // ★ 営業時間設定の読み込み
+        async function loadBusinessHours() {
+            try {
+                const settings = await apiRequest('/store/settings');
+                appState.businessStartHour = settings.business_start_hour || 18;
+                appState.businessEndHour = settings.business_end_hour || 6;
+                
+                // UIに反映
+                const startSelect = document.getElementById('settingBusinessStart');
+                const endSelect = document.getElementById('settingBusinessEnd');
+                if (startSelect) startSelect.value = appState.businessStartHour;
+                if (endSelect) endSelect.value = appState.businessEndHour;
+                
+                console.log(`✅ 営業時間設定: ${appState.businessStartHour}:00 〜 翌${appState.businessEndHour}:00`);
+            } catch (e) {
+                console.warn('営業時間設定の読み込み失敗（デフォルト使用）:', e);
+            }
+        }
+        
+        // ★ 営業時間設定の保存
+        async function saveBusinessHours() {
+            const startHour = Number(document.getElementById('settingBusinessStart')?.value ?? 18);
+            const endHour = Number(document.getElementById('settingBusinessEnd')?.value ?? 6);
+            
+            try {
+                await apiRequest('/store/settings', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        business_start_hour: startHour,
+                        business_end_hour: endHour
+                    })
+                });
+                
+                appState.businessStartHour = startHour;
+                appState.businessEndHour = endHour;
+                
+                showNotification('営業時間を保存しました', 'success');
+                
+                // 日報等を再描画
+                if (typeof renderDailyReport === 'function') renderDailyReport();
+                if (typeof updateDashboard === 'function') updateDashboard();
+            } catch (e) {
+                console.error('営業時間保存失敗:', e);
+                showNotification('営業時間の保存に失敗しました', 'error');
+            }
+        }
+        
+        // ★ 営業日を計算（深夜でも前日の営業日として扱う）
+        function getBusinessDate(dateTime = new Date()) {
+            const d = new Date(dateTime);
+            const hour = d.getHours();
+            const startHour = appState.businessStartHour || 18;
+            const endHour = appState.businessEndHour || 6;
+            
+            // 深夜帯（0時〜営業終了時間）は前日の営業日
+            if (hour < endHour) {
+                d.setDate(d.getDate() - 1);
+            }
+            // 営業開始前（営業終了〜営業開始）も前日扱い
+            else if (hour < startHour) {
+                d.setDate(d.getDate() - 1);
+            }
+            
+            return d.toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+        
+        // ★ 営業日の開始・終了時刻を取得
+        function getBusinessDayRange(businessDate) {
+            const startHour = appState.businessStartHour || 18;
+            const endHour = appState.businessEndHour || 6;
+            
+            // 営業日の開始: businessDate の startHour:00
+            const start = new Date(businessDate + 'T00:00:00');
+            start.setHours(startHour, 0, 0, 0);
+            
+            // 営業日の終了: businessDate + 1日 の endHour:00
+            const end = new Date(businessDate + 'T00:00:00');
+            end.setDate(end.getDate() + 1);
+            end.setHours(endHour, 0, 0, 0);
+            
+            return { start, end };
+        }
+        
+        // ★ 時刻が営業日の範囲内かチェック
+        function isInBusinessDay(dateTime, businessDate) {
+            const { start, end } = getBusinessDayRange(businessDate);
+            const d = new Date(dateTime);
+            return d >= start && d < end;
         }
         
         // appStateにバック設定を追加
@@ -7917,14 +8049,26 @@ function renderCheckoutHistory() {
     const container = document.getElementById('checkoutHistoryContent');
     if (!container) return;
     
-    // 今日の日付
-    const today = new Date();
-    const todayStr = today.toLocaleDateString('ja-JP');
+    // ★ 営業日を計算（深夜でも前日の営業日として扱う）
+    const businessDate = (typeof getBusinessDate === 'function') ? getBusinessDate() : new Date().toISOString().split('T')[0];
     
-    // 今日の会計のみフィルタ
+    // ★ 営業日の範囲を取得
+    let businessStart, businessEnd;
+    if (typeof getBusinessDayRange === 'function') {
+        const range = getBusinessDayRange(businessDate);
+        businessStart = range.start;
+        businessEnd = range.end;
+    } else {
+        // フォールバック: 当日0時〜翌日0時
+        businessStart = new Date(businessDate + 'T00:00:00');
+        businessEnd = new Date(businessDate + 'T00:00:00');
+        businessEnd.setDate(businessEnd.getDate() + 1);
+    }
+    
+    // ★ 営業日の会計のみフィルタ
     const todayHistory = (appState.checkoutHistory || []).filter(session => {
         const checkoutTime = new Date(session.checkoutTime);
-        return checkoutTime.toLocaleDateString('ja-JP') === todayStr;
+        return checkoutTime >= businessStart && checkoutTime < businessEnd;
     }).sort((a, b) => new Date(b.checkoutTime) - new Date(a.checkoutTime));
     
     if (todayHistory.length === 0) {
@@ -8217,7 +8361,35 @@ function renderDailyReport() {
 
         const casts        = Array.isArray(app.casts)        ? app.casts        : [];
         const attendances  = Array.isArray(app.attendances)  ? app.attendances  : [];
-        const today        = new Date().toISOString().split('T')[0];
+        
+        // ★ 営業日を計算（深夜でも前日の営業日として扱う）
+        const businessDate = (typeof getBusinessDate === 'function') ? getBusinessDate() : new Date().toISOString().split('T')[0];
+        const today = businessDate;
+        
+        // ★ 営業日の範囲を取得
+        let businessStart, businessEnd;
+        if (typeof getBusinessDayRange === 'function') {
+            const range = getBusinessDayRange(businessDate);
+            businessStart = range.start;
+            businessEnd = range.end;
+        } else {
+            // フォールバック: 当日0時〜翌日0時
+            businessStart = new Date(businessDate + 'T00:00:00');
+            businessEnd = new Date(businessDate + 'T00:00:00');
+            businessEnd.setDate(businessEnd.getDate() + 1);
+        }
+        
+        // ★ 営業日の範囲内のセッションのみフィルタ
+        const filteredSessions = allSessions.filter(s => {
+            // セッションの開始時間を取得
+            const sessionTime = s.start_time || s.startTime || s.checkoutTime || s.created_at;
+            if (!sessionTime) return true; // 時間がなければ含める
+            
+            const d = new Date(sessionTime);
+            return d >= businessStart && d < businessEnd;
+        });
+        
+        console.log('[renderDailyReport] businessDate:', businessDate, 'filtered:', filteredSessions.length, '/', allSessions.length);
 
         // ===== セッション1件あたりの売上を取るヘルパー =====
         function getSessionTotal(session) {
@@ -9516,12 +9688,36 @@ function renderMonthlyReport(data) {
         // ダッシュボード更新
         
         function updateDashboard() {
+            // ★ 営業日を計算
+            const businessDate = (typeof getBusinessDate === 'function') ? getBusinessDate() : new Date().toISOString().split('T')[0];
+            
+            // ★ 営業日の範囲を取得
+            let businessStart, businessEnd;
+            if (typeof getBusinessDayRange === 'function') {
+                const range = getBusinessDayRange(businessDate);
+                businessStart = range.start;
+                businessEnd = range.end;
+            } else {
+                businessStart = new Date(businessDate + 'T00:00:00');
+                businessEnd = new Date(businessDate + 'T00:00:00');
+                businessEnd.setDate(businessEnd.getDate() + 1);
+            }
+            
             const allSessions = [...(appState.activeSessions || []), ...(appState.checkoutHistory || [])];
-            const totalSales = allSessions.reduce((sum, s) => {
+            
+            // ★ 営業日のセッションのみフィルタ
+            const todaySessions = allSessions.filter(s => {
+                const sessionTime = s.start_time || s.startTime || s.checkoutTime || s.created_at;
+                if (!sessionTime) return false;
+                const d = new Date(sessionTime);
+                return d >= businessStart && d < businessEnd;
+            });
+            
+            const totalSales = todaySessions.reduce((sum, s) => {
                 const total = s.currentTotal || s.current_total || s.totalAmount || s.total_amount || 0;
                 return sum + Number(total);
             }, 0);
-            const totalCustomers = allSessions.length;
+            const totalCustomers = todaySessions.length;
             const workingCasts = (appState.attendances || []).filter(a => a.status === 'working').length;
             const averageSpend = totalCustomers > 0 ? Math.floor(totalSales / totalCustomers) : 0;
             
@@ -9529,6 +9725,16 @@ function renderMonthlyReport(data) {
             document.getElementById('totalCustomers').textContent = `${totalCustomers}組`;
             document.getElementById('workingCasts').textContent = `${workingCasts}名`;
             document.getElementById('averageSpend').textContent = `¥${averageSpend.toLocaleString()}`;
+            
+            // ★ 営業日ラベルを更新
+            const salesLabel = document.getElementById('salesLabel');
+            if (salesLabel) {
+                const d = new Date(businessDate);
+                const month = d.getMonth() + 1;
+                const day = d.getDate();
+                const weekday = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+                salesLabel.textContent = `${month}/${day}（${weekday}）の売上`;
+            }
             
             const activities = document.getElementById('recentActivities');
             activities.innerHTML = '<p class="text-sm text-gray-400">最新の活動がここに表示されます</p>';
