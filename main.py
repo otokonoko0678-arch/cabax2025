@@ -1931,6 +1931,27 @@ async def serve_admin():
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="Admin page not found")
 
+@app.get("/super-admin", response_class=HTMLResponse)
+async def serve_super_admin():
+    """スーパー管理画面"""
+    file_path = STATIC_DIR / "super-admin.html"
+    if file_path.exists():
+        return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="Super admin page not found")
+
+# HTML拡張子付きのルートも対応
+@app.get("/admin.html", response_class=HTMLResponse)
+async def serve_admin_html():
+    return await serve_admin()
+
+@app.get("/order.html", response_class=HTMLResponse)
+async def serve_order_html():
+    return await serve_order()
+
+@app.get("/super-admin.html", response_class=HTMLResponse)
+async def serve_super_admin_html():
+    return await serve_super_admin()
+
 # ヘルスチェック
 @app.get("/health")
 async def health_check():
