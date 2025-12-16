@@ -152,6 +152,7 @@ class Order(Base):
     store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"))
     menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=True)
+    item_name = Column(String, nullable=True)  # カスタム商品名（カクテル（カシスオレンジ）など）
     quantity = Column(Integer)
     price = Column(Integer)
     is_drink_back = Column(Boolean, default=False)
@@ -353,6 +354,7 @@ class OrderCreate(BaseModel):
     quantity: int
     is_drink_back: bool = False
     cast_name: Optional[str] = None
+    item_name: Optional[str] = None  # カスタム商品名（カクテル（カシスオレンジ）など）
 
 class AttendanceCreate(BaseModel):
     cast_id: int
@@ -1101,8 +1103,8 @@ def get_session_orders(session_id: int, db: Session = Depends(get_db)):
     result = []
     for order in orders:
         menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first() if order.menu_item_id else None
-        # menu_item_idがない場合はcast_nameにitem_nameが入っている（add-chargeで追加した料金）
-        item_name = menu_item.name if menu_item else (order.cast_name or "料金")
+        # 保存されたitem_nameを優先、なければmenu_item.name、それもなければcast_nameか"料金"
+        item_name = order.item_name or (menu_item.name if menu_item else None) or order.cast_name or "料金"
         result.append({
             "id": order.id,
             "session_id": order.session_id,
@@ -1309,9 +1311,14 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db), ):
     menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
     if not menu_item:
         raise HTTPException(status_code=404, detail="Menu item not found")
+    
+    # カスタム商品名があればそれを使う、なければメニューの名前
+    final_item_name = order.item_name if order.item_name else menu_item.name
+    
     db_order = Order(
         session_id=order.session_id,
         menu_item_id=order.menu_item_id,
+        item_name=final_item_name,
         quantity=order.quantity,
         price=menu_item.price,
         is_drink_back=order.is_drink_back,

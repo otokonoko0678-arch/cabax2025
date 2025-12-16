@@ -1224,8 +1224,9 @@ async function submitOrder() {
                 session_id:    session.id,
                 menu_item_id:  menuItemId,
                 quantity:      quantity,
-                is_drink_back: false,
-                cast_name:     null,
+                is_drink_back: item.isDrinkBack || false,
+                cast_name:     item.personName || null,
+                item_name:     item.name || null,  // カスタム商品名を送信
             };
 
             const res = await apiRequest(`${API_BASE}/orders`, {
