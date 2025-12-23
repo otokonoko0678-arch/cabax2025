@@ -1287,8 +1287,8 @@ def get_orders(db: Session = Depends(get_db)):
         if order.menu_item_id:
             menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
         
-        # menu_item_idがない場合はcast_nameにアイテム名が入っている（add-chargeで追加した料金）
-        item_name = menu_item.name if menu_item else (order.cast_name or "料金")
+        # DBに保存されたitem_nameを優先、なければmenu_item.name、それもなければcast_nameか"料金"
+        item_name = order.item_name or (menu_item.name if menu_item else None) or order.cast_name or "料金"
         
         result.append({
             "id": order.id,
