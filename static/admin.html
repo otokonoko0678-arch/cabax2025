@@ -3829,46 +3829,47 @@ function initializeApp() {
 
         // ロールに応じたメニュー制限
         window.applyRoleRestrictions = function(role) {
+            // 制限するタブのID（showTab関数の引数）
             const restrictedTabs = [
-                'dashboard',    // ダッシュボード
-                'daily-report', // 日報
-                'cast',         // キャスト管理
-                'menu',         // メニュー管理
+                'dashboard',        // ダッシュボード
+                'daily-report',     // 日報
+                'casts',            // キャスト管理
+                'menu',             // メニュー管理
                 'checkout-history', // 会計履歴
-                'settings',     // 店舗設定
-                'report',       // 売上レポート
-                'shift',        // シフト管理
-                'attendance'    // 勤怠管理
+                'store-settings',   // 店舗設定
+                'reports',          // 売上レポート
+                'shifts',           // シフト管理
+                'attendance'        // 勤怠管理
             ];
             
             if (role === 'staff') {
                 // スタッフの場合、制限されたタブを非表示
                 restrictedTabs.forEach(tabId => {
                     // サイドバーのボタン
-                    const sidebarBtn = document.querySelector(`[onclick*="openTab('${tabId}')"]`);
+                    const sidebarBtn = document.querySelector(`[onclick*="showTab('${tabId}')"]`);
                     if (sidebarBtn) {
                         sidebarBtn.style.display = 'none';
                     }
                     // ボトムナビのボタン
-                    const bottomBtn = document.querySelector(`.bottom-nav [onclick*="openTab('${tabId}')"]`);
+                    const bottomBtn = document.querySelector(`.bottom-nav [onclick*="showTab('${tabId}')"]`);
                     if (bottomBtn) {
                         bottomBtn.style.display = 'none';
                     }
                 });
                 
-                // デフォルトでテーブル管理を開く（openTabが定義されていれば）
-                if (typeof openTab === 'function') {
-                    openTab('tables');
+                // デフォルトでテーブル管理を開く（showTabが定義されていれば）
+                if (typeof showTab === 'function') {
+                    showTab('tables');
                 }
                 console.log('スタッフモード: 制限されたメニューを非表示にしました');
             } else {
                 // 経営者の場合、全て表示（初期状態に戻す）
                 restrictedTabs.forEach(tabId => {
-                    const sidebarBtn = document.querySelector(`[onclick*="openTab('${tabId}')"]`);
+                    const sidebarBtn = document.querySelector(`[onclick*="showTab('${tabId}')"]`);
                     if (sidebarBtn) {
                         sidebarBtn.style.display = '';
                     }
-                    const bottomBtn = document.querySelector(`.bottom-nav [onclick*="openTab('${tabId}')"]`);
+                    const bottomBtn = document.querySelector(`.bottom-nav [onclick*="showTab('${tabId}')"]`);
                     if (bottomBtn) {
                         bottomBtn.style.display = '';
                     }
