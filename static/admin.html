@@ -3776,6 +3776,7 @@ function initializeApp() {
                     // JWTからstore_idとstore_nameを取得
                     let storeId = data.store_id;
                     let storeName = data.store_name;
+                    let role = data.role || 'manager';
                     
                     // レスポンスにない場合はJWTをデコード
                     if (!storeId && data.access_token) {
@@ -3783,6 +3784,7 @@ function initializeApp() {
                             const payload = JSON.parse(atob(data.access_token.split('.')[1]));
                             storeId = payload.store_id;
                             storeName = payload.store_name;
+                            role = payload.role || 'manager';
                             console.log('JWT decoded:', payload);
                         } catch (e) {
                             console.log('JWT decode failed:', e);
@@ -3794,15 +3796,18 @@ function initializeApp() {
                     sessionStorage.setItem('cabax_token', data.access_token);
                     sessionStorage.setItem('cabax_store_id', storeId || '');
                     sessionStorage.setItem('cabax_store_name', storeName || '');
+                    sessionStorage.setItem('cabax_role', role);
                     
-                    console.log('Store ID saved:', storeId);
+                    console.log('Store ID saved:', storeId, 'Role:', role);
                     
                     errorDiv.classList.remove('active');
                     showMainApp();
+                    applyRoleRestrictions(role);
                     initializeApp();
                     
                     const displayName = storeName || 'Cabax';
-                    showNotification(`${displayName} にログインしました`, 'success');
+                    const roleLabel = role === 'manager' ? '経営' : 'スタッフ';
+                    showNotification(`${displayName} にログインしました（${roleLabel}）`, 'success');
                 } else {
                     const err = await response.json().catch(() => ({}));
                     console.log('ログイン失敗:', err.detail);
@@ -3820,6 +3825,54 @@ function initializeApp() {
         function showMainApp() {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainApp').style.display = 'block';
+        }
+
+        // ロールに応じたメニュー制限
+        window.applyRoleRestrictions = function(role) {
+            const restrictedTabs = [
+                'dashboard',    // ダッシュボード
+                'daily-report', // 日報
+                'cast',         // キャスト管理
+                'menu',         // メニュー管理
+                'checkout-history', // 会計履歴
+                'settings',     // 店舗設定
+                'report',       // 売上レポート
+                'shift',        // シフト管理
+                'attendance'    // 勤怠管理
+            ];
+            
+            if (role === 'staff') {
+                // スタッフの場合、制限されたタブを非表示
+                restrictedTabs.forEach(tabId => {
+                    // サイドバーのボタン
+                    const sidebarBtn = document.querySelector(`[onclick*="openTab('${tabId}')"]`);
+                    if (sidebarBtn) {
+                        sidebarBtn.style.display = 'none';
+                    }
+                    // ボトムナビのボタン
+                    const bottomBtn = document.querySelector(`.bottom-nav [onclick*="openTab('${tabId}')"]`);
+                    if (bottomBtn) {
+                        bottomBtn.style.display = 'none';
+                    }
+                });
+                
+                // デフォルトでテーブル管理を開く
+                openTab('tables');
+                console.log('スタッフモード: 制限されたメニューを非表示にしました');
+            } else {
+                // 経営者の場合、全て表示（初期状態に戻す）
+                restrictedTabs.forEach(tabId => {
+                    const sidebarBtn = document.querySelector(`[onclick*="openTab('${tabId}')"]`);
+                    if (sidebarBtn) {
+                        sidebarBtn.style.display = '';
+                    }
+                    const bottomBtn = document.querySelector(`.bottom-nav [onclick*="openTab('${tabId}')"]`);
+                    if (bottomBtn) {
+                        bottomBtn.style.display = '';
+                    }
+                });
+                console.log('経営者モード: 全メニュー表示');
+            }
         }
 
         function logout() {
@@ -10167,6 +10220,28 @@ function setupCharts() {
             const isLoggedIn = sessionStorage.getItem('cabax_logged_in');
             if (isLoggedIn === 'true') {
                 showMainApp();
+                
+                // roleをsessionStorageまたはトークンから取得
+                let role = sessionStorage.getItem('cabax_role');
+                if (!role) {
+                    // トークンからroleを取得
+                    const token = sessionStorage.getItem('cabax_token');
+                    if (token) {
+                        try {
+                            const payload = JSON.parse(atob(token.split('.')[1]));
+                            role = payload.role || 'manager';
+                            sessionStorage.setItem('cabax_role', role);
+                            console.log('Role from token:', role);
+                        } catch (e) {
+                            console.log('Token decode failed:', e);
+                            role = 'manager';
+                        }
+                    } else {
+                        role = 'manager';
+                    }
+                }
+                
+                applyRoleRestrictions(role);
                 initializeApp();
             }
         });
