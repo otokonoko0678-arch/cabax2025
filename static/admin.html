@@ -3856,8 +3856,10 @@ function initializeApp() {
                     }
                 });
                 
-                // デフォルトでテーブル管理を開く
-                openTab('tables');
+                // デフォルトでテーブル管理を開く（openTabが定義されていれば）
+                if (typeof openTab === 'function') {
+                    openTab('tables');
+                }
                 console.log('スタッフモード: 制限されたメニューを非表示にしました');
             } else {
                 // 経営者の場合、全て表示（初期状態に戻す）
