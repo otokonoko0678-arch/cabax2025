@@ -203,6 +203,8 @@ class Store(Base):
     license_key = Column(String, unique=True, index=True)  # ライセンスキー
     username = Column(String, unique=True, index=True, nullable=True)  # ログインユーザー名
     hashed_password = Column(String, nullable=True)  # ハッシュ化パスワード
+    manager_pin = Column(String, nullable=True)  # 経営者PIN
+    staff_pin = Column(String, nullable=True)  # スタッフPIN
     expires_at = Column(DateTime)  # 有効期限
     status = Column(String, default="active")  # active, expired, suspended
     plan = Column(String, default="standard")  # standard, premium
@@ -653,33 +655,63 @@ def startup_event():
 # 認証
 @app.post("/api/auth/login", response_model=Token)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
+    print(f"[LOGIN DEBUG] username={request.username}, password={request.password}")
+    
     # まず店舗テーブルで認証を試みる
     store = db.query(Store).filter(Store.username == request.username).first()
-    if store and store.hashed_password and verify_password(request.password, store.hashed_password):
+    print(f"[LOGIN DEBUG] store found: {store is not None}")
+    
+    if store:
+        print(f"[LOGIN DEBUG] store.manager_pin={store.manager_pin}, store.staff_pin={store.staff_pin}")
+        print(f"[LOGIN DEBUG] password match manager: {request.password == store.manager_pin}")
+        print(f"[LOGIN DEBUG] password match staff: {request.password == store.staff_pin}")
+        
         # ステータスチェック
         if store.status == "suspended":
             raise HTTPException(status_code=403, detail="このアカウントは停止されています")
         if store.expires_at and store.expires_at < datetime.utcnow():
             raise HTTPException(status_code=403, detail="ライセンスの有効期限が切れています")
         
-        access_token = create_access_token(data={"sub": request.username, "store_id": store.id, "store_name": store.name})
-        return {
-            "access_token": access_token, 
-            "token_type": "bearer",
-            "store_id": store.id,
-            "store_name": store.name
-        }
+        # PIN認証（経営者PIN or スタッフPIN）
+        role = None
+        if store.manager_pin and request.password == store.manager_pin:
+            role = "manager"
+        elif store.staff_pin and request.password == store.staff_pin:
+            role = "staff"
+        # 従来のパスワード認証（後方互換性）
+        elif store.hashed_password and verify_password(request.password, store.hashed_password):
+            role = "manager"  # パスワード認証は経営者扱い
+        
+        print(f"[LOGIN DEBUG] role={role}")
+        
+        if role:
+            access_token = create_access_token(data={
+                "sub": request.username, 
+                "store_id": store.id, 
+                "store_name": store.name,
+                "role": role
+            })
+            return {
+                "access_token": access_token, 
+                "token_type": "bearer",
+                "store_id": store.id,
+                "store_name": store.name,
+                "role": role
+            }
+        else:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="PINまたはパスワードが正しくありません")
     
     # 従来のUserテーブルで認証（後方互換性 - store_id=null）
     user = db.query(User).filter(User.username == request.username).first()
     if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザー名またはパスワードが正しくありません")
-    access_token = create_access_token(data={"sub": user.username})
+    access_token = create_access_token(data={"sub": user.username, "role": "manager"})
     return {
         "access_token": access_token, 
         "token_type": "bearer",
         "store_id": None,
-        "store_name": None
+        "store_name": None,
+        "role": "manager"
     }
 
 # キャスト管理
@@ -887,6 +919,8 @@ class StoreSettingsUpdate(BaseModel):
     business_end_hour: Optional[int] = None
     business_start_minutes: Optional[int] = None
     business_end_minutes: Optional[int] = None
+    manager_pin: Optional[str] = None
+    staff_pin: Optional[str] = None
 
 @app.get("/api/store/settings")
 def get_store_settings(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
@@ -914,7 +948,9 @@ def get_store_settings(db: Session = Depends(get_db), store_id: Optional[int] = 
         "business_start_hour": store.business_start_hour or 18,
         "business_end_hour": store.business_end_hour or 6,
         "business_start_minutes": store.business_start_minutes if store.business_start_minutes is not None else (store.business_start_hour or 18) * 60,
-        "business_end_minutes": store.business_end_minutes if store.business_end_minutes is not None else (store.business_end_hour or 6) * 60
+        "business_end_minutes": store.business_end_minutes if store.business_end_minutes is not None else (store.business_end_hour or 6) * 60,
+        "manager_pin": store.manager_pin or "",
+        "staff_pin": store.staff_pin or ""
     }
 
 @app.put("/api/store/settings")
@@ -943,13 +979,21 @@ def update_store_settings(settings: StoreSettingsUpdate, db: Session = Depends(g
         # 時間単位も同期
         store.business_end_hour = settings.business_end_minutes // 60
     
+    # PIN設定
+    if settings.manager_pin is not None:
+        store.manager_pin = settings.manager_pin
+    if settings.staff_pin is not None:
+        store.staff_pin = settings.staff_pin
+    
     db.commit()
     return {
         "message": "設定を更新しました",
         "business_start_hour": store.business_start_hour,
         "business_end_hour": store.business_end_hour,
         "business_start_minutes": store.business_start_minutes,
-        "business_end_minutes": store.business_end_minutes
+        "business_end_minutes": store.business_end_minutes,
+        "manager_pin": store.manager_pin or "",
+        "staff_pin": store.staff_pin or ""
     }
 
 # メニュー管理
