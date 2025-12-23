@@ -2078,6 +2078,10 @@ const orderNotification = {
             if (hasNewOrder) {
                 this.playSound();
                 showNotification('🔔 新しい注文が入りました！', 'info');
+                // オーダー管理画面も即座に更新
+                if (typeof loadOrdersFromApi === 'function') {
+                    loadOrdersFromApi();
+                }
             }
             
             this.initialized = true;
