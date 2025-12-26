@@ -2054,7 +2054,7 @@ const orderNotification = {
     // 新しい注文をチェック
     async checkNewOrders() {
         try {
-            // 全注文を一括取得（N+1問題解消）
+            // 全注文を一括取得（API側でJOIN最適化済み）
             const orders = await apiRequest('/orders');
             if (!Array.isArray(orders)) return;
             
@@ -2074,10 +2074,9 @@ const orderNotification = {
             if (hasNewOrder) {
                 this.playSound();
                 showNotification('🔔 新しい注文が入りました！', 'info');
-                // オーダー管理画面も即座に更新
-                if (typeof loadOrdersFromApi === 'function') {
-                    loadOrdersFromApi();
-                }
+                // 既に取得したデータで画面更新（APIを再度叩かない）
+                allOrders = orders;
+                renderOrders();
             }
             
             this.initialized = true;

@@ -1321,30 +1321,40 @@ def add_charge_to_session(session_id: int, charge: dict, db: Session = Depends(g
 # 注文管理
 @app.get("/api/orders")
 def get_orders(db: Session = Depends(get_db)):
-    """全注文を取得（テーブル名、メニュー名付き）"""
-    orders = db.query(Order).all()
+    """全注文を取得（テーブル名、メニュー名付き）- JOIN最適化版"""
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import outerjoin
+    
+    # JOINで一括取得（N+1問題解消）
+    query = db.query(
+        Order,
+        SessionModel.table_id,
+        Table.name.label('table_name'),
+        MenuItem.name.label('menu_name')
+    ).outerjoin(
+        SessionModel, Order.session_id == SessionModel.id
+    ).outerjoin(
+        Table, SessionModel.table_id == Table.id
+    ).outerjoin(
+        MenuItem, Order.menu_item_id == MenuItem.id
+    )
+    
     result = []
-    for order in orders:
-        session = db.query(SessionModel).filter(SessionModel.id == order.session_id).first()
-        table = db.query(Table).filter(Table.id == session.table_id).first() if session else None
-        menu_item = None
-        if order.menu_item_id:
-            menu_item = db.query(MenuItem).filter(MenuItem.id == order.menu_item_id).first()
-        
-        # DBに保存されたitem_nameを優先、なければmenu_item.name、それもなければcast_nameか"料金"
-        item_name = order.item_name or (menu_item.name if menu_item else None) or order.cast_name or "料金"
+    for order, table_id, table_name, menu_name in query.all():
+        # DBに保存されたitem_nameを優先、なければmenu_name、それもなければcast_nameか"料金"
+        item_name = order.item_name or menu_name or order.cast_name or "料金"
         
         result.append({
             "id": order.id,
             "session_id": order.session_id,
-            "table_id": table.id if table else None,
-            "table_name": table.name if table else "?",
+            "table_id": table_id,
+            "table_name": table_name or "?",
             "menu_item_id": order.menu_item_id,
             "item_name": item_name,
             "quantity": order.quantity,
             "price": order.price,
             "is_drink_back": order.is_drink_back,
-            "cast_name": order.cast_name if menu_item else None,
+            "cast_name": order.cast_name if order.menu_item_id else None,
             "is_served": order.is_served,
             "created_at": order.created_at.isoformat() if order.created_at else None
         })
