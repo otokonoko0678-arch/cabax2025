@@ -2054,30 +2054,30 @@ const orderNotification = {
     // 新しい注文をチェック
     async checkNewOrders() {
         try {
-            const sessions = await apiRequest(API_ENDPOINTS.sessionsActive);
-            if (!Array.isArray(sessions)) return;
+            // 全注文を一括取得（N+1問題解消）
+            const orders = await apiRequest('/orders');
+            if (!Array.isArray(orders)) return;
             
             let hasNewOrder = false;
             
-            for (const session of sessions) {
-                const orders = await apiRequest(`/sessions/${session.id}/orders`);
-                if (!Array.isArray(orders)) continue;
-                
-                for (const order of orders) {
-                    const orderId = `${session.id}-${order.id}`;
-                    if (!this.lastOrderIds.has(orderId)) {
-                        if (this.initialized) {
-                            hasNewOrder = true;
-                            console.log('[通知] 新しい注文:', order);
-                        }
-                        this.lastOrderIds.add(orderId);
+            for (const order of orders) {
+                const orderId = `${order.session_id}-${order.id}`;
+                if (!this.lastOrderIds.has(orderId)) {
+                    if (this.initialized) {
+                        hasNewOrder = true;
+                        console.log('[通知] 新しい注文:', order);
                     }
+                    this.lastOrderIds.add(orderId);
                 }
             }
             
             if (hasNewOrder) {
                 this.playSound();
                 showNotification('🔔 新しい注文が入りました！', 'info');
+                // オーダー管理画面も即座に更新
+                if (typeof loadOrdersFromApi === 'function') {
+                    loadOrdersFromApi();
+                }
             }
             
             this.initialized = true;
@@ -3705,6 +3705,11 @@ function initializeApp() {
     if (typeof loadCastsFromApi === 'function') {
         loadCastsFromApi().catch(err => console.error('loadCastsFromApi failed:', err));
     }
+    
+    // ★ オーダー管理を初期化時に読み込む
+    if (typeof loadOrdersFromApi === 'function') {
+        loadOrdersFromApi().catch(err => console.error('loadOrdersFromApi failed:', err));
+    }
 
     // ★ 定期同期（二重起動防止）
     if (!window.__cabaxSyncInterval) {
@@ -3716,7 +3721,7 @@ function initializeApp() {
         }, 8000);
     }
     
-    // ★ 注文通知チェック（2秒間隔）
+    // ★ 注文通知チェック（1秒間隔）
     if (!window.__cabaxOrderCheckInterval) {
         // 初回チェック
         orderNotification.checkNewOrders();
@@ -3725,7 +3730,7 @@ function initializeApp() {
             if (document.visibilityState === 'visible') {
                 orderNotification.checkNewOrders();
             }
-        }, 2000);
+        }, 1000);
     }
 
     // ★ タブ復帰時に同期（二重登録防止）
