@@ -435,6 +435,8 @@ class StoreUpdate(BaseModel):
     name: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None  # 新しいパスワード（設定する場合）
+    manager_pin: Optional[str] = None  # 経営者PIN
+    staff_pin: Optional[str] = None  # スタッフPIN
     owner_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -2041,6 +2043,8 @@ async def get_stores(admin_key: str, db: Session = Depends(get_db)):
             "name": store.name,
             "license_key": store.license_key,
             "username": store.username,
+            "manager_pin": store.manager_pin,
+            "staff_pin": store.staff_pin,
             "expires_at": store.expires_at.isoformat() if store.expires_at else None,
             "status": store.status,
             "plan": store.plan,

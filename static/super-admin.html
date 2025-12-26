@@ -213,6 +213,20 @@
                     <input type="text" id="editPassword" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="空欄なら変更なし">
                 </div>
                 <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-amber-400 text-sm font-bold mb-2">🔑 ログインPIN設定</p>
+                    <p class="text-gray-500 text-xs mb-2">店舗スタッフがログインする際のPINです</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-gray-400 text-sm">👔 経営者PIN</label>
+                        <input type="text" id="editManagerPin" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="例: 9999" maxlength="10">
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-sm">👤 スタッフPIN</label>
+                        <input type="text" id="editStaffPin" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="例: 1234" maxlength="10">
+                    </div>
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
                     <p class="text-gray-500 text-sm mb-2">📋 店舗情報</p>
                 </div>
                 <div>
@@ -602,6 +616,8 @@
             document.getElementById('editStoreName').value = store.name || '';
             document.getElementById('editUsername').value = store.username || '';
             document.getElementById('editPassword').value = '';
+            document.getElementById('editManagerPin').value = store.manager_pin || '';
+            document.getElementById('editStaffPin').value = store.staff_pin || '';
             document.getElementById('editOwnerName').value = store.owner_name || '';
             document.getElementById('editPhone').value = store.phone || '';
             document.getElementById('editEmail').value = store.email || '';
@@ -633,6 +649,16 @@
             const password = document.getElementById('editPassword').value;
             if (password) {
                 data.password = password;
+            }
+            
+            // PINは入力された場合のみ送信
+            const managerPin = document.getElementById('editManagerPin').value;
+            const staffPin = document.getElementById('editStaffPin').value;
+            if (managerPin) {
+                data.manager_pin = managerPin;
+            }
+            if (staffPin) {
+                data.staff_pin = staffPin;
             }
             
             try {
