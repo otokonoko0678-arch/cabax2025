@@ -1322,7 +1322,7 @@ def add_charge_to_session(session_id: int, charge: dict, db: Session = Depends(g
 
 # 注文管理
 @app.get("/api/orders")
-def get_orders(db: Session = Depends(get_db)):
+def get_orders(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     """全注文を取得（テーブル名、メニュー名付き）- JOIN最適化版"""
     from sqlalchemy.orm import joinedload
     from sqlalchemy import outerjoin
@@ -1340,6 +1340,10 @@ def get_orders(db: Session = Depends(get_db)):
     ).outerjoin(
         MenuItem, Order.menu_item_id == MenuItem.id
     )
+    
+    # store_idでフィルタ
+    if store_id:
+        query = query.filter(SessionModel.store_id == store_id)
     
     result = []
     for order, table_id, table_name, menu_name in query.all():
