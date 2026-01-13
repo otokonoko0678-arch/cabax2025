@@ -2219,11 +2219,30 @@ function exitTable() {
                 
                 if (res.ok) {
                     const data = await res.json();
+                    console.log('ログイン成功！', data);
+                    
+                    // store_idを取得（レスポンス or JWTから）
+                    let storeId = data.store_id;
+                    let storeName = data.store_name;
+                    
+                    // レスポンスにない場合はJWTをデコード
+                    if (!storeId && data.access_token) {
+                        try {
+                            const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+                            storeId = payload.store_id;
+                            storeName = payload.store_name;
+                            console.log('JWT decoded:', payload);
+                        } catch (e) {
+                            console.log('JWT decode failed:', e);
+                        }
+                    }
                     
                     // トークンとstore_idを保存
                     localStorage.setItem('cabax_token', data.access_token);
-                    sessionStorage.setItem('cabax_store_id', data.store_id);
-                    sessionStorage.setItem('cabax_store_name', data.store_name || username);
+                    sessionStorage.setItem('cabax_store_id', storeId || '');
+                    sessionStorage.setItem('cabax_store_name', storeName || username);
+                    
+                    console.log('Store ID saved:', storeId);
                     
                     // ログイン画面を隠してメイン画面を表示
                     document.getElementById('loginScreen').classList.add('hidden');
@@ -2247,13 +2266,17 @@ function exitTable() {
             const storeId = getStoreId();
             const token = localStorage.getItem('cabax_token');
             
-            if (storeId && token) {
+            // store_idが有効な値かチェック（空文字、undefined、'undefined'は無効）
+            const validStoreId = storeId && storeId !== '' && storeId !== 'undefined' && storeId !== 'null';
+            
+            if (validStoreId && token) {
                 // ログイン済み
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('mainAppContent').classList.remove('hidden');
                 init();
             } else {
-                // 未ログイン
+                // 未ログイン - 不正なデータをクリア
+                sessionStorage.removeItem('cabax_store_id');
                 document.getElementById('loginScreen').classList.remove('hidden');
                 document.getElementById('mainAppContent').classList.add('hidden');
             }
