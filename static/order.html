@@ -478,15 +478,36 @@ console.log('[Cabax] API_BASE:', API_BASE);
 
 // ★ 店舗IDを取得（sessionStorageまたはURLパラメータから）
 function getStoreId() {
-    // sessionStorageから取得（admin.htmlでログイン時に保存される）
-    const stored = sessionStorage.getItem('cabax_store_id');
-    if (stored) return stored;
+    // localStorageから取得（ブラウザ閉じても残る）
+    const stored = localStorage.getItem('cabax_store_id');
+    if (stored && stored !== 'undefined' && stored !== 'null' && stored !== '') return stored;
+    
+    // sessionStorageからも試す（後方互換性）
+    const session = sessionStorage.getItem('cabax_store_id');
+    if (session && session !== 'undefined' && session !== 'null' && session !== '') {
+        localStorage.setItem('cabax_store_id', session);
+        return session;
+    }
+    
+    // JWTトークンからデコード
+    const token = localStorage.getItem('cabax_token');
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.store_id) {
+                localStorage.setItem('cabax_store_id', payload.store_id);
+                return payload.store_id;
+            }
+        } catch (e) {
+            console.log('JWT decode failed:', e);
+        }
+    }
     
     // URLパラメータから取得（order.html?store_id=1）
     const urlParams = new URLSearchParams(window.location.search);
     const urlStoreId = urlParams.get('store_id');
     if (urlStoreId) {
-        sessionStorage.setItem('cabax_store_id', urlStoreId);
+        localStorage.setItem('cabax_store_id', urlStoreId);
         return urlStoreId;
     }
     
@@ -2237,10 +2258,10 @@ function exitTable() {
                         }
                     }
                     
-                    // トークンとstore_idを保存
+                    // トークンとstore_idを保存（localStorageで永続化）
                     localStorage.setItem('cabax_token', data.access_token);
-                    sessionStorage.setItem('cabax_store_id', storeId || '');
-                    sessionStorage.setItem('cabax_store_name', storeName || username);
+                    localStorage.setItem('cabax_store_id', storeId || '');
+                    localStorage.setItem('cabax_store_name', storeName || username);
                     
                     console.log('Store ID saved:', storeId);
                     
@@ -2276,7 +2297,7 @@ function exitTable() {
                 init();
             } else {
                 // 未ログイン - 不正なデータをクリア
-                sessionStorage.removeItem('cabax_store_id');
+                localStorage.removeItem('cabax_store_id');
                 document.getElementById('loginScreen').classList.remove('hidden');
                 document.getElementById('mainAppContent').classList.add('hidden');
             }
