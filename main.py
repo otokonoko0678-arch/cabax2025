@@ -802,11 +802,13 @@ def delete_staff(staff_id: int, db: Session = Depends(get_db), store_id: Optiona
 
 # スタッフ勤怠管理
 @app.get("/api/staff-attendance")
-def get_staff_attendance(date: Optional[str] = None, db: Session = Depends(get_db)):
+def get_staff_attendance(date: Optional[str] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     """スタッフ勤怠一覧を取得"""
     query = db.query(StaffAttendance)
     if date:
         query = query.filter(StaffAttendance.date == date)
+    if store_id:
+        query = query.filter(StaffAttendance.store_id == store_id)
     attendances = query.all()
     
     # スタッフ情報を付加
@@ -829,7 +831,7 @@ def get_staff_attendance(date: Optional[str] = None, db: Session = Depends(get_d
     return result
 
 @app.post("/api/staff-attendance")
-def create_staff_attendance(data: StaffAttendanceCreate, db: Session = Depends(get_db)):
+def create_staff_attendance(data: StaffAttendanceCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     """スタッフ出勤記録を作成"""
     # 既に同日の出勤があるかチェック
     existing = db.query(StaffAttendance).filter(
@@ -840,6 +842,7 @@ def create_staff_attendance(data: StaffAttendanceCreate, db: Session = Depends(g
         raise HTTPException(status_code=400, detail="Already clocked in today")
     
     attendance = StaffAttendance(
+        store_id=store_id,
         staff_id=data.staff_id,
         date=data.date,
         clock_in=data.clock_in
@@ -893,12 +896,15 @@ def staff_clock_out(attendance_id: int, data: StaffAttendanceClockOut, db: Sessi
     return attendance
 
 @app.get("/api/staff-attendance/today-total")
-def get_today_staff_cost(db: Session = Depends(get_db)):
+def get_today_staff_cost(db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     """今日のスタッフ人件費合計を取得"""
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
     
-    attendances = db.query(StaffAttendance).filter(StaffAttendance.date == today).all()
+    query = db.query(StaffAttendance).filter(StaffAttendance.date == today)
+    if store_id:
+        query = query.filter(StaffAttendance.store_id == store_id)
+    attendances = query.all()
     total_cost = sum(att.daily_wage or 0 for att in attendances)
     
     return {
@@ -1421,8 +1427,10 @@ def update_order_status(session_id: int, order_id: int, status_data: dict, db: S
 
 # 勤怠管理
 @app.post("/api/attendance/clock-in")
-def clock_in(attendance: AttendanceCreate, db: Session = Depends(get_db), ):
-    db_attendance = Attendance(**attendance.dict(), status="working")
+def clock_in(attendance: AttendanceCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    attendance_data = attendance.dict()
+    attendance_data['store_id'] = store_id
+    db_attendance = Attendance(**attendance_data, status="working")
     db.add(db_attendance)
     db.commit()
     db.refresh(db_attendance)
@@ -1439,26 +1447,32 @@ def clock_out(attendance_id: int, data: AttendanceClockOut, db: Session = Depend
     return attendance
 
 @app.get("/api/attendance")
-def get_attendance(date: Optional[str] = None, db: Session = Depends(get_db), ):
+def get_attendance(date: Optional[str] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     query = db.query(Attendance)
     if date:
         query = query.filter(Attendance.date == date)
+    if store_id:
+        query = query.filter(Attendance.store_id == store_id)
     return query.all()
 
 # シフト管理
 @app.post("/api/shifts")
-def create_shift(shift: ShiftCreate, db: Session = Depends(get_db), ):
-    db_shift = Shift(**shift.dict())
+def create_shift(shift: ShiftCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    shift_data = shift.dict()
+    shift_data['store_id'] = store_id
+    db_shift = Shift(**shift_data)
     db.add(db_shift)
     db.commit()
     db.refresh(db_shift)
     return db_shift
 
 @app.get("/api/shifts")
-def get_shifts(date: Optional[str] = None, db: Session = Depends(get_db), ):
+def get_shifts(date: Optional[str] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     query = db.query(Shift)
     if date:
         query = query.filter(Shift.date == date)
+    if store_id:
+        query = query.filter(Shift.store_id == store_id)
     return query.all()
 
 # 日報
