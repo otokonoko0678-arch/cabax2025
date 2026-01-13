@@ -292,6 +292,37 @@
     </style>
 </head>
 <body>
+    <!-- ログイン画面 -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass-effect rounded-2xl p-6 sm:p-8 w-full max-w-sm">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl sm:text-4xl font-bold gold-accent mb-2">Cabax</h1>
+                <p class="text-gray-400 text-sm">注文システム</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-400 text-sm mb-2">ユーザー名</label>
+                    <input type="text" id="loginUsername" 
+                           class="w-full px-4 py-3 bg-gray-800/50 rounded-xl text-white border border-gray-700 focus:border-yellow-600 focus:outline-none"
+                           placeholder="店舗ユーザー名">
+                </div>
+                <div>
+                    <label class="block text-gray-400 text-sm mb-2">PIN</label>
+                    <input type="password" id="loginPin" 
+                           class="w-full px-4 py-3 bg-gray-800/50 rounded-xl text-white border border-gray-700 focus:border-yellow-600 focus:outline-none"
+                           placeholder="スタッフPINまたは経営者PIN"
+                           onkeypress="if(event.key==='Enter')handleLogin()">
+                </div>
+                <button onclick="handleLogin()" class="luxury-btn w-full py-4 rounded-xl text-lg">
+                    ログイン
+                </button>
+                <p id="loginError" class="text-red-400 text-center text-sm hidden">ログインに失敗しました</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- メインアプリ（ログイン後に表示） -->
+    <div id="mainAppContent" class="hidden">
     <div id="notificationArea"></div>
 
     <!-- テーブル選択画面 -->
@@ -1424,8 +1455,7 @@ function exitTable() {
             }, 3000);
         }
 
-        // 初期化実行
-        init();
+        // 初期化はログイン後にcheckLoginState()から呼ばれる
     </script>
     
     <!-- ドリンク注文モーダル -->
@@ -2168,6 +2198,70 @@ function exitTable() {
             }
             showNotification(msg, 'success');
         }
+        
+        // ★ ログイン処理
+        async function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const pin = document.getElementById('loginPin').value.trim();
+            
+            if (!username || !pin) {
+                document.getElementById('loginError').textContent = 'ユーザー名とPINを入力してください';
+                document.getElementById('loginError').classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password: pin })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // トークンとstore_idを保存
+                    localStorage.setItem('cabax_token', data.access_token);
+                    sessionStorage.setItem('cabax_store_id', data.store_id);
+                    sessionStorage.setItem('cabax_store_name', data.store_name || username);
+                    
+                    // ログイン画面を隠してメイン画面を表示
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('mainAppContent').classList.remove('hidden');
+                    
+                    // アプリ初期化
+                    init();
+                } else {
+                    document.getElementById('loginError').textContent = 'ユーザー名またはPINが正しくありません';
+                    document.getElementById('loginError').classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error('Login error:', e);
+                document.getElementById('loginError').textContent = '接続エラー';
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+        
+        // ★ 初期化時にログイン状態をチェック
+        function checkLoginState() {
+            const storeId = getStoreId();
+            const token = localStorage.getItem('cabax_token');
+            
+            if (storeId && token) {
+                // ログイン済み
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainAppContent').classList.remove('hidden');
+                init();
+            } else {
+                // 未ログイン
+                document.getElementById('loginScreen').classList.remove('hidden');
+                document.getElementById('mainAppContent').classList.add('hidden');
+            }
+        }
+        
+        // ページ読み込み時
+        document.addEventListener('DOMContentLoaded', checkLoginState);
     </script>
+    </div><!-- mainAppContent -->
 </body>
 </html>
