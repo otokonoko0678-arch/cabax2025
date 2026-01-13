@@ -1463,15 +1463,18 @@ def get_shifts(date: Optional[str] = None, db: Session = Depends(get_db), ):
 
 # 日報
 @app.get("/api/daily-report")
-def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
+def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     """日報データを取得（粗利計算含む）"""
     target_date = date or datetime.utcnow().strftime("%Y-%m-%d")
     
-    # その日のセッション
-    sessions = db.query(SessionModel).filter(
+    # その日のセッション（店舗フィルタ）
+    session_query = db.query(SessionModel).filter(
         SessionModel.start_time >= f"{target_date} 00:00:00",
         SessionModel.start_time <= f"{target_date} 23:59:59"
-    ).all()
+    )
+    if store_id:
+        session_query = session_query.filter(SessionModel.store_id == store_id)
+    sessions = session_query.all()
     
     # 売上計算
     total_sales = 0
@@ -1482,11 +1485,16 @@ def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
         total_sales += session.current_total or 0
         total_guests += session.guests or 0
     
-    # その日の注文
-    orders = db.query(Order).filter(
-        Order.created_at >= f"{target_date} 00:00:00",
-        Order.created_at <= f"{target_date} 23:59:59"
-    ).all()
+    # その日の注文（セッション経由で店舗フィルタ）
+    session_ids = [s.id for s in sessions]
+    if session_ids:
+        orders = db.query(Order).filter(
+            Order.created_at >= f"{target_date} 00:00:00",
+            Order.created_at <= f"{target_date} 23:59:59",
+            Order.session_id.in_(session_ids)
+        ).all()
+    else:
+        orders = []
     
     # 原価計算
     total_cost = 0
@@ -1494,8 +1502,11 @@ def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
         if order.menu_item and order.menu_item.cost:
             total_cost += order.menu_item.cost * order.quantity
     
-    # キャスト情報を取得
-    casts = db.query(Cast).all()
+    # キャスト情報を取得（店舗フィルタ）
+    cast_query = db.query(Cast)
+    if store_id:
+        cast_query = cast_query.filter(Cast.store_id == store_id)
+    casts = cast_query.all()
     cast_dict = {c.stage_name: c for c in casts}
     
     # ===== キャストバック計算 =====
@@ -1545,15 +1556,21 @@ def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
     # キャストバック合計
     cast_payroll_total = companion_back_total + nomination_back_total + drink_back_total + sales_back_total
     
-    # スタッフ人件費
-    staff_attendances = db.query(StaffAttendance).filter(StaffAttendance.date == target_date).all()
+    # スタッフ人件費（店舗フィルタ）
+    staff_att_query = db.query(StaffAttendance).filter(StaffAttendance.date == target_date)
+    if store_id:
+        staff_att_query = staff_att_query.filter(StaffAttendance.store_id == store_id)
+    staff_attendances = staff_att_query.all()
     staff_cost_total = sum(att.daily_wage or 0 for att in staff_attendances)
     
     # 粗利 = 売上 - 原価 - キャストバック - スタッフ人件費
     gross_profit = total_sales - total_cost - cast_payroll_total - staff_cost_total
     
-    # その日の勤怠
-    attendances = db.query(Attendance).filter(Attendance.date == target_date).all()
+    # その日の勤怠（店舗フィルタ）
+    att_query = db.query(Attendance).filter(Attendance.date == target_date)
+    if store_id:
+        att_query = att_query.filter(Attendance.store_id == store_id)
+    attendances = att_query.all()
     
     return {
         "date": target_date,
@@ -1591,16 +1608,29 @@ def get_daily_report(date: Optional[str] = None, db: Session = Depends(get_db)):
     }
 
 @app.get("/api/daily-report/cast-ranking")
-def get_cast_ranking(date: Optional[str] = None, db: Session = Depends(get_db)):
+def get_cast_ranking(date: Optional[str] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     """キャストランキングを取得"""
     target_date = date or datetime.utcnow().strftime("%Y-%m-%d")
     
-    # その日のドリンクバック注文を集計
-    orders = db.query(Order).filter(
-        Order.created_at >= f"{target_date} 00:00:00",
-        Order.created_at <= f"{target_date} 23:59:59",
-        Order.is_drink_back == True
-    ).all()
+    # まず店舗のセッションを取得
+    session_query = db.query(SessionModel).filter(
+        SessionModel.start_time >= f"{target_date} 00:00:00",
+        SessionModel.start_time <= f"{target_date} 23:59:59"
+    )
+    if store_id:
+        session_query = session_query.filter(SessionModel.store_id == store_id)
+    session_ids = [s.id for s in session_query.all()]
+    
+    # その日のドリンクバック注文を集計（店舗フィルタ）
+    if session_ids:
+        orders = db.query(Order).filter(
+            Order.created_at >= f"{target_date} 00:00:00",
+            Order.created_at <= f"{target_date} 23:59:59",
+            Order.is_drink_back == True,
+            Order.session_id.in_(session_ids)
+        ).all()
+    else:
+        orders = []
     
     # キャストごとに集計
     cast_totals = {}
@@ -1622,7 +1652,7 @@ def get_cast_ranking(date: Optional[str] = None, db: Session = Depends(get_db)):
 
 # 月次レポート
 @app.get("/api/monthly-report")
-def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, db: Session = Depends(get_db)):
+def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     """月次レポートデータを取得"""
     from calendar import monthrange
     
@@ -1635,11 +1665,14 @@ def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, 
     last_day = monthrange(target_year, target_month)[1]
     end_date = f"{target_year}-{target_month:02d}-{last_day}"
     
-    # 月間のセッション
-    sessions = db.query(SessionModel).filter(
+    # 月間のセッション（店舗フィルタ）
+    session_query = db.query(SessionModel).filter(
         SessionModel.start_time >= f"{start_date} 00:00:00",
         SessionModel.start_time <= f"{end_date} 23:59:59"
-    ).all()
+    )
+    if store_id:
+        session_query = session_query.filter(SessionModel.store_id == store_id)
+    sessions = session_query.all()
     
     # 売上計算
     total_sales = 0
@@ -1658,11 +1691,16 @@ def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, 
             nomination_count += 1
         extension_count += session.extension_count or 0
     
-    # 月間の注文
-    orders = db.query(Order).filter(
-        Order.created_at >= f"{start_date} 00:00:00",
-        Order.created_at <= f"{end_date} 23:59:59"
-    ).all()
+    # 月間の注文（店舗フィルタ）
+    session_ids = [s.id for s in sessions]
+    if session_ids:
+        orders = db.query(Order).filter(
+            Order.created_at >= f"{start_date} 00:00:00",
+            Order.created_at <= f"{end_date} 23:59:59",
+            Order.session_id.in_(session_ids)
+        ).all()
+    else:
+        orders = []
     
     # 原価計算
     total_cost = 0
@@ -1670,8 +1708,11 @@ def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, 
         if order.menu_item and order.menu_item.cost:
             total_cost += order.menu_item.cost * order.quantity
     
-    # キャスト情報を取得
-    casts = db.query(Cast).all()
+    # キャスト情報を取得（店舗フィルタ）
+    cast_query = db.query(Cast)
+    if store_id:
+        cast_query = cast_query.filter(Cast.store_id == store_id)
+    casts = cast_query.all()
     cast_dict = {c.stage_name: c for c in casts}
     
     # ===== キャストバック計算 =====
@@ -1721,11 +1762,14 @@ def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, 
     
     cast_payroll_total = companion_back_total + nomination_back_total + drink_back_total + sales_back_total
     
-    # スタッフ人件費（月間）
-    staff_attendances = db.query(StaffAttendance).filter(
+    # スタッフ人件費（月間・店舗フィルタ）
+    staff_att_query = db.query(StaffAttendance).filter(
         StaffAttendance.date >= start_date,
         StaffAttendance.date <= end_date
-    ).all()
+    )
+    if store_id:
+        staff_att_query = staff_att_query.filter(StaffAttendance.store_id == store_id)
+    staff_attendances = staff_att_query.all()
     staff_cost_total = sum(att.daily_wage or 0 for att in staff_attendances)
     
     # 粗利
@@ -1798,7 +1842,7 @@ def get_monthly_report(year: Optional[int] = None, month: Optional[int] = None, 
 
 # キャスト給与計算
 @app.get("/api/cast-payroll")
-def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, cast_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, cast_id: Optional[int] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
     """キャスト給与明細を取得"""
     from calendar import monthrange
     
@@ -1811,21 +1855,26 @@ def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, ca
     last_day = monthrange(target_year, target_month)[1]
     end_date = f"{target_year}-{target_month:02d}-{last_day}"
     
-    # キャスト取得
+    # キャスト取得（店舗フィルタ）
+    cast_query = db.query(Cast)
     if cast_id:
-        casts = db.query(Cast).filter(Cast.id == cast_id).all()
-    else:
-        casts = db.query(Cast).all()
+        cast_query = cast_query.filter(Cast.id == cast_id)
+    if store_id:
+        cast_query = cast_query.filter(Cast.store_id == store_id)
+    casts = cast_query.all()
     
     payroll_list = []
     
     for cast in casts:
-        # 出勤記録
-        attendances = db.query(Attendance).filter(
+        # 出勤記録（店舗フィルタ）
+        att_query = db.query(Attendance).filter(
             Attendance.cast_id == cast.id,
             Attendance.date >= start_date,
             Attendance.date <= end_date
-        ).all()
+        )
+        if store_id:
+            att_query = att_query.filter(Attendance.store_id == store_id)
+        attendances = att_query.all()
         
         # 勤務時間計算
         total_hours = 0
@@ -1849,12 +1898,15 @@ def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, ca
         else:
             base_salary = int((cast.hourly_rate or 0) * total_hours)
         
-        # セッション取得
-        sessions = db.query(SessionModel).filter(
+        # セッション取得（店舗フィルタ）
+        session_query = db.query(SessionModel).filter(
             SessionModel.cast_id == cast.id,
             SessionModel.start_time >= f"{start_date} 00:00:00",
             SessionModel.start_time <= f"{end_date} 23:59:59"
-        ).all()
+        )
+        if store_id:
+            session_query = session_query.filter(SessionModel.store_id == store_id)
+        sessions = session_query.all()
         
         # 同伴バック
         companion_count = 0
@@ -1872,13 +1924,18 @@ def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, ca
                 nomination_count += 1
                 nomination_back += cast.nomination_back or 0
         
-        # ドリンクバック
-        orders = db.query(Order).filter(
-            Order.cast_name == cast.stage_name,
-            Order.is_drink_back == True,
-            Order.created_at >= f"{start_date} 00:00:00",
-            Order.created_at <= f"{end_date} 23:59:59"
-        ).all()
+        # ドリンクバック（店舗のセッション経由でフィルタ）
+        session_ids = [s.id for s in sessions]
+        if session_ids:
+            orders = db.query(Order).filter(
+                Order.cast_name == cast.stage_name,
+                Order.is_drink_back == True,
+                Order.created_at >= f"{start_date} 00:00:00",
+                Order.created_at <= f"{end_date} 23:59:59",
+                Order.session_id.in_(session_ids)
+            ).all()
+        else:
+            orders = []
         
         drink_sales = sum(o.price * o.quantity for o in orders)
         drink_back = int(drink_sales * (cast.drink_back_rate or 10) / 100)
