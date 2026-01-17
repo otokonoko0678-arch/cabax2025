@@ -1272,6 +1272,20 @@ def cancel_settling(session_id: int, db: Session = Depends(get_db)):
     
     return {"message": "精算ロック解除"}
 
+@app.post("/api/sessions/{session_id}/settling/force-cancel")
+def force_cancel_settling(session_id: int, db: Session = Depends(get_db)):
+    """精算ロック強制解除（管理者用）"""
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    session.is_settling = False
+    session.settling_by = None
+    session.settling_at = None
+    db.commit()
+    
+    return {"message": "精算ロック強制解除完了"}
+
 @app.put("/api/sessions/{session_id}/checkout")
 def checkout_session(session_id: int, db: Session = Depends(get_db), ):
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()

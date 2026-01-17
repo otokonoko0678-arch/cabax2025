@@ -3069,7 +3069,9 @@ async function checkoutSession(sessionId) {
         return;
     }
     
-    if (!confirm('このテーブルを清算して空席に戻しますか？')) {
+    // ★ 確認モーダルを表示（confirmの代わり）
+    const confirmed = await showConfirmModal('このテーブルを清算して空席に戻しますか？');
+    if (!confirmed) {
         // キャンセル時はロック解除
         try {
             await apiRequest(`/sessions/${sessionId}/settling/cancel`, { method: 'POST' });
@@ -6427,7 +6429,8 @@ async function openTableDetail(tableId) {
               return;
             }
             
-            if (!confirm('精算しますか？（DB注文合計から再計算して確定）')) {
+            const confirmed = await showConfirmModal('精算しますか？（DB注文合計から再計算して確定）');
+            if (!confirmed) {
               // キャンセル時はロック解除
               try {
                 await fetchJson(`/sessions/${sessionId}/settling/cancel`, { method: 'POST' });
@@ -10362,6 +10365,39 @@ function setupCharts() {
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
+        }
+
+        // スマホ対応の確認モーダル（confirm()の代わり）
+        function showConfirmModal(message) {
+            return new Promise((resolve) => {
+                // モーダル要素を作成
+                const overlay = document.createElement('div');
+                overlay.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
+                overlay.innerHTML = `
+                    <div class="bg-gray-800 rounded-2xl p-6 max-w-sm w-full border border-gray-700 shadow-xl">
+                        <p class="text-white text-lg mb-6 text-center">${message}</p>
+                        <div class="flex gap-3">
+                            <button id="confirmCancel" class="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-3 rounded-xl font-bold">
+                                キャンセル
+                            </button>
+                            <button id="confirmOk" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-bold">
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                
+                // ボタンイベント
+                overlay.querySelector('#confirmCancel').onclick = () => {
+                    overlay.remove();
+                    resolve(false);
+                };
+                overlay.querySelector('#confirmOk').onclick = () => {
+                    overlay.remove();
+                    resolve(true);
+                };
+            });
         }
 
         function showNotification(message, type = 'info') {
