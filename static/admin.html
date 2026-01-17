@@ -3037,12 +3037,14 @@ function showTableDetailPanel({ tableId, session, orders }) {
             </div>
 
             <div class="flex gap-2 pt-4 border-t border-gray-700">
-                <button class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg text-sm"
+                <button class="flex-1 bg-amber-600 hover:bg-amber-500 active:bg-amber-400 text-white py-3 rounded-lg text-sm font-bold"
+                        style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 48px;"
                         onclick="showAdminNominationModal(${session.id}, ${tableId})">
                     ✨ 場内指名
                 </button>
-                <button class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg text-sm"
-                        onclick="checkoutSession(${session.id})">
+                <button class="flex-1 bg-red-600 hover:bg-red-500 active:bg-red-400 text-white py-3 rounded-lg text-sm font-bold"
+                        style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 48px;"
+                        onclick="checkoutSession(${session.id}); return false;">
                     清算（チェックアウト）
                 </button>
             </div>
@@ -3054,6 +3056,9 @@ function showTableDetailPanel({ tableId, session, orders }) {
 
 // ★ 清算ボタン：バックエンドで清算 → APIから最新状態を取り直して反映
 async function checkoutSession(sessionId) {
+    console.log('[CHECKOUT] checkoutSession called with sessionId:', sessionId);
+    alert('精算処理を開始します'); // デバッグ用
+    
     // スタッフ名を取得（なければデフォルト名を使用 - iOS Safari対応）
     let staffName = localStorage.getItem('cabax_staff_name');
     if (!staffName) {
