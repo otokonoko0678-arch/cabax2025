@@ -3037,14 +3037,12 @@ function showTableDetailPanel({ tableId, session, orders }) {
             </div>
 
             <div class="flex gap-2 pt-4 border-t border-gray-700">
-                <button class="flex-1 bg-amber-600 hover:bg-amber-500 active:bg-amber-400 text-white py-3 rounded-lg text-sm font-bold"
-                        style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 48px;"
+                <button class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg text-sm"
                         onclick="showAdminNominationModal(${session.id}, ${tableId})">
                     ✨ 場内指名
                 </button>
-                <button class="flex-1 bg-red-600 hover:bg-red-500 active:bg-red-400 text-white py-3 rounded-lg text-sm font-bold"
-                        style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 48px;"
-                        onclick="checkoutSession(${session.id}); return false;">
+                <button class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg text-sm"
+                        onclick="checkoutSession(${session.id})">
                     清算（チェックアウト）
                 </button>
             </div>
@@ -3056,24 +3054,8 @@ function showTableDetailPanel({ tableId, session, orders }) {
 
 // ★ 清算ボタン：バックエンドで清算 → APIから最新状態を取り直して反映
 async function checkoutSession(sessionId) {
-    console.log('[CHECKOUT] checkoutSession called with sessionId:', sessionId);
-    alert('精算処理を開始します'); // デバッグ用
-    
     // スタッフ名を取得（なければデフォルト名を使用 - iOS Safari対応）
-    let staffName = localStorage.getItem('cabax_staff_name');
-    if (!staffName) {
-        // prompt()はiOS Safariで動かない場合があるので、try-catchで囲む
-        try {
-            staffName = prompt('あなたの名前を入力してください（精算担当者として記録）');
-        } catch (e) {
-            console.warn('prompt() failed:', e);
-        }
-        // promptが失敗またはキャンセルされた場合はデフォルト名
-        if (!staffName) {
-            staffName = 'スタッフ';
-        }
-        localStorage.setItem('cabax_staff_name', staffName);
-    }
+    let staffName = localStorage.getItem('cabax_staff_name') || 'スタッフ';
     
     // ★ 精算ロック取得
     try {
@@ -6429,20 +6411,7 @@ async function openTableDetail(tableId) {
         btnCheckout.onclick = async () => {
           try {
             // スタッフ名を取得（iOS Safari対応）
-            let staffName = localStorage.getItem('cabax_staff_name');
-            if (!staffName) {
-              try {
-                staffName = prompt('あなたの名前を入力してください（精算担当者として記録）');
-              } catch (e) {
-                console.warn('prompt() failed:', e);
-              }
-              if (!staffName) {
-                staffName = 'スタッフ';
-              }
-              localStorage.setItem('cabax_staff_name', staffName);
-            }
-              localStorage.setItem('cabax_staff_name', staffName);
-            }
+            let staffName = localStorage.getItem('cabax_staff_name') || 'スタッフ';
             
             // ★ 精算ロック取得
             try {
