@@ -1360,6 +1360,49 @@
                         </div>
                     </div>
                     
+                    <!-- データバックアップ -->
+                    <div class="glass-effect rounded-2xl p-6 mb-6">
+                        <h2 class="text-xl font-bold text-white mb-4">💾 データバックアップ</h2>
+                        <p class="text-gray-400 text-sm mb-4">各種データをCSVファイルでダウンロードできます。定期的なバックアップをおすすめします。</p>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <button onclick="exportData('sessions')" class="p-4 bg-gray-800 hover:bg-gray-700 rounded-xl text-center transition">
+                                <div class="text-2xl mb-2">📋</div>
+                                <div class="text-white text-sm font-semibold">会計履歴</div>
+                                <div class="text-gray-500 text-xs">精算済みセッション</div>
+                            </button>
+                            <button onclick="exportData('orders')" class="p-4 bg-gray-800 hover:bg-gray-700 rounded-xl text-center transition">
+                                <div class="text-2xl mb-2">🍺</div>
+                                <div class="text-white text-sm font-semibold">注文履歴</div>
+                                <div class="text-gray-500 text-xs">全注文データ</div>
+                            </button>
+                            <button onclick="exportData('casts')" class="p-4 bg-gray-800 hover:bg-gray-700 rounded-xl text-center transition">
+                                <div class="text-2xl mb-2">👩</div>
+                                <div class="text-white text-sm font-semibold">キャスト</div>
+                                <div class="text-gray-500 text-xs">キャスト一覧</div>
+                            </button>
+                            <button onclick="exportData('menu')" class="p-4 bg-gray-800 hover:bg-gray-700 rounded-xl text-center transition">
+                                <div class="text-2xl mb-2">📖</div>
+                                <div class="text-white text-sm font-semibold">メニュー</div>
+                                <div class="text-gray-500 text-xs">メニュー一覧</div>
+                            </button>
+                            <button onclick="exportData('tables')" class="p-4 bg-gray-800 hover:bg-gray-700 rounded-xl text-center transition">
+                                <div class="text-2xl mb-2">🪑</div>
+                                <div class="text-white text-sm font-semibold">テーブル</div>
+                                <div class="text-gray-500 text-xs">テーブル設定</div>
+                            </button>
+                            <button onclick="exportAllData()" class="p-4 bg-amber-900/50 hover:bg-amber-800/50 rounded-xl text-center transition border border-amber-700/50">
+                                <div class="text-2xl mb-2">📦</div>
+                                <div class="text-amber-400 text-sm font-semibold">全データ</div>
+                                <div class="text-gray-500 text-xs">JSON形式</div>
+                            </button>
+                        </div>
+                        
+                        <div class="mt-4 p-3 bg-blue-900/20 rounded-xl border border-blue-800/30">
+                            <p class="text-blue-400 text-xs">💡 ヒント: 月末に「全データ」をバックアップしておくと安心です</p>
+                        </div>
+                    </div>
+                    
                     <!-- スタッフ管理 -->
                     <div class="glass-effect rounded-2xl p-6 mb-6">
                         <div class="flex justify-between items-center mb-4">
@@ -3011,11 +3054,19 @@ function showTableDetailPanel({ tableId, session, orders }) {
 
 // ★ 清算ボタン：バックエンドで清算 → APIから最新状態を取り直して反映
 async function checkoutSession(sessionId) {
-    // スタッフ名を取得（なければ入力を求める）
+    // スタッフ名を取得（なければデフォルト名を使用 - iOS Safari対応）
     let staffName = localStorage.getItem('cabax_staff_name');
     if (!staffName) {
-        staffName = prompt('あなたの名前を入力してください（精算担当者として記録）');
-        if (!staffName) return;
+        // prompt()はiOS Safariで動かない場合があるので、try-catchで囲む
+        try {
+            staffName = prompt('あなたの名前を入力してください（精算担当者として記録）');
+        } catch (e) {
+            console.warn('prompt() failed:', e);
+        }
+        // promptが失敗またはキャンセルされた場合はデフォルト名
+        if (!staffName) {
+            staffName = 'スタッフ';
+        }
         localStorage.setItem('cabax_staff_name', staffName);
     }
     
@@ -4458,6 +4509,97 @@ async function syncWithBackend() {
                 updateTodayStaffCost();
             } catch (e) {
                 console.error('スタッフ勤怠取得失敗:', e);
+            }
+        }
+        
+        // データエクスポート機能
+        async function exportData(type) {
+            try {
+                showNotification(`📥 ${type}データをエクスポート中...`, 'info');
+                
+                let data = [];
+                let filename = '';
+                let headers = [];
+                
+                switch(type) {
+                    case 'sessions':
+                        data = await apiRequest('/api/sessions');
+                        filename = `会計履歴_${new Date().toISOString().split('T')[0]}.csv`;
+                        headers = ['ID', 'テーブルID', '顧客名', '人数', '開始時刻', '終了時刻', '合計金額', 'ステータス'];
+                        data = data.map(s => [s.id, s.table_id, s.customer_name || '', s.guest_count || 1, s.start_time, s.end_time || '', s.current_total || 0, s.status]);
+                        break;
+                    case 'orders':
+                        data = await apiRequest('/api/orders');
+                        filename = `注文履歴_${new Date().toISOString().split('T')[0]}.csv`;
+                        headers = ['ID', 'セッションID', 'テーブル名', '商品名', '数量', '価格', 'ドリンクバック', '提供済み', '注文時刻'];
+                        data = data.map(o => [o.id, o.session_id, o.table_name || '', o.item_name, o.quantity, o.price, o.is_drink_back ? 'はい' : 'いいえ', o.is_served ? '済' : '未', o.created_at]);
+                        break;
+                    case 'casts':
+                        data = await apiRequest('/api/casts');
+                        filename = `キャスト一覧_${new Date().toISOString().split('T')[0]}.csv`;
+                        headers = ['ID', '名前', '時給', 'ドリンクバック率', 'ステータス'];
+                        data = data.map(c => [c.id, c.name, c.hourly_rate || 0, c.drink_back_rate || 0, c.status || 'active']);
+                        break;
+                    case 'menu':
+                        data = await apiRequest('/api/menu');
+                        filename = `メニュー一覧_${new Date().toISOString().split('T')[0]}.csv`;
+                        headers = ['ID', 'カテゴリ', '商品名', '価格', '表示順'];
+                        data = data.map(m => [m.id, m.category, m.name, m.price, m.sort_order || 0]);
+                        break;
+                    case 'tables':
+                        data = await apiRequest('/api/tables');
+                        filename = `テーブル一覧_${new Date().toISOString().split('T')[0]}.csv`;
+                        headers = ['ID', 'テーブル名', 'ステータス', '表示順'];
+                        data = data.map(t => [t.id, t.name, t.status, t.sort_order || 0]);
+                        break;
+                }
+                
+                // CSVを生成
+                const csvContent = [headers.join(','), ...data.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
+                
+                // BOM付きUTF-8でダウンロード
+                const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showNotification(`✅ ${filename} をダウンロードしました`, 'success');
+            } catch (e) {
+                console.error('エクスポートエラー:', e);
+                showNotification('❌ エクスポートに失敗しました', 'error');
+            }
+        }
+        
+        async function exportAllData() {
+            try {
+                showNotification('📥 全データをエクスポート中...', 'info');
+                
+                const allData = {
+                    exportDate: new Date().toISOString(),
+                    sessions: await apiRequest('/api/sessions'),
+                    orders: await apiRequest('/api/orders'),
+                    casts: await apiRequest('/api/casts'),
+                    menu: await apiRequest('/api/menu'),
+                    tables: await apiRequest('/api/tables')
+                };
+                
+                const filename = `Cabax_全データバックアップ_${new Date().toISOString().split('T')[0]}.json`;
+                const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showNotification(`✅ ${filename} をダウンロードしました`, 'success');
+            } catch (e) {
+                console.error('全データエクスポートエラー:', e);
+                showNotification('❌ エクスポートに失敗しました', 'error');
             }
         }
         
@@ -6281,11 +6423,19 @@ async function openTableDetail(tableId) {
       if (btnCheckout) {
         btnCheckout.onclick = async () => {
           try {
-            // スタッフ名を取得
+            // スタッフ名を取得（iOS Safari対応）
             let staffName = localStorage.getItem('cabax_staff_name');
             if (!staffName) {
-              staffName = prompt('あなたの名前を入力してください（精算担当者として記録）');
-              if (!staffName) return;
+              try {
+                staffName = prompt('あなたの名前を入力してください（精算担当者として記録）');
+              } catch (e) {
+                console.warn('prompt() failed:', e);
+              }
+              if (!staffName) {
+                staffName = 'スタッフ';
+              }
+              localStorage.setItem('cabax_staff_name', staffName);
+            }
               localStorage.setItem('cabax_staff_name', staffName);
             }
             
