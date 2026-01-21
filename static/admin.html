@@ -1844,6 +1844,21 @@
                         </div>
                     </div>
                     
+                    <!-- 支払い方式 -->
+                    <div class="border-t border-gray-700 pt-4 mt-4">
+                        <p class="text-sm text-gray-400 mb-3">💴 支払い方式</p>
+                        <div class="flex gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="castPaymentType" value="daily" class="accent-green-500">
+                                <span class="text-sm text-gray-300">日払い</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="castPaymentType" value="monthly" checked class="accent-green-500">
+                                <span class="text-sm text-gray-300">月払い</span>
+                            </label>
+                        </div>
+                    </div>
+                    
                     <!-- バック設定 -->
                     <div class="border-t border-gray-700 pt-4 mt-4">
                         <p class="text-sm text-gray-400 mb-3">💰 バック設定</p>
@@ -1913,6 +1928,21 @@
                         <div id="editMonthlyInput" class="hidden">
                             <label class="block text-xs text-gray-500 mb-1">月給（円）</label>
                             <input type="number" id="editCastMonthlySalary" placeholder="300000" class="w-full px-4 py-3 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    
+                    <!-- 支払い方式 -->
+                    <div class="border-t border-gray-700 pt-4 mt-4">
+                        <p class="text-sm text-gray-400 mb-3">💴 支払い方式</p>
+                        <div class="flex gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="editCastPaymentType" id="editPaymentTypeDaily" value="daily" class="accent-green-500">
+                                <span class="text-sm text-gray-300">日払い</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="editCastPaymentType" id="editPaymentTypeMonthly" value="monthly" checked class="accent-green-500">
+                                <span class="text-sm text-gray-300">月払い</span>
+                            </label>
                         </div>
                     </div>
                     
@@ -7033,6 +7063,10 @@ function cancelOneFromGroup(tableId, groupIndex) {
                 const initial = displayName.charAt(0) || '?';
                 const hourlyRate = Number(cast.hourly_rate || cast.hourlyRate || 0);
                 const sales = Number(cast.sales || 0);
+                const paymentType = cast.payment_type || cast.paymentType || 'monthly';
+                const paymentBadge = paymentType === 'daily' 
+                    ? '<span class="ml-2 text-xs px-2 py-0.5 rounded bg-green-600/30 text-green-400">日払い</span>'
+                    : '<span class="ml-2 text-xs px-2 py-0.5 rounded bg-blue-600/30 text-blue-400">月払い</span>';
                 
                 return `
                 <div class="luxury-card rounded-2xl p-6">
@@ -7041,7 +7075,7 @@ function cancelOneFromGroup(tableId, groupIndex) {
                             ${initial}
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-gray-200">${displayName}</h3>
+                            <h3 class="text-xl font-bold text-gray-200">${displayName}${paymentBadge}</h3>
                             <p class="text-sm ${getRankColor(cast.rank)}">${getRankLabel(cast.rank)}</p>
                         </div>
                     </div>
@@ -7297,6 +7331,7 @@ async function addCast(event) {
     const name = document.getElementById('castName').value;
     const rank = document.getElementById('castRank').value;
     const salaryType = document.querySelector('input[name="castSalaryType"]:checked').value;
+    const paymentType = document.querySelector('input[name="castPaymentType"]:checked').value;
     const hourlyRate = parseInt(document.getElementById('castHourlyRate').value) || 0;
     const monthlySalary = parseInt(document.getElementById('castMonthlySalary').value) || 0;
     const companionBack = parseInt(document.getElementById('castCompanionBack').value) || 3000;
@@ -7310,6 +7345,7 @@ async function addCast(event) {
         stage_name: name,
         rank: rank,
         salary_type: salaryType,
+        payment_type: paymentType,
         hourly_rate: hourlyRate,
         monthly_salary: monthlySalary,
         companion_back: companionBack,
@@ -7393,6 +7429,14 @@ async function addCast(event) {
             document.getElementById('editCastHourlyRate').value = cast.hourlyRate ?? cast.hourly_rate ?? 0;
             document.getElementById('editCastMonthlySalary').value = cast.monthlySalary ?? cast.monthly_salary ?? 0;
             
+            // 支払い方式
+            const paymentType = cast.paymentType ?? cast.payment_type ?? 'monthly';
+            if (paymentType === 'daily') {
+                document.getElementById('editPaymentTypeDaily').checked = true;
+            } else {
+                document.getElementById('editPaymentTypeMonthly').checked = true;
+            }
+            
             document.getElementById('editCastCompanionBack').value = cast.companionBack ?? cast.companion_back ?? 3000;
             document.getElementById('editCastNominationBack').value = cast.nominationBack ?? cast.nomination_back ?? 1000;
             document.getElementById('editCastDrinkBackRate').value = cast.drinkBackRate ?? cast.drink_back_rate ?? 10;
@@ -7411,6 +7455,7 @@ async function updateCast(event) {
     const name = document.getElementById('editCastName').value;
     const rank = document.getElementById('editCastRank').value;
     const salaryType = document.querySelector('input[name="editCastSalaryType"]:checked').value;
+    const paymentType = document.querySelector('input[name="editCastPaymentType"]:checked').value;
     const hourlyRate = parseInt(document.getElementById('editCastHourlyRate').value) || 0;
     const monthlySalary = parseInt(document.getElementById('editCastMonthlySalary').value) || 0;
     const companionBack = parseInt(document.getElementById('editCastCompanionBack').value) || 3000;
@@ -7425,6 +7470,7 @@ async function updateCast(event) {
         stage_name: name,
         rank: rank,
         salary_type: salaryType,
+        payment_type: paymentType,
         hourly_rate: hourlyRate,
         monthly_salary: monthlySalary,
         companion_back: companionBack,
@@ -7448,6 +7494,7 @@ async function updateCast(event) {
             name: name,
             rank: rank,
             salaryType: salaryType,
+            paymentType: paymentType,
             hourlyRate: hourlyRate,
             monthlySalary: monthlySalary,
             companionBack: companionBack,
@@ -9123,10 +9170,22 @@ function renderDailyReport() {
                         `).join('')}
                     </div>
                 </div>
+                
+                <!-- 日払い一覧 -->
+                <div class="luxury-card rounded-xl p-6">
+                    <h2 class="text-2xl font-bold mb-6 gold-accent">💴 本日の日払い</h2>
+                    <div id="dailyPayrollContent">
+                        <div class="text-center py-4 text-gray-400">読み込み中...</div>
+                    </div>
+                </div>
             </div>
         `;
 
         container.innerHTML = content;
+        
+        // 日払い一覧を非同期で読み込み
+        loadDailyPayroll();
+        
         console.log('[renderDailyReport] finished');
     } catch (e) {
         console.error('[renderDailyReport] error', e);
@@ -9136,6 +9195,151 @@ function renderDailyReport() {
             </div>
         `;
     }
+}
+
+// 日払い一覧を読み込み
+async function loadDailyPayroll() {
+    const container = document.getElementById('dailyPayrollContent');
+    if (!container) return;
+    
+    try {
+        let data;
+        if (appState.apiConnected) {
+            // APIから日払いデータを取得
+            data = await apiRequest('/daily-payroll');
+        } else {
+            // オフライン時はローカルで計算
+            data = calculateLocalDailyPayroll();
+        }
+        
+        if (!data.payroll_list || data.payroll_list.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4 text-gray-500">
+                    本日の日払い対象キャストはいません
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="mb-4 p-4 bg-green-900/30 rounded-xl border border-green-700/30">
+                <div class="flex justify-between items-center">
+                    <span class="text-green-400 font-semibold">本日の日払い合計</span>
+                    <span class="text-2xl font-bold text-green-300">¥${Number(data.total_daily_payroll).toLocaleString()}</span>
+                </div>
+                <p class="text-xs text-green-400/70 mt-1">日払い対象: ${data.daily_cast_count}名</p>
+            </div>
+            <div class="space-y-3">
+                ${data.payroll_list.map(p => `
+                    <div class="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="font-bold text-white text-lg">${p.cast_name}</span>
+                                <span class="ml-2 text-xs px-2 py-0.5 rounded bg-green-600/30 text-green-400">日払い</span>
+                            </div>
+                            <span class="text-xl font-bold text-green-400">¥${Number(p.total_payroll).toLocaleString()}</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                            <div class="bg-gray-900/50 rounded-lg p-2">
+                                <p class="text-xs text-gray-500">勤務時間</p>
+                                <p class="text-gray-300">${p.clock_in || '-'} ~ ${p.clock_out || '勤務中'}</p>
+                                <p class="text-xs text-gray-400">${p.work_hours}時間</p>
+                            </div>
+                            <div class="bg-gray-900/50 rounded-lg p-2">
+                                <p class="text-xs text-gray-500">基本給</p>
+                                <p class="text-gray-300">¥${Number(p.base_salary).toLocaleString()}</p>
+                                <p class="text-xs text-gray-400">@¥${Number(p.hourly_rate).toLocaleString()}/h</p>
+                            </div>
+                            <div class="bg-gray-900/50 rounded-lg p-2">
+                                <p class="text-xs text-gray-500">同伴・指名</p>
+                                <p class="text-gray-300">¥${Number(p.companion_back + p.nomination_back).toLocaleString()}</p>
+                                <p class="text-xs text-gray-400">同伴${p.companion_count} 指名${p.nomination_count}</p>
+                            </div>
+                            <div class="bg-gray-900/50 rounded-lg p-2">
+                                <p class="text-xs text-gray-500">ドリンク・売上</p>
+                                <p class="text-gray-300">¥${Number(p.drink_back + p.sales_back).toLocaleString()}</p>
+                                <p class="text-xs text-gray-400">DB${p.drink_count}杯 売上¥${Number(p.total_sales).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (e) {
+        console.error('日払い読み込みエラー:', e);
+        container.innerHTML = `
+            <div class="text-center py-4 text-red-400">
+                日払いデータの読み込みに失敗しました
+            </div>
+        `;
+    }
+}
+
+// オフライン時のローカル日払い計算
+function calculateLocalDailyPayroll() {
+    const today = (typeof getBusinessDate === 'function') ? getBusinessDate() : new Date().toISOString().split('T')[0];
+    const casts = appState.casts || [];
+    const attendances = appState.attendances || [];
+    
+    // 日払いキャストのみ
+    const dailyCasts = casts.filter(c => (c.paymentType || c.payment_type) === 'daily');
+    
+    const payroll_list = [];
+    let total = 0;
+    
+    dailyCasts.forEach(cast => {
+        // 今日の出勤記録を探す
+        const att = attendances.find(a => 
+            (a.castId === cast.id || a.cast_id === cast.id) && 
+            a.date === today
+        );
+        
+        if (!att) return; // 出勤していなければスキップ
+        
+        // 勤務時間計算
+        let workHours = 0;
+        if (att.clockIn && att.clockOut) {
+            const [inH, inM] = att.clockIn.split(':').map(Number);
+            const [outH, outM] = att.clockOut.split(':').map(Number);
+            let outTotal = outH * 60 + outM;
+            const inTotal = inH * 60 + inM;
+            if (outTotal < inTotal) outTotal += 24 * 60; // 深夜跨ぎ
+            workHours = (outTotal - inTotal) / 60;
+        }
+        
+        const hourlyRate = cast.hourlyRate || cast.hourly_rate || 0;
+        const baseSalary = Math.floor(hourlyRate * workHours);
+        
+        // 簡易的なバック計算（実際はAPIから取得するのが正確）
+        const totalPayroll = baseSalary;
+        total += totalPayroll;
+        
+        payroll_list.push({
+            cast_id: cast.id,
+            cast_name: cast.name || cast.stage_name,
+            clock_in: att.clockIn || att.clock_in,
+            clock_out: att.clockOut || att.clock_out,
+            work_hours: Math.round(workHours * 10) / 10,
+            hourly_rate: hourlyRate,
+            base_salary: baseSalary,
+            companion_count: 0,
+            companion_back: 0,
+            nomination_count: 0,
+            nomination_back: 0,
+            drink_count: 0,
+            drink_back: 0,
+            total_sales: 0,
+            sales_back: 0,
+            total_payroll: totalPayroll
+        });
+    });
+    
+    return {
+        date: today,
+        daily_cast_count: payroll_list.length,
+        total_daily_payroll: total,
+        payroll_list
+    };
 }
 
 // ===== 月報機能 =====

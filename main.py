@@ -92,6 +92,7 @@ class Cast(Base):
     stage_name = Column(String, index=True)
     rank = Column(String, default="regular")
     salary_type = Column(String, default="hourly")  # hourly or monthly
+    payment_type = Column(String, default="monthly")  # daily（日払い） or monthly（月払い）
     hourly_rate = Column(Integer)
     monthly_salary = Column(Integer, default=0)  # 月給（月給制の場合）
     drink_back_rate = Column(Integer, default=10)  # ドリンクバック率(%)
@@ -240,6 +241,7 @@ class CastCreate(BaseModel):
     stage_name: str
     rank: str
     salary_type: str = "hourly"
+    payment_type: str = "monthly"  # daily or monthly
     hourly_rate: int = 0
     monthly_salary: int = 0
     drink_back_rate: int = 10
@@ -251,6 +253,7 @@ class CastUpdate(BaseModel):
     stage_name: Optional[str] = None
     rank: Optional[str] = None
     salary_type: Optional[str] = None
+    payment_type: Optional[str] = None  # daily or monthly
     hourly_rate: Optional[int] = None
     monthly_salary: Optional[int] = None
     drink_back_rate: Optional[int] = None
@@ -263,6 +266,7 @@ class CastResponse(BaseModel):
     stage_name: str
     rank: str
     salary_type: str
+    payment_type: str = "monthly"  # daily or monthly
     hourly_rate: int
     monthly_salary: int
     drink_back_rate: int
@@ -522,7 +526,7 @@ def get_store_id(request: Request) -> Optional[int]:
 # FastAPI アプリケーション
 # ========================
 
-app = FastAPI(title="Cabax API", version="2.0.0")
+app = FastAPI(title="Cabax API", version="2.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -2006,10 +2010,158 @@ def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, ca
         "payroll_list": payroll_list
     }
 
+# 日払い給与計算（本日分）
+@app.get("/api/daily-payroll")
+def get_daily_payroll(date: Optional[str] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    """日払いキャストの本日の給与を計算"""
+    
+    # 日付指定がなければ今日
+    if date:
+        target_date = date
+    else:
+        now = datetime.utcnow()
+        target_date = now.strftime("%Y-%m-%d")
+    
+    # 日払いキャストのみ取得（店舗フィルタ）
+    cast_query = db.query(Cast).filter(Cast.payment_type == "daily")
+    if store_id:
+        cast_query = cast_query.filter(Cast.store_id == store_id)
+    daily_casts = cast_query.all()
+    
+    payroll_list = []
+    total_daily_payroll = 0
+    
+    for cast in daily_casts:
+        # 出勤記録
+        att_query = db.query(Attendance).filter(
+            Attendance.cast_id == cast.id,
+            Attendance.date == target_date
+        )
+        if store_id:
+            att_query = att_query.filter(Attendance.store_id == store_id)
+        attendance = att_query.first()
+        
+        if not attendance:
+            # 出勤していない場合はスキップ
+            continue
+        
+        # 勤務時間計算
+        work_hours = 0
+        if attendance.clock_in and attendance.clock_out:
+            try:
+                clock_in = datetime.strptime(attendance.clock_in, "%H:%M")
+                clock_out = datetime.strptime(attendance.clock_out, "%H:%M")
+                # 深夜跨ぎ対応
+                if clock_out < clock_in:
+                    clock_out = clock_out.replace(day=clock_in.day + 1)
+                work_hours = (clock_out - clock_in).seconds / 3600
+            except:
+                pass
+        elif attendance.clock_in:
+            # まだ退勤していない場合、現在時刻までで計算
+            try:
+                clock_in = datetime.strptime(attendance.clock_in, "%H:%M")
+                now_time = datetime.utcnow()
+                clock_out = datetime.strptime(now_time.strftime("%H:%M"), "%H:%M")
+                if clock_out < clock_in:
+                    clock_out = clock_out.replace(day=clock_in.day + 1)
+                work_hours = (clock_out - clock_in).seconds / 3600
+            except:
+                pass
+        
+        # 基本給計算（時給 × 勤務時間）
+        base_salary = int((cast.hourly_rate or 0) * work_hours)
+        
+        # セッション取得（その日の担当卓）
+        session_query = db.query(SessionModel).filter(
+            SessionModel.cast_id == cast.id,
+            SessionModel.start_time >= f"{target_date} 00:00:00",
+            SessionModel.start_time <= f"{target_date} 23:59:59"
+        )
+        if store_id:
+            session_query = session_query.filter(SessionModel.store_id == store_id)
+        sessions = session_query.all()
+        
+        # 同伴バック
+        companion_count = 0
+        companion_back = 0
+        for session in sessions:
+            if session.has_companion and session.companion_name == cast.stage_name:
+                companion_count += 1
+                companion_back += cast.companion_back or 0
+        
+        # 指名バック
+        nomination_count = 0
+        nomination_back = 0
+        for session in sessions:
+            if session.nomination_type:
+                nomination_count += 1
+                nomination_back += cast.nomination_back or 0
+        
+        # ドリンクバック
+        session_ids = [s.id for s in sessions]
+        if session_ids:
+            orders = db.query(Order).filter(
+                Order.cast_name == cast.stage_name,
+                Order.is_drink_back == True,
+                Order.created_at >= f"{target_date} 00:00:00",
+                Order.created_at <= f"{target_date} 23:59:59",
+                Order.session_id.in_(session_ids)
+            ).all()
+        else:
+            # セッション経由じゃないドリンクバックも取得
+            orders = db.query(Order).filter(
+                Order.cast_name == cast.stage_name,
+                Order.is_drink_back == True,
+                Order.created_at >= f"{target_date} 00:00:00",
+                Order.created_at <= f"{target_date} 23:59:59"
+            ).all()
+        
+        drink_sales = sum(o.price * o.quantity for o in orders)
+        drink_back = int(drink_sales * (cast.drink_back_rate or 10) / 100)
+        drink_count = sum(o.quantity for o in orders)
+        
+        # 売上バック
+        total_sales = sum(s.current_total or 0 for s in sessions)
+        sales_back = int(total_sales * (cast.sales_back_rate or 0) / 100)
+        
+        # 合計
+        total_payroll = base_salary + companion_back + nomination_back + drink_back + sales_back
+        total_daily_payroll += total_payroll
+        
+        payroll_list.append({
+            "cast_id": cast.id,
+            "cast_name": cast.stage_name,
+            "rank": cast.rank,
+            "date": target_date,
+            "clock_in": attendance.clock_in,
+            "clock_out": attendance.clock_out,
+            "work_hours": round(work_hours, 1),
+            "hourly_rate": cast.hourly_rate or 0,
+            "base_salary": base_salary,
+            "companion_count": companion_count,
+            "companion_back": companion_back,
+            "nomination_count": nomination_count,
+            "nomination_back": nomination_back,
+            "drink_count": drink_count,
+            "drink_sales": drink_sales,
+            "drink_back": drink_back,
+            "total_sales": total_sales,
+            "sales_back": sales_back,
+            "total_payroll": total_payroll
+        })
+    
+    return {
+        "date": target_date,
+        "daily_cast_count": len(payroll_list),
+        "total_daily_payroll": total_daily_payroll,
+        "payroll_list": payroll_list
+    }
+
 # ヘルスチェック
 @app.get("/")
 def root():
-    return {"message": "Cabax API is running", "version": "2.0.0"}
+    return {"message": "Cabax API is running", "version": "2.1.0"}
 
 if __name__ == "__main__":
     import uvicorn
