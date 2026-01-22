@@ -93,7 +93,7 @@ class Cast(Base):
     rank = Column(String, default="regular")
     salary_type = Column(String, default="hourly")  # hourly or monthly
     payment_type = Column(String, default="monthly")  # daily（日払い） or monthly（月払い）
-    referrer_id = Column(Integer, nullable=True)  # 紹介者のキャストID
+    referrer_name = Column(String, nullable=True)  # 紹介者名（手入力）
     referral_bonus = Column(Integer, default=0)  # 紹介料（円/月）
     hourly_rate = Column(Integer)
     monthly_salary = Column(Integer, default=0)  # 月給（月給制の場合）
@@ -244,7 +244,7 @@ class CastCreate(BaseModel):
     rank: str
     salary_type: str = "hourly"
     payment_type: str = "monthly"  # daily or monthly
-    referrer_id: Optional[int] = None  # 紹介者ID
+    referrer_name: Optional[str] = None  # 紹介者名
     referral_bonus: int = 0  # 紹介料
     hourly_rate: int = 0
     monthly_salary: int = 0
@@ -258,7 +258,7 @@ class CastUpdate(BaseModel):
     rank: Optional[str] = None
     salary_type: Optional[str] = None
     payment_type: Optional[str] = None  # daily or monthly
-    referrer_id: Optional[int] = None  # 紹介者ID
+    referrer_name: Optional[str] = None  # 紹介者名
     referral_bonus: Optional[int] = None  # 紹介料
     hourly_rate: Optional[int] = None
     monthly_salary: Optional[int] = None
@@ -273,7 +273,7 @@ class CastResponse(BaseModel):
     rank: str
     salary_type: str
     payment_type: str = "monthly"  # daily or monthly
-    referrer_id: Optional[int] = None  # 紹介者ID
+    referrer_name: Optional[str] = None  # 紹介者名
     referral_bonus: int = 0  # 紹介料
     hourly_rate: int
     monthly_salary: int
@@ -534,7 +534,7 @@ def get_store_id(request: Request) -> Optional[int]:
 # FastAPI アプリケーション
 # ========================
 
-app = FastAPI(title="Cabax API", version="2.2.0")
+app = FastAPI(title="Cabax API", version="2.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -562,11 +562,11 @@ def startup_event():
             db.commit()
             print("✅ マイグレーション: casts.payment_type カラム追加")
         
-        # referrer_id カラムを追加
-        if 'referrer_id' not in cast_columns:
-            db.execute(text("ALTER TABLE casts ADD COLUMN referrer_id INTEGER"))
+        # referrer_name カラムを追加（紹介者名）
+        if 'referrer_name' not in cast_columns:
+            db.execute(text("ALTER TABLE casts ADD COLUMN referrer_name VARCHAR"))
             db.commit()
-            print("✅ マイグレーション: casts.referrer_id カラム追加")
+            print("✅ マイグレーション: casts.referrer_name カラム追加")
         
         # referral_bonus カラムを追加
         if 'referral_bonus' not in cast_columns:
@@ -2038,45 +2038,8 @@ def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, ca
             "drink_back": drink_back,
             "total_sales": total_sales,
             "sales_back": sales_back,
-            "referral_bonus": 0,  # 後で計算
-            "referred_casts": [],  # 紹介したキャスト一覧
             "total_payroll": total_payroll
         })
-    
-    # 紹介料の計算
-    # 紹介されたキャストがその月に出勤していれば、紹介者に紹介料を加算
-    for p in payroll_list:
-        cast_id = p["cast_id"]
-        # このキャストが紹介したキャストを探す
-        referred = db.query(Cast).filter(Cast.referrer_id == cast_id)
-        if store_id:
-            referred = referred.filter(Cast.store_id == store_id)
-        referred_casts = referred.all()
-        
-        referral_bonus_total = 0
-        referred_names = []
-        
-        for ref_cast in referred_casts:
-            # 紹介されたキャストがその月に出勤しているか確認
-            ref_att = db.query(Attendance).filter(
-                Attendance.cast_id == ref_cast.id,
-                Attendance.date >= start_date,
-                Attendance.date <= end_date
-            )
-            if store_id:
-                ref_att = ref_att.filter(Attendance.store_id == store_id)
-            
-            if ref_att.first():  # 1日でも出勤していれば
-                referral_bonus_total += ref_cast.referral_bonus or 0
-                if ref_cast.referral_bonus and ref_cast.referral_bonus > 0:
-                    referred_names.append({
-                        "name": ref_cast.stage_name,
-                        "bonus": ref_cast.referral_bonus
-                    })
-        
-        p["referral_bonus"] = referral_bonus_total
-        p["referred_casts"] = referred_names
-        p["total_payroll"] += referral_bonus_total
     
     return {
         "year": target_year,
@@ -2233,10 +2196,86 @@ def get_daily_payroll(date: Optional[str] = None, db: Session = Depends(get_db),
         "payroll_list": payroll_list
     }
 
+# 紹介料管理API
+@app.get("/api/referral-bonus")
+def get_referral_bonus(year: Optional[int] = None, month: Optional[int] = None, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id)):
+    """紹介者別の紹介料を集計"""
+    from calendar import monthrange
+    
+    now = datetime.utcnow()
+    target_year = year or now.year
+    target_month = month or now.month
+    
+    # 月の開始日と終了日
+    start_date = f"{target_year}-{target_month:02d}-01"
+    last_day = monthrange(target_year, target_month)[1]
+    end_date = f"{target_year}-{target_month:02d}-{last_day}"
+    
+    # 紹介者名があるキャストを取得
+    cast_query = db.query(Cast).filter(Cast.referrer_name != None, Cast.referrer_name != "")
+    if store_id:
+        cast_query = cast_query.filter(Cast.store_id == store_id)
+    casts_with_referrer = cast_query.all()
+    
+    # 紹介者別に集計
+    referrer_data = {}
+    
+    for cast in casts_with_referrer:
+        referrer = cast.referrer_name
+        if not referrer:
+            continue
+            
+        # その月に出勤しているか確認
+        att_query = db.query(Attendance).filter(
+            Attendance.cast_id == cast.id,
+            Attendance.date >= start_date,
+            Attendance.date <= end_date
+        )
+        if store_id:
+            att_query = att_query.filter(Attendance.store_id == store_id)
+        
+        has_attendance = att_query.first() is not None
+        
+        if referrer not in referrer_data:
+            referrer_data[referrer] = {
+                "referrer_name": referrer,
+                "casts": [],
+                "total_bonus": 0,
+                "active_bonus": 0  # 出勤ありのキャストの紹介料のみ
+            }
+        
+        cast_info = {
+            "cast_id": cast.id,
+            "cast_name": cast.stage_name,
+            "referral_bonus": cast.referral_bonus or 0,
+            "has_attendance": has_attendance
+        }
+        
+        referrer_data[referrer]["casts"].append(cast_info)
+        referrer_data[referrer]["total_bonus"] += cast.referral_bonus or 0
+        
+        if has_attendance:
+            referrer_data[referrer]["active_bonus"] += cast.referral_bonus or 0
+    
+    # リストに変換してソート
+    referrer_list = sorted(referrer_data.values(), key=lambda x: x["active_bonus"], reverse=True)
+    
+    # 全体の合計
+    total_referral_bonus = sum(r["active_bonus"] for r in referrer_list)
+    
+    return {
+        "year": target_year,
+        "month": target_month,
+        "period": f"{target_year}年{target_month}月",
+        "total_referral_bonus": total_referral_bonus,
+        "referrer_count": len(referrer_list),
+        "referrer_list": referrer_list
+    }
+
 # ヘルスチェック
 @app.get("/")
 def root():
-    return {"message": "Cabax API is running", "version": "2.2.1"}
+    return {"message": "Cabax API is running", "version": "2.3.0"}
 
 if __name__ == "__main__":
     import uvicorn
