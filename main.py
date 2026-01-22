@@ -548,6 +548,36 @@ app.add_middleware(
 def startup_event():
     db = SessionLocal()
     
+    # === マイグレーション: 新しいカラムを追加 ===
+    from sqlalchemy import text, inspect
+    
+    try:
+        # castsテーブルのカラムを確認
+        inspector = inspect(engine)
+        cast_columns = [col['name'] for col in inspector.get_columns('casts')]
+        
+        # payment_type カラムを追加
+        if 'payment_type' not in cast_columns:
+            db.execute(text("ALTER TABLE casts ADD COLUMN payment_type VARCHAR DEFAULT 'monthly'"))
+            db.commit()
+            print("✅ マイグレーション: casts.payment_type カラム追加")
+        
+        # referrer_id カラムを追加
+        if 'referrer_id' not in cast_columns:
+            db.execute(text("ALTER TABLE casts ADD COLUMN referrer_id INTEGER"))
+            db.commit()
+            print("✅ マイグレーション: casts.referrer_id カラム追加")
+        
+        # referral_bonus カラムを追加
+        if 'referral_bonus' not in cast_columns:
+            db.execute(text("ALTER TABLE casts ADD COLUMN referral_bonus INTEGER DEFAULT 0"))
+            db.commit()
+            print("✅ マイグレーション: casts.referral_bonus カラム追加")
+            
+    except Exception as e:
+        print(f"⚠️ マイグレーションエラー（無視可能）: {e}")
+        db.rollback()
+    
     # デフォルトユーザー
     existing_user = db.query(User).filter(User.username == "admin").first()
     if not existing_user:
@@ -2206,7 +2236,7 @@ def get_daily_payroll(date: Optional[str] = None, db: Session = Depends(get_db),
 # ヘルスチェック
 @app.get("/")
 def root():
-    return {"message": "Cabax API is running", "version": "2.2.0"}
+    return {"message": "Cabax API is running", "version": "2.2.1"}
 
 if __name__ == "__main__":
     import uvicorn
