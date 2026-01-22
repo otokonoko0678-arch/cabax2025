@@ -93,6 +93,8 @@ class Cast(Base):
     rank = Column(String, default="regular")
     salary_type = Column(String, default="hourly")  # hourly or monthly
     payment_type = Column(String, default="monthly")  # daily（日払い） or monthly（月払い）
+    referrer_id = Column(Integer, nullable=True)  # 紹介者のキャストID
+    referral_bonus = Column(Integer, default=0)  # 紹介料（円/月）
     hourly_rate = Column(Integer)
     monthly_salary = Column(Integer, default=0)  # 月給（月給制の場合）
     drink_back_rate = Column(Integer, default=10)  # ドリンクバック率(%)
@@ -242,6 +244,8 @@ class CastCreate(BaseModel):
     rank: str
     salary_type: str = "hourly"
     payment_type: str = "monthly"  # daily or monthly
+    referrer_id: Optional[int] = None  # 紹介者ID
+    referral_bonus: int = 0  # 紹介料
     hourly_rate: int = 0
     monthly_salary: int = 0
     drink_back_rate: int = 10
@@ -254,6 +258,8 @@ class CastUpdate(BaseModel):
     rank: Optional[str] = None
     salary_type: Optional[str] = None
     payment_type: Optional[str] = None  # daily or monthly
+    referrer_id: Optional[int] = None  # 紹介者ID
+    referral_bonus: Optional[int] = None  # 紹介料
     hourly_rate: Optional[int] = None
     monthly_salary: Optional[int] = None
     drink_back_rate: Optional[int] = None
@@ -267,6 +273,8 @@ class CastResponse(BaseModel):
     rank: str
     salary_type: str
     payment_type: str = "monthly"  # daily or monthly
+    referrer_id: Optional[int] = None  # 紹介者ID
+    referral_bonus: int = 0  # 紹介料
     hourly_rate: int
     monthly_salary: int
     drink_back_rate: int
@@ -526,7 +534,7 @@ def get_store_id(request: Request) -> Optional[int]:
 # FastAPI アプリケーション
 # ========================
 
-app = FastAPI(title="Cabax API", version="2.1.0")
+app = FastAPI(title="Cabax API", version="2.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -1977,7 +1985,7 @@ def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, ca
         total_sales = sum(s.current_total or 0 for s in sessions)
         sales_back = int(total_sales * (cast.sales_back_rate or 0) / 100)
         
-        # 合計
+        # 合計（紹介料は後で計算）
         total_payroll = base_salary + companion_back + nomination_back + drink_back + sales_back
         
         payroll_list.append({
@@ -2000,8 +2008,45 @@ def get_cast_payroll(year: Optional[int] = None, month: Optional[int] = None, ca
             "drink_back": drink_back,
             "total_sales": total_sales,
             "sales_back": sales_back,
+            "referral_bonus": 0,  # 後で計算
+            "referred_casts": [],  # 紹介したキャスト一覧
             "total_payroll": total_payroll
         })
+    
+    # 紹介料の計算
+    # 紹介されたキャストがその月に出勤していれば、紹介者に紹介料を加算
+    for p in payroll_list:
+        cast_id = p["cast_id"]
+        # このキャストが紹介したキャストを探す
+        referred = db.query(Cast).filter(Cast.referrer_id == cast_id)
+        if store_id:
+            referred = referred.filter(Cast.store_id == store_id)
+        referred_casts = referred.all()
+        
+        referral_bonus_total = 0
+        referred_names = []
+        
+        for ref_cast in referred_casts:
+            # 紹介されたキャストがその月に出勤しているか確認
+            ref_att = db.query(Attendance).filter(
+                Attendance.cast_id == ref_cast.id,
+                Attendance.date >= start_date,
+                Attendance.date <= end_date
+            )
+            if store_id:
+                ref_att = ref_att.filter(Attendance.store_id == store_id)
+            
+            if ref_att.first():  # 1日でも出勤していれば
+                referral_bonus_total += ref_cast.referral_bonus or 0
+                if ref_cast.referral_bonus and ref_cast.referral_bonus > 0:
+                    referred_names.append({
+                        "name": ref_cast.stage_name,
+                        "bonus": ref_cast.referral_bonus
+                    })
+        
+        p["referral_bonus"] = referral_bonus_total
+        p["referred_casts"] = referred_names
+        p["total_payroll"] += referral_bonus_total
     
     return {
         "year": target_year,
@@ -2161,7 +2206,7 @@ def get_daily_payroll(date: Optional[str] = None, db: Session = Depends(get_db),
 # ヘルスチェック
 @app.get("/")
 def root():
-    return {"message": "Cabax API is running", "version": "2.1.0"}
+    return {"message": "Cabax API is running", "version": "2.2.0"}
 
 if __name__ == "__main__":
     import uvicorn

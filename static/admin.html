@@ -1859,6 +1859,19 @@
                         </div>
                     </div>
                     
+                    <!-- 紹介者 -->
+                    <div class="border-t border-gray-700 pt-4 mt-4">
+                        <p class="text-sm text-gray-400 mb-3">🤝 紹介者</p>
+                        <select id="castReferrer" class="w-full px-4 py-3 rounded-xl text-sm mb-3">
+                            <option value="">紹介者なし</option>
+                        </select>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">紹介料（円/月）</label>
+                            <input type="number" id="castReferralBonus" value="0" placeholder="5000" class="w-full px-4 py-3 rounded-xl text-sm">
+                            <p class="text-xs text-gray-500 mt-1">紹介者に毎月支払われる金額</p>
+                        </div>
+                    </div>
+                    
                     <!-- バック設定 -->
                     <div class="border-t border-gray-700 pt-4 mt-4">
                         <p class="text-sm text-gray-400 mb-3">💰 バック設定</p>
@@ -1943,6 +1956,19 @@
                                 <input type="radio" name="editCastPaymentType" id="editPaymentTypeMonthly" value="monthly" checked class="accent-green-500">
                                 <span class="text-sm text-gray-300">月払い</span>
                             </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 紹介者 -->
+                    <div class="border-t border-gray-700 pt-4 mt-4">
+                        <p class="text-sm text-gray-400 mb-3">🤝 紹介者</p>
+                        <select id="editCastReferrer" class="w-full px-4 py-3 rounded-xl text-sm mb-3">
+                            <option value="">紹介者なし</option>
+                        </select>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">紹介料（円/月）</label>
+                            <input type="number" id="editCastReferralBonus" value="0" placeholder="5000" class="w-full px-4 py-3 rounded-xl text-sm">
+                            <p class="text-xs text-gray-500 mt-1">紹介者に毎月支払われる金額</p>
                         </div>
                     </div>
                     
@@ -7304,6 +7330,9 @@ function cancelOneFromGroup(tableId, groupIndex) {
             // フォームをリセット
             toggleSalaryType('add', 'hourly');
             document.querySelector('input[name="castSalaryType"][value="hourly"]').checked = true;
+            // 紹介者選択を更新
+            populateReferrerSelect('castReferrer');
+            document.getElementById('castReferralBonus').value = 0;
             document.getElementById('addCastModal').classList.add('active');
         }
         
@@ -7332,6 +7361,8 @@ async function addCast(event) {
     const rank = document.getElementById('castRank').value;
     const salaryType = document.querySelector('input[name="castSalaryType"]:checked').value;
     const paymentType = document.querySelector('input[name="castPaymentType"]:checked').value;
+    const referrerId = document.getElementById('castReferrer').value || null;
+    const referralBonus = parseInt(document.getElementById('castReferralBonus').value) || 0;
     const hourlyRate = parseInt(document.getElementById('castHourlyRate').value) || 0;
     const monthlySalary = parseInt(document.getElementById('castMonthlySalary').value) || 0;
     const companionBack = parseInt(document.getElementById('castCompanionBack').value) || 3000;
@@ -7346,6 +7377,8 @@ async function addCast(event) {
         rank: rank,
         salary_type: salaryType,
         payment_type: paymentType,
+        referrer_id: referrerId ? parseInt(referrerId) : null,
+        referral_bonus: referralBonus,
         hourly_rate: hourlyRate,
         monthly_salary: monthlySalary,
         companion_back: companionBack,
@@ -7437,12 +7470,32 @@ async function addCast(event) {
                 document.getElementById('editPaymentTypeMonthly').checked = true;
             }
             
+            // 紹介者
+            populateReferrerSelect('editCastReferrer', cast.id);
+            const referrerId = cast.referrerId ?? cast.referrer_id ?? '';
+            document.getElementById('editCastReferrer').value = referrerId || '';
+            document.getElementById('editCastReferralBonus').value = cast.referralBonus ?? cast.referral_bonus ?? 0;
+            
             document.getElementById('editCastCompanionBack').value = cast.companionBack ?? cast.companion_back ?? 3000;
             document.getElementById('editCastNominationBack').value = cast.nominationBack ?? cast.nomination_back ?? 1000;
             document.getElementById('editCastDrinkBackRate').value = cast.drinkBackRate ?? cast.drink_back_rate ?? 10;
             document.getElementById('editCastSalesBackRate').value = cast.salesBackRate ?? cast.sales_back_rate ?? 0;
             
             document.getElementById('editCastModal').classList.add('active');
+        }
+        
+        // 紹介者選択ドロップダウンを生成
+        function populateReferrerSelect(selectId, excludeId = null) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">紹介者なし</option>';
+            
+            (appState.casts || []).forEach(cast => {
+                if (excludeId && cast.id === excludeId) return; // 自分自身は除外
+                const name = cast.name || cast.stage_name || `Cast#${cast.id}`;
+                select.innerHTML += `<option value="${cast.id}">${name}</option>`;
+            });
         }
 
 async function updateCast(event) {
@@ -7456,6 +7509,8 @@ async function updateCast(event) {
     const rank = document.getElementById('editCastRank').value;
     const salaryType = document.querySelector('input[name="editCastSalaryType"]:checked').value;
     const paymentType = document.querySelector('input[name="editCastPaymentType"]:checked').value;
+    const referrerId = document.getElementById('editCastReferrer').value || null;
+    const referralBonus = parseInt(document.getElementById('editCastReferralBonus').value) || 0;
     const hourlyRate = parseInt(document.getElementById('editCastHourlyRate').value) || 0;
     const monthlySalary = parseInt(document.getElementById('editCastMonthlySalary').value) || 0;
     const companionBack = parseInt(document.getElementById('editCastCompanionBack').value) || 3000;
@@ -7471,6 +7526,8 @@ async function updateCast(event) {
         rank: rank,
         salary_type: salaryType,
         payment_type: paymentType,
+        referrer_id: referrerId ? parseInt(referrerId) : null,
+        referral_bonus: referralBonus,
         hourly_rate: hourlyRate,
         monthly_salary: monthlySalary,
         companion_back: companionBack,
@@ -7495,6 +7552,8 @@ async function updateCast(event) {
             rank: rank,
             salaryType: salaryType,
             paymentType: paymentType,
+            referrerId: referrerId ? parseInt(referrerId) : null,
+            referralBonus: referralBonus,
             hourlyRate: hourlyRate,
             monthlySalary: monthlySalary,
             companionBack: companionBack,
