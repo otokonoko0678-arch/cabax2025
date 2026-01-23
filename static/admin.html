@@ -1834,6 +1834,79 @@
         </div>
     </div>
 
+    <!-- モーダル: ドリンク注文（キャスト/スタッフ選択） -->
+    <div id="drinkOrderModal" class="modal fixed inset-0 z-[60] items-center justify-center bg-black bg-opacity-70 p-4">
+        <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl">
+            <div class="border-b border-gray-700 px-6 py-5 flex items-center justify-between">
+                <h2 class="text-xl font-bold gold-accent">🍸 ドリンク注文</h2>
+                <button onclick="closeModal('drinkOrderModal')" class="text-gray-400 hover:text-gray-200 text-2xl">✕</button>
+            </div>
+            <div class="p-6">
+                <p class="text-lg font-semibold text-white mb-4" id="drinkOrderItemName">ドリンク名</p>
+                <input type="hidden" id="drinkOrderMenuItemId">
+                
+                <!-- 誰が飲む？ -->
+                <div class="mb-4">
+                    <p class="text-sm text-gray-400 mb-3">誰が飲みますか？</p>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-800/50 border border-gray-700 cursor-pointer hover:bg-gray-700/50">
+                            <input type="radio" name="drinkForAdmin" value="customer" checked onchange="updateDrinkOrderUI()">
+                            <span class="text-white">🍻 お客様</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-800/50 border border-gray-700 cursor-pointer hover:bg-gray-700/50">
+                            <input type="radio" name="drinkForAdmin" value="cast" onchange="updateDrinkOrderUI()">
+                            <span class="text-white">👩 キャスト（DB）</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 rounded-xl bg-gray-800/50 border border-gray-700 cursor-pointer hover:bg-gray-700/50">
+                            <input type="radio" name="drinkForAdmin" value="staff" onchange="updateDrinkOrderUI()">
+                            <span class="text-white">🧑‍💼 スタッフ</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- キャスト/スタッフ選択 -->
+                <div id="drinkPersonSelectArea" class="mb-4 hidden">
+                    <p class="text-sm text-gray-400 mb-2">選択してください</p>
+                    <select id="drinkPersonSelect" class="w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white">
+                        <option value="">-- 選択 --</option>
+                    </select>
+                </div>
+                
+                <!-- サイズ選択（キャスト/スタッフ用） -->
+                <div id="drinkSizeArea" class="mb-4 hidden">
+                    <p class="text-sm text-gray-400 mb-2">サイズ</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="flex flex-col items-center p-3 rounded-xl bg-gray-800/50 border border-gray-700 cursor-pointer hover:bg-gray-700/50">
+                            <input type="radio" name="drinkSizeAdmin" value="single" checked class="mb-1">
+                            <span class="text-white text-sm">シングル</span>
+                            <span class="text-green-400 text-xs">¥1,000</span>
+                        </label>
+                        <label class="flex flex-col items-center p-3 rounded-xl bg-gray-800/50 border border-gray-700 cursor-pointer hover:bg-gray-700/50">
+                            <input type="radio" name="drinkSizeAdmin" value="double" class="mb-1">
+                            <span class="text-white text-sm">ダブル</span>
+                            <span class="text-green-400 text-xs">¥2,000</span>
+                        </label>
+                        <label class="flex flex-col items-center p-3 rounded-xl bg-gray-800/50 border border-gray-700 cursor-pointer hover:bg-gray-700/50">
+                            <input type="radio" name="drinkSizeAdmin" value="triple" class="mb-1">
+                            <span class="text-white text-sm">トリプル</span>
+                            <span class="text-green-400 text-xs">¥3,000</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- ボタン -->
+                <div class="flex gap-3 mt-6">
+                    <button onclick="closeModal('drinkOrderModal')" class="flex-1 py-3 rounded-xl bg-gray-700 text-white hover:bg-gray-600">
+                        キャンセル
+                    </button>
+                    <button onclick="confirmDrinkOrder()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold hover:opacity-90">
+                        追加
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- モーダル: キャスト追加 -->
     <div id="addCastModal" class="modal fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-70 p-4">
         <div class="w-full max-w-md glass-effect rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -6807,25 +6880,118 @@ function addOrderToTable(menuItemId) {
     const menuItem = appState.menuItems.find(m => m.id === menuItemId);
     if (!menuItem) return;
 
-    // DB注文かどうか（ドリンクだけ確認）
+    // ドリンクカテゴリの場合はモーダルを表示
+    const category = (menuItem.category || '').toLowerCase();
+    if (category === 'drink' || category === 'castdrink') {
+        openDrinkOrderModal(menuItem);
+        return;
+    }
+
+    // ドリンク以外は直接追加
+    addOrderDirectly(menuItem, false, null, null);
+}
+
+// ドリンク注文モーダルを開く
+function openDrinkOrderModal(menuItem) {
+    document.getElementById('drinkOrderItemName').textContent = menuItem.name;
+    document.getElementById('drinkOrderMenuItemId').value = menuItem.id;
+    
+    // リセット
+    document.querySelector('input[name="drinkForAdmin"][value="customer"]').checked = true;
+    document.querySelector('input[name="drinkSizeAdmin"][value="single"]').checked = true;
+    
+    // キャスト/スタッフ選択肢を更新
+    populateDrinkPersonSelect();
+    updateDrinkOrderUI();
+    
+    document.getElementById('drinkOrderModal').classList.add('active');
+}
+
+// キャスト/スタッフ選択肢を生成
+function populateDrinkPersonSelect() {
+    const select = document.getElementById('drinkPersonSelect');
+    const drinkFor = document.querySelector('input[name="drinkForAdmin"]:checked')?.value;
+    
+    select.innerHTML = '<option value="">-- 選択 --</option>';
+    
+    if (drinkFor === 'cast') {
+        (appState.casts || []).forEach(cast => {
+            const name = cast.name || cast.stage_name || `Cast#${cast.id}`;
+            select.innerHTML += `<option value="${name}">${name}</option>`;
+        });
+    } else if (drinkFor === 'staff') {
+        (appState.staff || []).forEach(staff => {
+            const name = staff.name || `Staff#${staff.id}`;
+            select.innerHTML += `<option value="${name}">${name}</option>`;
+        });
+    }
+}
+
+// UI更新（キャスト/スタッフ選択時に表示切替）
+function updateDrinkOrderUI() {
+    const drinkFor = document.querySelector('input[name="drinkForAdmin"]:checked')?.value;
+    const personArea = document.getElementById('drinkPersonSelectArea');
+    const sizeArea = document.getElementById('drinkSizeArea');
+    
+    if (drinkFor === 'cast' || drinkFor === 'staff') {
+        personArea.classList.remove('hidden');
+        sizeArea.classList.remove('hidden');
+        populateDrinkPersonSelect();
+    } else {
+        personArea.classList.add('hidden');
+        sizeArea.classList.add('hidden');
+    }
+}
+
+// ドリンク注文確定
+function confirmDrinkOrder() {
+    const menuItemId = parseInt(document.getElementById('drinkOrderMenuItemId').value);
+    const menuItem = appState.menuItems.find(m => m.id === menuItemId);
+    if (!menuItem) return;
+    
+    const drinkFor = document.querySelector('input[name="drinkForAdmin"]:checked')?.value || 'customer';
     let isDrinkBack = false;
     let castName = null;
-
-    if (menuItem.category === 'drink') {
-        const confirmDb = confirm(
-            `${menuItem.name} をDB注文にしますか？\n\n` +
-            `OK = DB注文（${session.castName || ''}）\nキャンセル = 通常注文`
-        );
-        if (confirmDb) {
-            isDrinkBack = true;
-            castName = session.castName;
+    let price = 0;
+    let itemNameSuffix = '';
+    
+    if (drinkFor === 'cast' || drinkFor === 'staff') {
+        castName = document.getElementById('drinkPersonSelect').value;
+        if (!castName) {
+            showNotification('キャストまたはスタッフを選択してください', 'error');
+            return;
         }
+        
+        isDrinkBack = (drinkFor === 'cast');
+        
+        // サイズによる価格
+        const size = document.querySelector('input[name="drinkSizeAdmin"]:checked')?.value || 'single';
+        const prices = { single: 1000, double: 2000, triple: 3000 };
+        price = prices[size];
+        const sizeLabel = size === 'single' ? 'シングル' : size === 'double' ? 'ダブル' : 'トリプル';
+        itemNameSuffix = `（${sizeLabel}）`;
+    } else {
+        // お客様の場合は0円（セット料金込み）
+        price = 0;
     }
+    
+    closeModal('drinkOrderModal');
+    addOrderDirectly(menuItem, isDrinkBack, castName, price, itemNameSuffix);
+}
+
+// 注文を直接追加
+function addOrderDirectly(menuItem, isDrinkBack, castName, customPrice, nameSuffix = '') {
+    const tableId = appState.currentTableId;
+    const session = appState.activeSessions.find(s => s.tableId === tableId);
+    if (!session) return;
+    
+    const finalPrice = customPrice !== null ? customPrice : menuItem.price;
+    const finalName = menuItem.name + nameSuffix;
 
     // ★ すでに同じ条件の注文があるか探す
     const existingOrder = (session.orders || []).find(o =>
-        o.itemName === menuItem.name &&
-        (o.price || 0) === menuItem.price &&
+        o.itemName === finalName &&
+        (o.price || 0) === finalPrice &&
         (o.category || 'other') === (menuItem.category || 'other') &&
         !!o.isDrinkBack === isDrinkBack &&
         (o.castName || '') === (castName || '')
@@ -6837,21 +7003,21 @@ function addOrderToTable(menuItemId) {
     } else {
         // なければ新規行を追加
         session.orders.push({
-            itemName: menuItem.name,
+            itemName: finalName,
             category: menuItem.category,
-            price: menuItem.price,
+            price: finalPrice,
             quantity: 1,
             isDrinkBack,
             castName
         });
     }
 
-    // 合計金額を再計算（さっき作ったやつを利用）
+    // 合計金額を再計算
     recalcSessionTotal(session);
 
     renderTables();
     openTableDetail(tableId);
-    showNotification(`${menuItem.name} を追加しました`, 'success');
+    showNotification(`${finalName} を追加しました`, 'success');
 }
 
 
