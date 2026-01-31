@@ -369,6 +369,7 @@ class OrderCreate(BaseModel):
     is_drink_back: bool = False
     cast_name: Optional[str] = None
     item_name: Optional[str] = None  # カスタム商品名（カクテル（カシスオレンジ）など）
+    custom_price: Optional[int] = None  # カスタム価格（キャストドリンクのサイズ別など）
 
 class AttendanceCreate(BaseModel):
     cast_id: int
@@ -1437,19 +1438,22 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db), ):
     # カスタム商品名があればそれを使う、なければメニューの名前
     final_item_name = order.item_name if order.item_name else menu_item.name
     
+    # カスタム価格があればそれを使う、なければメニューの価格
+    final_price = order.custom_price if order.custom_price is not None else menu_item.price
+    
     db_order = Order(
         session_id=order.session_id,
         menu_item_id=order.menu_item_id,
         item_name=final_item_name,
         quantity=order.quantity,
-        price=menu_item.price,
+        price=final_price,
         is_drink_back=order.is_drink_back,
         cast_name=order.cast_name
     )
     db.add(db_order)
     session = db.query(SessionModel).filter(SessionModel.id == order.session_id).first()
     if session:
-        session.current_total += menu_item.price * order.quantity
+        session.current_total += final_price * order.quantity
     db.commit()
     db.refresh(db_order)
     return db_order
