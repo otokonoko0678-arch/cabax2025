@@ -3378,10 +3378,17 @@ function showReceipt(session, orders) {
     // 注文を整形
     const orderItems = orders.map(o => {
         const itemName = o.item_name || o.itemName || '商品';
+        const castName = o.cast_name || o.castName || '';
+        const isDrinkBack = o.is_drink_back || o.isDrinkBack || false;
         const qty = o.quantity || 1;
         const price = o.price || 0;
         const subtotal = price * qty;
-        return { name: itemName, qty, price, subtotal };
+        // キャスト名があれば商品名に追加
+        let displayName = itemName;
+        if (castName) {
+            displayName = `${itemName}（${castName}）`;
+        }
+        return { name: displayName, qty, price, subtotal, isDrinkBack };
     });
     
     // TAX/サービス料を分離して計算
