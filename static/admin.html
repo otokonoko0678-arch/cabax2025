@@ -5708,22 +5708,40 @@ function onOrderMenuChange() {
     if (!select) return;
     
     const itemId = Number(select.value);
+    // 選択肢のテキストから名前を抽出（「レモンサワー（セット込）」→「レモンサワー」）
+    const selectedText = select.options[select.selectedIndex]?.text || '';
+    const itemName = selectedText.replace(/（.*）$/, '').trim();
+    
+    // APIのメニューからも探す（あれば）
     const menuItem = (appState.menuItems || []).find(m => m.id === itemId);
-    const category = (menuItem?.category || '').toLowerCase();
-    const itemName = menuItem?.name || '';
+    const apiCategory = (menuItem?.category || '').toLowerCase();
+    
+    // 名前ベースでカテゴリ判定
+    const customerDrinkList = ['レモンサワー', 'コークハイ', 'ジンジャーハイ', 'ビール', 'カクテル', 'ソフトドリンク'];
+    const castDrinkList = ['麦焼酎', 'ウイスキー'];
+    const paidDrinkList = ['ショット', 'グラスワイン'];
+    const tableSetList = ['アイスセット', 'アイス（追加）', 'グラス（追加）', 'ウーロン茶ピッチャー', '緑茶ピッチャー', '炭酸水', '紅茶ピッチャー', 'ジャスミン茶ピッチャー', 'コーヒーピッチャー', 'ミネラルウォーター'];
+    const bottleList = ['黒霧島', 'いいちこ', 'ジャックダニエル', '山崎'];
+    const champagneList = ['アルマンド ブリュット', 'アルマンド ロゼ', 'クリュッグ', 'ドンペリ', 'ドンペリ ロゼ', 'ベルエポック', 'サロン', 'ヴーヴクリコ', 'モエ', 'ローランペリエ'];
+    const wineList = ['赤ワイン', '白ワイン'];
+    
+    // カテゴリ判定（名前ベース）
+    const isCustomerDrink = customerDrinkList.includes(itemName);
+    const isCastDrink = castDrinkList.includes(itemName);
+    const isPaidDrink = paidDrinkList.includes(itemName);
+    const isTableSet = tableSetList.includes(itemName);
+    const isBottle = bottleList.includes(itemName);
+    const isChampagne = champagneList.includes(itemName);
+    const isWine = wineList.includes(itemName);
+    
+    // ドリンクカテゴリ全体
+    const isDrinkCategory = isCustomerDrink || isCastDrink || isPaidDrink || isBottle || isChampagne || isWine;
+    const isDrinkOnly = isCustomerDrink || isCastDrink;
     
     const drinkSizeSection = document.getElementById('drinkSizeSection');
     const drinkForSection = document.getElementById('drinkForSection');
     const mixStyleSection = document.getElementById('mixStyleSection');
     const mixStyleOptions = document.getElementById('mixStyleOptions');
-    
-    // カテゴリ判定
-    const isCastDrink = category === 'castdrink';
-    const isTableSet = category === 'tableset';
-    const isDrinkCategory = ['drink', 'castdrink', 'bottle', 'champagne', 'wine'].includes(category);
-    const isDrinkOnly = ['drink', 'castdrink'].includes(category);
-    const isPaidDrink = paidDrinksAdmin.includes(itemName);
-    const isCastOnlyDrink = castOnlyDrinksAdmin.includes(itemName);
     
     // 割り方スタイルを取得
     const hasMixStyle = isCastDrink 
@@ -6478,25 +6496,38 @@ async function openTableDetail(tableId) {
           
           try {
             msg('注文追加中...');
-            const itemId = Number(document.getElementById('selAddOrderItem')?.value);
+            const select = document.getElementById('selAddOrderItem');
+            const itemId = Number(select?.value);
             let qty = Number(document.getElementById('inpAddOrderQty')?.value ?? 1);
             if (!itemId || qty <= 0) throw new Error('メニュー/数量を確認してください');
             
-            // メニュー情報を取得（APIから）
-            const menuData = await fetchJson('/menu', { method: 'GET' }).catch(() => []);
-            const menuItem = menuData.find(m => m.id === itemId);
-            const category = menuItem?.category?.toLowerCase() || '';
-            const itemName = menuItem?.name || '';
-            const isDrinkCategory = ['drink', 'bottle', 'champagne', 'wine'].includes(category);
+            // 選択肢のテキストから名前を抽出（「レモンサワー（セット込）」→「レモンサワー」）
+            const selectedText = select.options[select.selectedIndex]?.text || '';
+            const itemName = selectedText.replace(/（.*）$/, '').trim();
             
-            // 有料ドリンク（ショット・グラスワイン）
-            const isPaidDrink = paidDrinksAdmin.includes(itemName);
+            // 名前ベースでカテゴリ判定
+            const customerDrinkList = ['レモンサワー', 'コークハイ', 'ジンジャーハイ', 'ビール', 'カクテル', 'ソフトドリンク'];
+            const castDrinkList = ['麦焼酎', 'ウイスキー'];
+            const paidDrinkList = ['ショット', 'グラスワイン'];
+            const tableSetList = ['アイスセット', 'アイス（追加）', 'グラス（追加）', 'ウーロン茶ピッチャー', '緑茶ピッチャー', '炭酸水', '紅茶ピッチャー', 'ジャスミン茶ピッチャー', 'コーヒーピッチャー', 'ミネラルウォーター'];
+            const bottleList = ['黒霧島', 'いいちこ', 'ジャックダニエル', '山崎'];
+            const champagneList = ['アルマンド ブリュット', 'アルマンド ロゼ', 'クリュッグ', 'ドンペリ', 'ドンペリ ロゼ', 'ベルエポック', 'サロン', 'ヴーヴクリコ', 'モエ', 'ローランペリエ'];
+            const wineList = ['赤ワイン', '白ワイン'];
+            
+            const isCustomerDrink = customerDrinkList.includes(itemName);
+            const isCastDrink = castDrinkList.includes(itemName);
+            const isPaidDrink = paidDrinkList.includes(itemName);
+            const isTableSet = tableSetList.includes(itemName);
+            const isBottle = bottleList.includes(itemName);
+            const isChampagne = champagneList.includes(itemName);
+            const isWine = wineList.includes(itemName);
+            const isDrinkCategory = isCustomerDrink || isCastDrink || isPaidDrink || isBottle || isChampagne || isWine;
             
             // 割り方があるかチェック
-            const hasMixStyle = mixStylesAdmin[itemName] !== undefined;
+            const hasMixStyle = mixStylesAdmin[itemName] !== undefined || castDrinkMixStylesAdmin[itemName] !== undefined;
             
             // ドリンクサイズによる価格調整
-            let finalPrice = menuItem?.price || 0;
+            let finalPrice = 0;
             let itemNameSuffix = '';
             
             // 割り方がある場合は名前に追加
@@ -6506,8 +6537,8 @@ async function openTableDetail(tableId) {
             
             if (isPaidDrink) {
               // ショット・グラスワインは統一価格、サイズなし
-              finalPrice = menuItem?.price || 2000;
-            } else if (category === 'drink') {
+              finalPrice = 2000;
+            } else if (isCustomerDrink || isCastDrink) {
               const drinkFor = document.querySelector('input[name="drinkFor"]:checked')?.value || 'customer';
               if (drinkFor === 'customer') {
                 // お客様のセットドリンクは0円
@@ -6525,6 +6556,19 @@ async function openTableDetail(tableId) {
                   itemNameSuffix = '（' + sizeLabel + '）';
                 }
               }
+            } else if (isBottle || isChampagne || isWine) {
+              // ボトル・シャンパン・ワインはAPIから価格取得を試みる
+              const menuData = await fetchJson('/menu', { method: 'GET' }).catch(() => []);
+              const menuItem = menuData.find(m => m.name === itemName);
+              finalPrice = menuItem?.price || 0;
+            } else if (isTableSet) {
+              // 卓セットは0円（セット込み）
+              finalPrice = 0;
+            } else {
+              // その他はAPIから価格取得
+              const menuData = await fetchJson('/menu', { method: 'GET' }).catch(() => []);
+              const menuItem = menuData.find(m => m.name === itemName);
+              finalPrice = menuItem?.price || 0;
             }
             
             // 誰が飲むか
@@ -6547,6 +6591,7 @@ async function openTableDetail(tableId) {
               body: JSON.stringify({
                 session_id: sessionId,
                 menu_item_id: itemId,
+                item_name: itemName + itemNameSuffix,
                 quantity: qty,
                 is_drink_back: isDrinkBack,
                 cast_name: personName,
