@@ -5605,7 +5605,7 @@ function renderOrders() {
                     ${statusBadge}
                     <span class="text-base">${emoji}</span>
                     <div class="flex-1 min-w-0">
-                        <span class="text-white text-sm truncate block">${order.item_name || '?'}</span>
+                        <span class="text-white text-sm truncate block">${order.item_name || '?'}${order.cast_name ? ` <span class="text-purple-400 text-xs">👤${order.cast_name}</span>` : ''}</span>
                     </div>
                     <span class="text-[10px] text-gray-500">${timeStr}</span>
                     ${elapsedStr}
@@ -5631,7 +5631,7 @@ function renderOrders() {
                         <span class="text-2xl">${emoji}</span>
                         <div class="flex-1 min-w-0">
                             <div class="text-white font-semibold truncate">${order.item_name || '?'}</div>
-                            <div class="text-sm text-gray-400">×${order.quantity} / ¥${(order.price * order.quantity).toLocaleString()}</div>
+                            <div class="text-sm text-gray-400">×${order.quantity} / ¥${(order.price * order.quantity).toLocaleString()}${order.cast_name ? ` <span class="text-purple-400">👤${order.cast_name}</span>` : ''}${order.is_drink_back ? ' <span class="text-xs text-green-400">DB</span>' : ''}</div>
                         </div>
                     </div>
                     
@@ -5827,14 +5827,20 @@ function onDrinkForChange() {
     const drinkBackInfo = document.getElementById('drinkBackInfo');
     const drinkSizeSection = document.getElementById('drinkSizeSection');
     
-    // 現在選択中のメニューを取得
+    // 現在選択中のメニューを取得（名前ベースで判定）
     const select = document.getElementById('selAddOrderItem');
-    const itemId = Number(select?.value);
-    const menuItem = (appState.menuItems || []).find(m => m.id === itemId);
-    const itemName = menuItem?.name || '';
-    const category = (menuItem?.category || '').toLowerCase();
-    const isPaidDrink = paidDrinksAdmin.includes(itemName);
-    const isDrinkOnly = category === 'drink';
+    const selectedText = select?.options[select.selectedIndex]?.text || '';
+    const itemName = selectedText.replace(/（.*）$/, '').trim();
+    
+    // 名前ベースでカテゴリ判定
+    const customerDrinkList = ['レモンサワー', 'コークハイ', 'ジンジャーハイ', 'ビール', 'カクテル', 'ソフトドリンク'];
+    const castDrinkList = ['麦焼酎', 'ウイスキー'];
+    const paidDrinkList = ['ショット', 'グラスワイン'];
+    
+    const isCustomerDrink = customerDrinkList.includes(itemName);
+    const isCastDrink = castDrinkList.includes(itemName);
+    const isPaidDrink = paidDrinkList.includes(itemName);
+    const isDrinkOnly = isCustomerDrink || isCastDrink;
     
     if (drinkFor === 'customer') {
         // お客様の場合は選択不要
