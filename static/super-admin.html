@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cabax Super Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .status-active { color: #22c55e; }
+        .status-expired { color: #ef4444; }
+        .status-suspended { color: #f59e0b; }
+        .gold-accent { color: #d4af37; }
+    </style>
+</head>
+<body class="text-white">
+    <!-- ログイン画面 -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center">
+        <div class="glass-card rounded-2xl p-8 w-96">
+            <h1 class="text-3xl font-bold text-center gold-accent mb-6">🔐 Super Admin</h1>
+            <p class="text-gray-400 text-center mb-6">管理者キーを入力してください</p>
+            <input type="password" id="adminKeyInput" 
+                   class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white mb-4"
+                   placeholder="Admin Key" onkeypress="if(event.key==='Enter')login()">
+            <button onclick="login()" 
+                    class="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-xl font-bold hover:opacity-90">
+                ログイン
+            </button>
+            <p id="loginError" class="text-red-400 text-center mt-4 hidden">無効なキーです</p>
+        </div>
+    </div>
+
+    <!-- メイン画面 -->
+    <div id="mainScreen" class="hidden">
+        <!-- ヘッダー -->
+        <header class="glass-card px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold gold-accent">Cabax Super Admin</h1>
+            <div class="flex items-center gap-4">
+                <span id="storeCount" class="text-gray-400">店舗数: 0</span>
+                <button onclick="logout()" class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    ログアウト
+                </button>
+            </div>
+        </header>
+
+        <!-- コンテンツ -->
+        <main class="p-6 max-w-6xl mx-auto">
+            <!-- アクションバー -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">店舗一覧</h2>
+                <button onclick="showAddModal()" 
+                        class="px-6 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-xl font-bold hover:opacity-90">
+                    ➕ 新規店舗登録
+                </button>
+            </div>
+
+            <!-- サマリーカード -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <p class="text-gray-400 text-sm">総店舗数</p>
+                    <p id="totalStores" class="text-3xl font-bold gold-accent">0</p>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <p class="text-gray-400 text-sm">有効</p>
+                    <p id="activeStores" class="text-3xl font-bold text-green-400">0</p>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <p class="text-gray-400 text-sm">期限切れ</p>
+                    <p id="expiredStores" class="text-3xl font-bold text-red-400">0</p>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <p class="text-gray-400 text-sm">月間収益</p>
+                    <p id="monthlyRevenue" class="text-3xl font-bold gold-accent">¥0</p>
+                </div>
+            </div>
+
+            <!-- 店舗リスト -->
+            <div id="storeList" class="space-y-4">
+                <!-- 店舗カードがここに挿入される -->
+            </div>
+        </main>
+    </div>
+
+    <!-- 新規店舗モーダル -->
+    <div id="addModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="glass-card rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold gold-accent mb-4">新規店舗登録</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-gray-400 text-sm">店舗名 *</label>
+                    <input type="text" id="newStoreName" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-amber-400 text-sm font-bold mb-2">🔐 ログイン情報</p>
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">ユーザー名 *</label>
+                    <input type="text" id="newUsername" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="店舗用ログインID">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">パスワード *</label>
+                    <input type="password" id="newPassword" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="初期パスワード">
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-gray-500 text-sm mb-2">📋 店舗情報</p>
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">オーナー名</label>
+                    <input type="text" id="newOwnerName" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">電話番号</label>
+                    <input type="text" id="newPhone" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">メール</label>
+                    <input type="email" id="newEmail" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">住所</label>
+                    <input type="text" id="newAddress" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">プラン</label>
+                    <select id="newPlan" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                        <option value="standard">スタンダード</option>
+                        <option value="premium">プレミアム</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">月額料金</label>
+                    <input type="number" id="newMonthlyFee" value="30000" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">メモ</label>
+                    <textarea id="newNotes" rows="2" class="w-full px-4 py-2 bg-gray-800 rounded-lg"></textarea>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="hideAddModal()" class="flex-1 py-3 bg-gray-700 rounded-xl">キャンセル</button>
+                <button onclick="createStore()" class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-xl font-bold">
+                    登録
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 詳細モーダル -->
+    <div id="detailModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="glass-card rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold gold-accent mb-4">店舗詳細</h3>
+            <div id="detailContent" class="space-y-4">
+                <!-- 詳細がここに表示される -->
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="hideDetailModal()" class="flex-1 py-3 bg-gray-700 rounded-xl">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 延長モーダル -->
+    <div id="extendModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="glass-card rounded-2xl p-6 w-96 mx-4">
+            <h3 class="text-xl font-bold gold-accent mb-4">ライセンス延長</h3>
+            <p id="extendStoreName" class="text-gray-400 mb-4"></p>
+            <div class="space-y-3">
+                <button onclick="extendLicense(1)" class="w-full py-3 bg-gray-700 rounded-xl hover:bg-gray-600">
+                    1ヶ月延長
+                </button>
+                <button onclick="extendLicense(3)" class="w-full py-3 bg-gray-700 rounded-xl hover:bg-gray-600">
+                    3ヶ月延長
+                </button>
+                <button onclick="extendLicense(6)" class="w-full py-3 bg-gray-700 rounded-xl hover:bg-gray-600">
+                    6ヶ月延長
+                </button>
+                <button onclick="extendLicense(12)" class="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-xl font-bold">
+                    12ヶ月延長
+                </button>
+            </div>
+            <button onclick="hideExtendModal()" class="w-full py-3 bg-gray-800 rounded-xl mt-4">
+                キャンセル
+            </button>
+        </div>
+    </div>
+
+    <!-- 編集モーダル -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="glass-card rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold gold-accent mb-4">店舗編集</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-gray-400 text-sm">店舗名</label>
+                    <input type="text" id="editStoreName" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-amber-400 text-sm font-bold mb-2">🔐 ログイン情報</p>
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">ユーザー名</label>
+                    <input type="text" id="editUsername" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">新しいパスワード（変更する場合のみ）</label>
+                    <input type="password" id="editPassword" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="空欄なら変更なし">
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-amber-400 text-sm font-bold mb-2">🔑 ログインPIN設定</p>
+                    <p class="text-gray-500 text-xs mb-2">店舗スタッフがログインする際のPINです</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-gray-400 text-sm">👔 経営者PIN</label>
+                        <input type="text" id="editManagerPin" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="例: 9999" maxlength="10">
+                    </div>
+                    <div>
+                        <label class="text-gray-400 text-sm">👤 スタッフPIN</label>
+                        <input type="text" id="editStaffPin" class="w-full px-4 py-2 bg-gray-800 rounded-lg" placeholder="例: 1234" maxlength="10">
+                    </div>
+                </div>
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-gray-500 text-sm mb-2">📋 店舗情報</p>
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">オーナー名</label>
+                    <input type="text" id="editOwnerName" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">電話番号</label>
+                    <input type="text" id="editPhone" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">メール</label>
+                    <input type="email" id="editEmail" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">月額料金</label>
+                    <input type="number" id="editMonthlyFee" class="w-full px-4 py-2 bg-gray-800 rounded-lg">
+                </div>
+                <div>
+                    <label class="text-gray-400 text-sm">メモ</label>
+                    <textarea id="editNotes" rows="2" class="w-full px-4 py-2 bg-gray-800 rounded-lg"></textarea>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="hideEditModal()" class="flex-1 py-3 bg-gray-700 rounded-xl">キャンセル</button>
+                <button onclick="updateStore()" class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-xl font-bold">
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        let adminKey = '';
+        let stores = [];
+        let selectedStoreId = null;
+        const API_BASE = '/api';
+
+        // ログイン
+        async function login() {
+            const key = document.getElementById('adminKeyInput').value;
+            try {
+                const res = await fetch(`${API_BASE}/stores`, { headers: { 'X-Admin-Key': key } });
+                if (res.ok) {
+                    adminKey = key;
+                    stores = await res.json();
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('mainScreen').classList.remove('hidden');
+                    renderStores();
+                } else {
+                    document.getElementById('loginError').classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            adminKey = '';
+            stores = [];
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainScreen').classList.add('hidden');
+            document.getElementById('adminKeyInput').value = '';
+        }
+
+        // 店舗一覧取得
+        async function loadStores() {
+            try {
+                const res = await fetch(`${API_BASE}/stores`, { headers: { 'X-Admin-Key': adminKey } });
+                if (res.ok) {
+                    stores = await res.json();
+                    renderStores();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // 店舗一覧描画
+        function renderStores() {
+            const container = document.getElementById('storeList');
+            
+            // サマリー更新
+            const active = stores.filter(s => s.status === 'active' && s.days_remaining >= 0).length;
+            const expired = stores.filter(s => s.days_remaining < 0 || s.status === 'expired').length;
+            const revenue = stores.filter(s => s.status === 'active').reduce((sum, s) => sum + s.monthly_fee, 0);
+            
+            document.getElementById('totalStores').textContent = stores.length;
+            document.getElementById('activeStores').textContent = active;
+            document.getElementById('expiredStores').textContent = expired;
+            document.getElementById('monthlyRevenue').textContent = `¥${revenue.toLocaleString()}`;
+            document.getElementById('storeCount').textContent = `店舗数: ${stores.length}`;
+
+            if (stores.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-card rounded-xl p-8 text-center">
+                        <p class="text-gray-400">登録された店舗がありません</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = stores.map(store => {
+                const statusClass = store.days_remaining < 0 ? 'status-expired' : 
+                                   store.status === 'suspended' ? 'status-suspended' : 'status-active';
+                const statusText = store.days_remaining < 0 ? '期限切れ' :
+                                  store.status === 'suspended' ? '停止中' : '有効';
+                const daysText = store.days_remaining >= 0 ? `残り${store.days_remaining}日` : `${Math.abs(store.days_remaining)}日超過`;
+                const warningClass = store.days_remaining <= 7 && store.days_remaining >= 0 ? 'text-yellow-400' : '';
+
+                return `
+                    <div class="glass-card rounded-xl p-4">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="text-lg font-bold">${escapeHtml(store.name)}</h3>
+                                    <span class="px-2 py-1 rounded text-xs ${statusClass} bg-gray-800">${escapeHtml(statusText)}</span>
+                                </div>
+                                <div class="flex gap-4 text-sm text-gray-400">
+                                    <span class="font-mono">${escapeHtml(store.license_key)}</span>
+                                    ${store.username ? `<span>🔐 ${escapeHtml(store.username)}</span>` : '<span class="text-red-400">⚠️ ログイン未設定</span>'}
+                                </div>
+                                <div class="flex gap-4 mt-2 text-sm">
+                                    <span class="${warningClass}">${escapeHtml(daysText)}</span>
+                                    <span class="text-gray-500">¥${store.monthly_fee.toLocaleString()}/月</span>
+                                    ${store.owner_name ? `<span class="text-gray-500">${escapeHtml(store.owner_name)}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="showExtendModal(${store.id}, '${escapeHtml(store.name)}')"
+                                        class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-500 text-sm">
+                                    延長
+                                </button>
+                                <button onclick="showEditModal(${store.id})"
+                                        class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 text-sm">
+                                    編集
+                                </button>
+                                <button onclick="showDetail(${store.id})"
+                                        class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 text-sm">
+                                    詳細
+                                </button>
+                                ${store.status === 'active' ? `
+                                    <button onclick="suspendStore(${store.id})"
+                                            class="px-4 py-2 bg-yellow-600 rounded-lg hover:bg-yellow-500 text-sm">
+                                        停止
+                                    </button>
+                                ` : `
+                                    <button onclick="activateStore(${store.id})"
+                                            class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 text-sm">
+                                        再開
+                                    </button>
+                                `}
+                                <button onclick="deleteStore(${store.id}, '${escapeHtml(store.name)}')"
+                                        class="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-500 text-sm">
+                                    削除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 新規店舗モーダル
+        function showAddModal() {
+            document.getElementById('addModal').classList.remove('hidden');
+        }
+        function hideAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+        }
+
+        async function createStore() {
+            const name = document.getElementById('newStoreName').value;
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            
+            if (!name) {
+                alert('店舗名を入力してください');
+                return;
+            }
+            if (!username || !password) {
+                alert('ユーザー名とパスワードを入力してください');
+                return;
+            }
+
+            const data = {
+                name,
+                username,
+                password,
+                owner_name: document.getElementById('newOwnerName').value || null,
+                phone: document.getElementById('newPhone').value || null,
+                email: document.getElementById('newEmail').value || null,
+                address: document.getElementById('newAddress').value || null,
+                plan: document.getElementById('newPlan').value,
+                monthly_fee: parseInt(document.getElementById('newMonthlyFee').value) || 30000,
+                notes: document.getElementById('newNotes').value || null
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/stores`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    const result = await res.json();
+                    alert(`店舗を登録しました\n\nユーザー名: ${result.username}\nライセンスキー: ${result.license_key}`);
+                    hideAddModal();
+                    // フォームリセット
+                    document.getElementById('newStoreName').value = '';
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('newOwnerName').value = '';
+                    document.getElementById('newPhone').value = '';
+                    document.getElementById('newEmail').value = '';
+                    document.getElementById('newAddress').value = '';
+                    document.getElementById('newNotes').value = '';
+                    document.getElementById('newMonthlyFee').value = '30000';
+                    loadStores();
+                } else {
+                    const err = await res.json();
+                    alert(err.detail || '登録に失敗しました');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('エラーが発生しました');
+            }
+        }
+
+        // 詳細モーダル
+        function showDetail(storeId) {
+            const store = stores.find(s => s.id === storeId);
+            if (!store) return;
+
+            const expiresAt = new Date(store.expires_at).toLocaleString('ja-JP');
+            const createdAt = new Date(store.created_at).toLocaleString('ja-JP');
+
+            const orderUrl = `${window.location.origin}/static/order.html?store_id=${store.id}`;
+            const adminUrl = `${window.location.origin}/admin?store_id=${store.id}`;
+            
+            document.getElementById('detailContent').innerHTML = `
+                <div class="space-y-3">
+                    <!-- 注文用URL & QRコード -->
+                    <div class="bg-gradient-to-r from-amber-500/20 to-yellow-600/20 rounded-xl p-4 mb-4">
+                        <p class="text-amber-400 font-bold mb-2">📱 注文用URL</p>
+                        <div class="flex items-center gap-2 mb-3">
+                            <input type="text" readonly value="${escapeHtml(orderUrl)}"
+                                   class="flex-1 px-3 py-2 bg-gray-900 rounded-lg text-sm font-mono text-gray-300"
+                                   id="orderUrlInput_${store.id}">
+                            <button onclick="copyOrderUrl(${store.id})"
+                                    class="px-3 py-2 bg-amber-500 rounded-lg hover:bg-amber-600 text-black font-bold text-sm">
+                                📋 コピー
+                            </button>
+                        </div>
+                        <div class="flex justify-center bg-white rounded-xl p-4">
+                            <div id="qrcode_${store.id}"></div>
+                        </div>
+                        <p class="text-gray-400 text-xs text-center mt-2">このQRコードをテーブルに設置してください</p>
+                    </div>
+
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">店舗名</span>
+                        <span class="font-bold">${escapeHtml(store.name)}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">ライセンスキー</span>
+                        <span class="font-mono text-sm">${escapeHtml(store.license_key)}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">ユーザー名</span>
+                        <span class="font-mono">${escapeHtml(store.username || '未設定')}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">有効期限</span>
+                        <span>${escapeHtml(expiresAt)}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">残り日数</span>
+                        <span>${escapeHtml(String(store.days_remaining))}日</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">プラン</span>
+                        <span>${store.plan === 'premium' ? 'プレミアム' : 'スタンダード'}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">月額</span>
+                        <span>¥${store.monthly_fee.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">オーナー</span>
+                        <span>${escapeHtml(store.owner_name || '-')}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">電話</span>
+                        <span>${escapeHtml(store.phone || '-')}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">メール</span>
+                        <span>${escapeHtml(store.email || '-')}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">住所</span>
+                        <span>${escapeHtml(store.address || '-')}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-700 pb-2">
+                        <span class="text-gray-400">登録日</span>
+                        <span>${escapeHtml(createdAt)}</span>
+                    </div>
+                    ${store.notes ? `
+                        <div class="border-b border-gray-700 pb-2">
+                            <span class="text-gray-400 block mb-1">メモ</span>
+                            <span class="text-sm">${escapeHtml(store.notes)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            document.getElementById('detailModal').classList.remove('hidden');
+            
+            // QRコード生成
+            setTimeout(() => {
+                const qrContainer = document.getElementById(`qrcode_${store.id}`);
+                if (qrContainer && typeof QRCode !== 'undefined') {
+                    qrContainer.innerHTML = '';
+                    new QRCode(qrContainer, {
+                        text: orderUrl,
+                        width: 200,
+                        height: 200
+                    });
+                }
+            }, 100);
+        }
+        
+        function copyOrderUrl(storeId) {
+            const input = document.getElementById(`orderUrlInput_${storeId}`);
+            if (input) {
+                input.select();
+                document.execCommand('copy');
+                alert('URLをコピーしました');
+            }
+        }
+        
+        function hideDetailModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        // 延長モーダル
+        function showExtendModal(storeId, storeName) {
+            selectedStoreId = storeId;
+            document.getElementById('extendStoreName').textContent = storeName;
+            document.getElementById('extendModal').classList.remove('hidden');
+        }
+        function hideExtendModal() {
+            document.getElementById('extendModal').classList.add('hidden');
+            selectedStoreId = null;
+        }
+
+        async function extendLicense(months) {
+            if (!selectedStoreId) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/stores/${selectedStoreId}/extend?months=${months}`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Key': adminKey }
+                });
+                
+                if (res.ok) {
+                    const result = await res.json();
+                    alert(result.message);
+                    hideExtendModal();
+                    loadStores();
+                } else {
+                    alert('延長に失敗しました');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('エラーが発生しました');
+            }
+        }
+
+        // 編集モーダル
+        function showEditModal(storeId) {
+            const store = stores.find(s => s.id === storeId);
+            if (!store) return;
+            
+            selectedStoreId = storeId;
+            document.getElementById('editStoreName').value = store.name || '';
+            document.getElementById('editUsername').value = store.username || '';
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editManagerPin').value = store.manager_pin || '';
+            document.getElementById('editStaffPin').value = store.staff_pin || '';
+            document.getElementById('editOwnerName').value = store.owner_name || '';
+            document.getElementById('editPhone').value = store.phone || '';
+            document.getElementById('editEmail').value = store.email || '';
+            document.getElementById('editMonthlyFee').value = store.monthly_fee || 30000;
+            document.getElementById('editNotes').value = store.notes || '';
+            
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        
+        function hideEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            selectedStoreId = null;
+        }
+        
+        async function updateStore() {
+            if (!selectedStoreId) return;
+            
+            const data = {
+                name: document.getElementById('editStoreName').value,
+                username: document.getElementById('editUsername').value || null,
+                owner_name: document.getElementById('editOwnerName').value || null,
+                phone: document.getElementById('editPhone').value || null,
+                email: document.getElementById('editEmail').value || null,
+                monthly_fee: parseInt(document.getElementById('editMonthlyFee').value) || 30000,
+                notes: document.getElementById('editNotes').value || null
+            };
+            
+            // パスワードは入力された場合のみ送信
+            const password = document.getElementById('editPassword').value;
+            if (password) {
+                data.password = password;
+            }
+            
+            // PINは入力された場合のみ送信
+            const managerPin = document.getElementById('editManagerPin').value;
+            const staffPin = document.getElementById('editStaffPin').value;
+            if (managerPin) {
+                data.manager_pin = managerPin;
+            }
+            if (staffPin) {
+                data.staff_pin = staffPin;
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/stores/${selectedStoreId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    alert('更新しました');
+                    hideEditModal();
+                    loadStores();
+                } else {
+                    const err = await res.json();
+                    alert(err.detail || '更新に失敗しました');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('エラーが発生しました');
+            }
+        }
+
+        // 停止/再開
+        async function suspendStore(storeId) {
+            if (!confirm('この店舗を停止しますか？')) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/stores/${storeId}/suspend`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Key': adminKey }
+                });
+                if (res.ok) loadStores();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function activateStore(storeId) {
+            try {
+                const res = await fetch(`${API_BASE}/stores/${storeId}/activate`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Key': adminKey }
+                });
+                if (res.ok) loadStores();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // 削除
+        async function deleteStore(storeId, storeName) {
+            if (!confirm(`「${storeName}」を削除しますか？\nこの操作は取り消せません。\n※関連する全データ（テーブル、メニュー、注文履歴等）も削除されます。`)) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/stores/${storeId}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Key': adminKey }
+                });
+                if (res.ok) {
+                    alert('削除しました');
+                    loadStores();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alert('削除失敗: ' + (err.detail || res.status));
+                }
+            } catch (e) {
+                console.error(e);
+                alert('削除エラー: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
