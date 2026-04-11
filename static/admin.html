@@ -11795,7 +11795,7 @@ function setupCharts() {
 
     async function loadExpenses(year, month) {
         try {
-            const data = await apiRequest(`/api/expenses?year=${year}&month=${month}`);
+            const data = await apiRequest(`/expenses?year=${year}&month=${month}`);
             expensesCache = Array.isArray(data) ? data : (data.expenses || []);
             renderExpenses(expensesCache);
         } catch (e) {
@@ -11807,7 +11807,7 @@ function setupCharts() {
 
     async function loadExpenseSummary(year, month) {
         try {
-            const summary = await apiRequest(`/api/expenses/summary?year=${year}&month=${month}`);
+            const summary = await apiRequest(`/expenses/summary?year=${year}&month=${month}`);
             renderExpenseSummary(summary);
         } catch (e) {
             console.error('経費サマリー読み込みエラー:', e);
@@ -11925,13 +11925,13 @@ function setupCharts() {
 
         try {
             if (id) {
-                await apiRequest(`/api/expenses/${id}`, {
+                await apiRequest(`/expenses/${id}`, {
                     method: 'PUT',
                     body: JSON.stringify(payload)
                 });
                 showNotification('経費を更新しました', 'success');
             } else {
-                await apiRequest('/api/expenses', {
+                await apiRequest('/expenses', {
                     method: 'POST',
                     body: JSON.stringify(payload)
                 });
@@ -11950,7 +11950,7 @@ function setupCharts() {
         if (!confirmed) return;
 
         try {
-            await apiRequest(`/api/expenses/${id}`, { method: 'DELETE' });
+            await apiRequest(`/expenses/${id}`, { method: 'DELETE' });
             showNotification('経費を削除しました', 'success');
             onExpenseFilterChange();
         } catch (e) {
