@@ -5,6 +5,9 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 .env
 *.db
+test_connection.py
+alembic/versions/__pycache__/
 .DS_Store
