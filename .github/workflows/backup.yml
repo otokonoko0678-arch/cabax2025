@@ -69,6 +69,7 @@ jobs:
           secret_access_key = ${R2_SECRET_ACCESS_KEY}
           endpoint = ${R2_ENDPOINT_URL}
           acl = private
+          no_check_bucket = true
           EOF
 
       - name: Upload to R2 (daily)
