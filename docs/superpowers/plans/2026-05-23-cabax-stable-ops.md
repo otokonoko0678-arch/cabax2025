@@ -132,6 +132,20 @@ os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB_PATH}")
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def _attach_caplog_to_cabax(caplog):
+    """logger.py で `propagate=False` にしてあるため、cabax logger の出力は
+    root に伝播せず、caplog のデフォルトハンドラ（root に attach）には届かない。
+    各テスト開始時に caplog の handler を cabax logger に直接 attach し、
+    終了時に detach する。本番ロガーの propagate 設定は触らない。
+    """
+    import logging
+    cabax_logger = logging.getLogger("cabax")
+    cabax_logger.addHandler(caplog.handler)
+    yield
+    cabax_logger.removeHandler(caplog.handler)
+
+
 @pytest.fixture
 def client():
     """import 時に main を読み込むことで、上書きした env を確実に拾わせる。
