@@ -9,7 +9,7 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Install pg_dump (PostgreSQL 15 client)
+      - name: Install pg_dump (PostgreSQL 17 client to match Supabase)
         run: |
           sudo apt-get update
           sudo apt-get install -y curl ca-certificates gnupg lsb-release
@@ -18,7 +18,7 @@ jobs:
             -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
           sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           sudo apt-get update
-          sudo apt-get install -y postgresql-client-15
+          sudo apt-get install -y postgresql-client-17
           pg_dump --version
 
       - name: Install age
