@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **改訂:** 2026-05-23 — 実コード（`main.py` 3229行 / 78ルート）との突き合わせ監査を反映した**実行可能版**。初版からの差分は文末「改訂履歴」を参照。
+
 **Goal:** 安定運用フェーズに必要な「壊れた時に追える / 壊れたまま本番に上がらない / データを失わない」基盤を、構造改修なしで導入する。
 
 **Architecture:** 既存の `main.py` 一枚岩構造を維持したまま、横断関心（observability / error handling / health）を最小モジュールで追加する。ops/infra（CI / backup / 監視 / Tailwind / runbook）は GitHub Actions と外部サービスで実装。
@@ -22,6 +24,7 @@
 - `tests/test_middleware_logging.py`
 - `tests/test_exception_handlers.py`
 - `tests/test_health.py`
+- `pytest.ini`
 - `.github/workflows/ci.yml` — push/PR時テスト（spec項目4）
 - `.github/workflows/backup.yml` — 日次pg_dump→R2（spec項目2）
 - `tailwind.config.js`
@@ -32,7 +35,7 @@
 - `docs/runbook-deploy.md`（spec項目7）
 
 **変更:**
-- `main.py` — middleware追加（L612-619 CORS の下）、exception_handler追加、`/health` を deep に強化、3229行のうち**新規追加のみ**で既存ルートには触らない
+- `main.py` — middleware追加（L619 の CORS ブロック直後、L621 `@app.on_event("startup")` の手前）、exception_handler追加、`get_db()` に rollback、`/health/deep` 追加。3229行のうち**新規追加と get_db の置換のみ**で既存ルートには触らない
 - `requirements.txt` — `pip freeze` の完全ピン版に置換
 - `static/admin.html` L7 — CDN→link rel
 - `static/order.html` L7 — 同上
@@ -103,13 +106,28 @@ addopts = -v --tb=short
 
 - [ ] **Step 3: `tests/conftest.py` を作成**
 
+> **監査反映（重要）:** `main.py` は L2899-2901 で `SUPER_ADMIN_KEY` が未設定だと **import 時に `RuntimeError` を投げる**。`from main import app` がそこで落ちると全テストが収集段階で失敗するため、conftest で必ず `SUPER_ADMIN_KEY` をセットしておく。
+> また、テスト DB は in-memory（`sqlite:///:memory:`）ではなく**一時ファイルの SQLite** を使う。in-memory は fixture とリクエスト処理が別コネクションになり得てテーブルが見えないことがあるため、ファイルベースで全コネクションから同一 DB を見せる。
+
 ```python
-"""共通テスト fixture。テスト用 DB は in-memory SQLite を使い、main.py の DATABASE_URL を上書きする。"""
+"""共通テスト fixture。
+
+main.py は import 時に SUPER_ADMIN_KEY 未設定だと RuntimeError を投げるため、
+main を import する前に必須 env をセットしておく。
+テスト DB は一時ファイル SQLite。in-memory はコネクション間でテーブルが
+見えない問題があるため避ける。
+"""
 import os
+import tempfile
 import pytest
 
+# --- main.py を import する前に必須 env をセット ---
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-only")
-os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+# SUPER_ADMIN_KEY はデフォルト無し。未設定だと main.py が import 時に raise する。
+os.environ.setdefault("SUPER_ADMIN_KEY", "test-super-admin-for-pytest")
+_fd, _TEST_DB_PATH = tempfile.mkstemp(suffix=".db", prefix="cabax-test-")
+os.close(_fd)
+os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB_PATH}")
 
 from fastapi.testclient import TestClient
 
@@ -120,6 +138,10 @@ def client():
 
     raise_server_exceptions=False で 5xx を例外として再raiseせず、レスポンスとして返す
     （exception handler の振る舞いをテストするため必須）。
+
+    注意: `with TestClient(app)` の時点で main.py の @app.on_event("startup") が走り、
+    インラインの列追加マイグレーションが実行される。Base.metadata.create_all を先に
+    呼んでおけば startup 側は基本 no-op になる想定。
     """
     from main import app, Base, engine
     Base.metadata.create_all(bind=engine)
@@ -134,7 +156,8 @@ def client():
 pytest tests/ -v
 ```
 
-Expected: `no tests ran` または `collected 0 items`（テストファイル未作成、エラー無し）
+Expected: `no tests ran` または `collected 0 items`（テストファイル未作成、エラー無し）。
+ここで `RuntimeError: SUPER_ADMIN_KEY ...` が出る場合は conftest の env セットが効いていない。
 
 - [ ] **Step 5: Commit**
 
@@ -394,7 +417,10 @@ Expected: 全テスト FAIL（middleware 未実装）
 ### Task 1.4: logging middleware の実装
 
 **Files:**
-- Modify: `main.py` — L619 の CORSMiddleware ブロックの直後（L620 以降に挿入）
+- Modify: `main.py` — L613-619 の `app.add_middleware(CORSMiddleware, ...)` ブロック直後（L620、`@app.on_event("startup")` の手前）に挿入
+
+> **監査反映:** `app = FastAPI(...)` は L611、CORS ブロックは L613-619、その直後 L621 に `@app.on_event("startup")` がある。middleware は **L619 の `)` の直後・L621 の手前** に入れる。
+> また JWT ペイロードには **数値の `user_id` は無い**。`create_access_token`（L561）が積むのは `sub`（＝ユーザー名文字列）・`store_id`・`role`。よって `user_id` 欄にはユーザー名（`sub`）を入れる。
 
 - [ ] **Step 1: import を追加**
 
@@ -403,12 +429,13 @@ Expected: 全テスト FAIL（middleware 未実装）
 ```python
 import time
 import uuid
+import logging
 from logger import get_logger
 ```
 
 - [ ] **Step 2: middleware を追加**
 
-`main.py` で `app.add_middleware(CORSMiddleware, ...)` ブロック（L613-619）の**直後**に以下を挿入：
+`main.py` で `app.add_middleware(CORSMiddleware, ...)` ブロック（L613-619）の**直後**、`@app.on_event("startup")`（L621）の**手前**に以下を挿入：
 
 ```python
 log = get_logger("cabax")
@@ -426,7 +453,8 @@ async def logging_middleware(request: Request, call_next):
         try:
             payload = jwt.decode(auth.split(" ", 1)[1], SECRET_KEY, algorithms=[ALGORITHM])
             store_id = payload.get("store_id")
-            user_id = payload.get("sub") or payload.get("user_id")
+            # トークンに数値の user_id は無い。sub（ユーザー名）を user_id 欄に入れる。
+            user_id = payload.get("sub")
         except Exception:
             pass  # 不正トークンは middleware では無視。認証は各ルートで弾く
 
@@ -464,12 +492,6 @@ async def logging_middleware(request: Request, call_next):
         )
 
     return response
-```
-
-`logging` import を冒頭に追加：
-
-```python
-import logging
 ```
 
 - [ ] **Step 3: テストPass確認**
@@ -701,13 +723,14 @@ pg_restore \
 cd ~/cabax-deploy
 DATABASE_URL="<新プロジェクトの connection string>" \
 SECRET_KEY="dummy-for-restore-test" \
+SUPER_ADMIN_KEY="dummy-for-restore-test" \
 uvicorn main:app --host 0.0.0.0 --port 8001
 ```
 
 別ターミナルで:
 
 ```bash
-curl http://localhost:8001/health
+curl http://localhost:8001/health/deep
 open http://localhost:8001/static/admin.html
 ```
 
@@ -758,7 +781,7 @@ Supabase → cabax-restore-test → Settings → Delete project
 5. **アプリ接続確認**
 
    ```bash
-   DATABASE_URL="<restore_target>" SECRET_KEY=dummy uvicorn main:app --port 8001
+   DATABASE_URL="<restore_target>" SECRET_KEY=dummy SUPER_ADMIN_KEY=dummy uvicorn main:app --port 8001
    curl http://localhost:8001/health/deep
    ```
 
@@ -874,6 +897,8 @@ Expected: 全 FAIL（handler 未実装、500 のまま返る）
 - Modify: `main.py` — L583-588 の `get_db()`
 - Modify: `main.py` — middleware 追加箇所の直後
 
+> **監査反映:** `get_db()` は L583-588 の 6 行（`SessionLocal()` を使う想定どおり）。下記の置換でちょうど収まる。
+
 - [ ] **Step 1: import 追加**
 
 `main.py` 冒頭に：
@@ -881,7 +906,6 @@ Expected: 全 FAIL（handler 未実装、500 のまま返る）
 ```python
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 ```
 
 - [ ] **Step 2: `get_db()` を rollback 込みに置換**
@@ -974,46 +998,54 @@ git commit -m "feat: add global exception handlers with mandatory rollback"
 ### Task 3.3: 会計系トランザクションの原子性監査
 
 **Files:**
-- Modify: `main.py` — checkout / billing 系 API のうち、複数 commit を分けているものを 1 トランザクションにまとめる
+- Modify（条件付き）: `main.py` — `settling/*` 3本のうち、複数 commit を分けているものがあれば 1 トランザクションにまとめる
 
-- [ ] **Step 1: 会計系 API を特定**
+> **監査反映:** 会計系の実エンドポイントは以下の5本（コード調査済み）。spec 初版が想定した `payment` / `会計` という名前のルートは存在しない。
+>
+> | 行 | メソッド | パス |
+> |----|---------|------|
+> | L1358 | POST | `/api/sessions/{id}/settling/start` |
+> | L1382 | POST | `/api/sessions/{id}/settling/cancel` |
+> | L1396 | POST | `/api/sessions/{id}/settling/force-cancel` |
+> | L1410 | PUT  | `/api/sessions/{id}/checkout` |
+> | L1426 | POST | `/api/sessions/{id}/add-charge` |
+>
+> このうち **`checkout`（L1410-1424）と `add-charge`（L1426-1462）は設計時 audit で確認済み**: いずれも属性更新後に末尾で `db.commit()` を1回だけ呼んでおり、**既に原子的。修正不要**。
+> 残る `settling/*` 3本のみ実装時に本体を確認する。
+
+- [ ] **Step 1: settling 系3本の本体を読む**
 
 ```bash
 cd ~/cabax-deploy
-grep -n "checkout\|payment\|会計\|お会計\|charge" main.py | head -40
+sed -n '1358,1410p' main.py
 ```
 
-- [ ] **Step 2: 各エンドポイント内の `db.commit()` 出現回数を確認**
+- [ ] **Step 2: 各関数内の `db.commit()` を数える**
 
-```bash
-awk '/^@app\.(post|put|delete)/{name=$0} /db\.commit/{print name; print "  L"NR": "$0}' main.py | grep -A1 -i "checkout\|payment\|charge"
-```
+各 settling 関数（`start_settling` / `cancel_settling` / `force_cancel_settling` 等）で `db.commit()` が**ループ内**または**複数回**現れていないか確認する。
 
-- [ ] **Step 3: 中間 commit を排除**
-
-会計系ルート（特に checkout / payment / charge を含むもの）で `db.commit()` が**ループ内**または**複数回**現れているものを抽出し、関数の**最後にだけ** `db.commit()` が来るように修正する。途中の `db.flush()` は許容。
+- 終端で1回だけ → 既に原子的。コード変更なし。
+- ループ内 / 複数回 → 関数の**最後にだけ** `db.commit()` が来るよう修正（途中の `db.flush()` は許容）。
 
 例（仮）:
 
 ```python
 # Before:
-for order in orders:
-    order.status = "paid"
-    db.commit()                    # ← 途中commit
-session.checkout_time = now
+for x in items:
+    x.status = "..."
+    db.commit()          # ← 途中commit
+session.is_settling = False
 db.commit()
 
 # After:
-for order in orders:
-    order.status = "paid"
-db.flush()                         # 必要なら
-session.checkout_time = now
-db.commit()                        # 終端で1回だけ
+for x in items:
+    x.status = "..."
+db.flush()               # 必要なら
+session.is_settling = False
+db.commit()              # 終端で1回だけ
 ```
 
-修正対象は実装時にコードを読みながら特定する。修正が不要だった場合（既に終端 commit のみ）はその旨を commit メッセージに残す。
-
-- [ ] **Step 4: 動作確認**
+- [ ] **Step 3: 動作確認**
 
 ```bash
 pytest tests/ -v
@@ -1021,12 +1053,16 @@ pytest tests/ -v
 
 Expected: 既存テスト全 passed
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
+
+修正があった場合：
 
 ```bash
 git add main.py
-git commit -m "fix: ensure checkout/payment routes commit atomically"
+git commit -m "fix: ensure settling routes commit atomically"
 ```
+
+修正が不要だった場合（既に終端 commit のみ）は、コード変更なし。その確認結果をこのタスクのチェック完了メモに残す（`checkout` / `add-charge` は audit 済み、`settling/*` も確認済みで全て終端 commit、等）。
 
 ---
 
@@ -1059,8 +1095,8 @@ mv requirements.full.txt requirements.txt
 ```bash
 python -m venv /tmp/verify-pin && source /tmp/verify-pin/bin/activate
 pip install -r requirements.txt
-python -c "import main"  # SECRET_KEY などが必要なら適宜 env 指定
-deactivate && rm -rf /tmp/verify-pin
+SECRET_KEY=x SUPER_ADMIN_KEY=x DATABASE_URL=sqlite:///./tmp.db python -c "import main"
+deactivate && rm -rf /tmp/verify-pin /tmp/tmp.db
 ```
 
 - [ ] **Step 4: Commit**
@@ -1139,6 +1175,8 @@ jobs:
           pytest tests/ -v
 ```
 
+> **監査メモ:** CI では `DATABASE_URL` が Postgres を指すため、`conftest.py` の `setdefault` は no-op になり、テストは Postgres コンテナに対して走る（本番に近い検証）。ローカルでは temp-file SQLite。両方で通ることを確認すること。
+
 - [ ] **Step 2: Commit + push**
 
 ```bash
@@ -1177,7 +1215,7 @@ git push origin --delete test-ci-failure
 
 ### Task 4.4: Railway デプロイゲート切り替え
 
-**外部作業（Railway ダッシュボード）:**
+**外部作業（Railway / GitHub ダッシュボード）:**
 
 - [ ] **Step 1: Railway の自動デプロイ設定を確認**
 
@@ -1257,12 +1295,12 @@ Expected: `test_health_deep_*` が FAIL（/health/deep 未実装）。
 ### Task 5.2: /health/deep の実装
 
 **Files:**
-- Modify: `main.py` — 既存 `/health` 付近
+- Modify: `main.py` — 既存 `/health`（L2892）付近
 
 - [ ] **Step 1: 既存 `/health` の位置を確認**
 
 ```bash
-grep -n "@app.get(\"/health\"" main.py
+grep -n '@app.get("/health"' main.py
 ```
 
 - [ ] **Step 2: 直後に `/health/deep` を追加**
@@ -1319,7 +1357,7 @@ Notification Settings:
 - Email: `otokonoko0678@gmail.com`
 - 連続失敗回数: 2
 
-LINE / Discord も使うなら Webhook で追加（任意）。
+LINE / Discord も使うなら Webhook で追加（任意）。**LINE Notify は 2025年3月末で終了済みのため使わない。** LINE を使うなら Messaging API のプッシュ。
 
 - [ ] **Step 4: アラート発火確認**
 
@@ -1361,15 +1399,14 @@ LINE / Discord も使うなら Webhook で追加（任意）。
 ```bash
 cd ~/cabax-deploy
 npm install
-ls node_modules/tailwindcss/package.json
 node -e "console.log(require('./node_modules/tailwindcss/package.json').version)"
 ```
 
-Expected: `3.4.x`
+Expected: `3.4.x`（`^3` ピンのため v4 は入らない）
 
 - [ ] **Step 3: .gitignore に node_modules 追加**
 
-`.gitignore`（無ければ作る）に追加：
+`.gitignore` に追加：
 
 ```
 node_modules/
@@ -1392,7 +1429,7 @@ git commit -m "chore: add tailwind v3 dev dependency"
 
 ```bash
 cd ~/cabax-deploy
-grep -nE 'className.*\$\{|class.*\$\{|\\\`(bg|text|border)-' static/*.html | head -40
+grep -nE 'class.*\$\{|\$\{.*(bg|text|border|rounded|flex|grid)-' static/*.html | head -40
 ```
 
 完全な文字列リテラル（例: `'bg-red-500'`）は自動検出される。連結（例: `` `bg-${color}-500` ``）は safelist に入れる必要あり。出力を見てパターンを抽出。
@@ -1464,7 +1501,7 @@ Expected: `app.css` が数十〜数百 KB で生成される。
 ```bash
 cd ~/cabax-deploy
 source .venv/bin/activate
-DATABASE_URL=sqlite:///./cabax.db SECRET_KEY=test uvicorn main:app --port 8002
+DATABASE_URL=sqlite:///./cabax.db SECRET_KEY=test SUPER_ADMIN_KEY=test uvicorn main:app --port 8002
 ```
 
 ブラウザで以下を開き、見た目が崩れていないか確認：
@@ -1534,14 +1571,16 @@ git push
 ### Task 7.1: 環境変数の棚卸し
 
 **Files:**
-- Create: `docs/runbook-deploy.md`
+- （次タスクの `docs/runbook-deploy.md` に記載）
 
 - [ ] **Step 1: コードから env var を抽出**
 
 ```bash
 cd ~/cabax-deploy
-grep -hE "os\.getenv|os\.environ" main.py logger.py 2>/dev/null | sort -u
+grep -hnE "os\.getenv|os\.environ" main.py logger.py 2>/dev/null | sort -u
 ```
+
+> **監査メモ:** 設計時に確認できた必須 env は `DATABASE_URL` / `SECRET_KEY` / `SUPER_ADMIN_KEY`、任意で `RESET_DB`。`SUPER_ADMIN_KEY` のみデフォルト無しで、未設定だと起動時に `RuntimeError`。Step 1 の grep 結果と突き合わせて最終確定する。
 
 - [ ] **Step 2: Railway の現行 Variables と突合**
 
@@ -1565,7 +1604,7 @@ Railway → cabax → Variables を開き、上記コードに出てくる名前
 |------|------|------|
 | `DATABASE_URL` | Supabase Postgres 接続文字列（direct, not pooler） | ✓ |
 | `SECRET_KEY` | JWT 署名鍵。流出時はトークン全失効のため即ローテーション | ✓ |
-| `SUPER_ADMIN_KEY` | super-admin 画面の API キー | ✓ |
+| `SUPER_ADMIN_KEY` | super-admin 画面の API キー。未設定だと起動時に RuntimeError | ✓ |
 | `RESET_DB` | 起動時 DB リセット（テスト時のみ true、本番では未設定または false） | – |
 
 **値はこの文書に書かない。** Railway Variables と 1Password にのみ保管。
@@ -1598,11 +1637,10 @@ Railway → cabax → Variables を開き、上記コードに出てくる名前
 2. **Railway logs を確認**
 
    ```bash
-   # Railway CLI（要インストール）
    railway logs --service cabax | tail -200
    ```
 
-   または Web UI から直接。`status_code` フィールドで 5xx を抽出、`exception` フィールドで stacktrace を確認。
+   または Web UI から直接。`status_code` フィールドで 5xx を抽出、`exception` フィールドで stacktrace、`request_id` で 1 リクエストを突合。
 
 3. **`/health/deep` で DB 生死確認**
 
@@ -1659,5 +1697,18 @@ git push
 ## 注記
 
 - **TDD カバレッジ:** コードレベル（logger, middleware, exception handlers, health/deep）は TDD。ops/infra（CI workflow, backup workflow, R2 設定, UptimeRobot, Tailwind ビルド, runbook）は実機/外部サービスでの検証。これは spec の「ユニットテストの大量導入はスコープ外」と整合。
-- **`main.py` の構造には触らない:** 既存 3229 行の API ルートは順序・実装ともに維持。追加するのは middleware と exception_handler のみ。
+- **`main.py` の構造には触らない:** 既存 3229 行の API ルートは順序・実装ともに維持。追加するのは middleware と exception_handler、`get_db()` の置換、`/health/deep` の追加のみ。
+- **startup イベントの存在:** `main.py` の `@app.on_event("startup")`（L621〜）は alembic とは別に、起動時にインラインで列追加マイグレーションを実行する。テストでも `with TestClient(app)` で発火する。今回のスコープでは触らないが、alembic と二重管理になっている点は認識しておくこと（将来の整理候補）。
 - **失敗時のロールバック方針:** いずれのタスク群も他と独立してコミット可能。途中で詰まったら、そのグループだけ revert して他は維持できる構造。
+
+---
+
+## 改訂履歴
+
+**2026-05-23 実行可能版（実コード監査反映）** — 初版（spec から自動生成）に対し、`main.py` 3229行・78ルートとの突き合わせで以下を修正:
+
+1. **F2 `conftest.py`:** `SUPER_ADMIN_KEY` の env セットを追加。`main.py` は L2899-2901 で未設定時に import 段階で `RuntimeError` を投げるため、未対応だと全テストが収集段階で落ちる（最重要修正）。あわせてテスト DB を in-memory から temp-file SQLite に変更（コネクション間のテーブル可視性問題の回避）。
+2. **Task 1.4:** middleware 挿入位置を正確化（CORS ブロック L613-619 直後、`@app.on_event` L621 手前）。JWT に数値 `user_id` は無いため、`user_id` 欄は `sub`（ユーザー名）から取る形に修正（初版の `payload.get("user_id")` は死にコード）。
+3. **Task 3.3:** 会計系の実エンドポイント5本（`settling/start` L1358 / `settling/cancel` L1382 / `settling/force-cancel` L1396 / `checkout` L1410 / `add-charge` L1426）を明記。`checkout` と `add-charge` は audit 済みで既に終端 commit 1回＝原子的、修正不要と確定。タスクを「`settling/*` 3本の確認のみ」に縮小。初版の grep 対象（`payment` / `会計`）は実在しないルート名だったため差し替え。
+4. **Task 2.5 / 4.1 / 6.3:** ローカル起動・検証コマンドに `SUPER_ADMIN_KEY` を追加（未指定だと起動できないため）。
+5. **注記:** `@app.on_event("startup")` のインライン・マイグレーションの存在を明記。
