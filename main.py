@@ -20,7 +20,11 @@ import bcrypt
 import os
 import secrets
 import string
+import time
+import uuid
+import logging
 from pathlib import Path
+from logger import get_logger
 
 # 設定
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -617,6 +621,62 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+log = get_logger("cabax")
+
+
+@app.middleware("http")
+async def logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    request.state.request_id = request_id
+
+    store_id = None
+    user_id = None
+    auth = request.headers.get("authorization")
+    if auth and auth.lower().startswith("bearer "):
+        try:
+            payload = jwt.decode(auth.split(" ", 1)[1], SECRET_KEY, algorithms=[ALGORITHM])
+            store_id = payload.get("store_id")
+            user_id = payload.get("sub") or payload.get("user_id")
+        except Exception:
+            pass  # 不正トークンは middleware では無視。認証は各ルートで弾く
+
+    start = time.perf_counter()
+    status_code = 500
+    exception = None
+    response = None
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        response.headers["X-Request-ID"] = request_id
+    except Exception as e:
+        exception = e
+        raise
+    finally:
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        if status_code >= 500 or exception is not None:
+            level = logging.ERROR
+        elif status_code >= 400:
+            level = logging.WARNING
+        else:
+            level = logging.INFO
+        log.log(
+            level,
+            "request",
+            extra={
+                "request_id": request_id,
+                "store_id": store_id,
+                "user_id": user_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": status_code,
+                "duration_ms": duration_ms,
+            },
+            exc_info=(type(exception), exception, exception.__traceback__) if exception is not None else None,
+        )
+
+    return response
+
 
 @app.on_event("startup")
 def startup_event():
