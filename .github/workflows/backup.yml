@@ -1,0 +1,89 @@
+name: Daily DB Backup
+
+on:
+  schedule:
+    - cron: "30 18 * * *"  # 03:30 JST
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pg_dump (PostgreSQL 17 client to match Supabase)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl ca-certificates gnupg lsb-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          # GitHub runner has client-16 pre-installed; force PATH to prefer 17
+          echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Install age
+        run: |
+          curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.2.0/age-v1.2.0-linux-amd64.tar.gz | tar xz
+          sudo mv age/age /usr/local/bin/
+          age --version
+
+      - name: Install rclone
+        run: |
+          curl https://rclone.org/install.sh | sudo bash
+          rclone version | head -1
+
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          TS=$(date -u +%Y%m%dT%H%M%SZ)
+          echo "TS=$TS" >> $GITHUB_ENV
+          pg_dump "$DATABASE_URL" \
+            --no-owner --no-privileges \
+            --format=custom \
+            --file="cabax-$TS.dump"
+          ls -lh "cabax-$TS.dump"
+
+      - name: Encrypt dump
+        env:
+          AGE_PUBKEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
+        run: |
+          age -r "$AGE_PUBKEY" -o "cabax-${TS}.dump.age" "cabax-${TS}.dump"
+          rm "cabax-${TS}.dump"
+          ls -lh "cabax-${TS}.dump.age"
+
+      - name: Configure rclone
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${R2_ACCESS_KEY_ID}
+          secret_access_key = ${R2_SECRET_ACCESS_KEY}
+          endpoint = ${R2_ENDPOINT_URL}
+          acl = private
+          no_check_bucket = true
+          EOF
+
+      - name: Upload to R2 (daily)
+        env:
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          rclone copy "cabax-${TS}.dump.age" "r2:${R2_BUCKET}/daily/"
+
+      - name: Promote to weekly on Sundays (UTC)
+        if: github.event_name == 'schedule'
+        env:
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          DOW=$(date -u +%u)
+          if [ "$DOW" = "7" ]; then
+            rclone copy "cabax-${TS}.dump.age" "r2:${R2_BUCKET}/weekly/"
+          fi
