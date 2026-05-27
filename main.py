@@ -3000,6 +3000,17 @@ async def serve_super_admin_html():
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
+
+@app.get("/health/deep")
+def health_deep(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ok", "database": "ok"}
+    except Exception as e:
+        log.error("health_deep_db_fail", extra={"error": str(e)})
+        return JSONResponse(status_code=503, content={"status": "fail", "database": "fail"})
+
 # ========================
 # 店舗・ライセンス管理 API
 # ========================
