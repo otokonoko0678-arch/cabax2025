@@ -53,6 +53,26 @@ jobs:
         run: |
           alembic upgrade head
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Build CSS
+        run: npm run build:css
+
+      - name: Verify CSS is committed (no drift)
+        run: |
+          if ! git diff --quiet static/css/app.css; then
+            echo "static/css/app.css is out of sync. Run 'npm run build:css' and commit."
+            git diff static/css/app.css | head -50
+            exit 1
+          fi
+
       - name: Run pytest
         run: |
           pytest tests/ -v

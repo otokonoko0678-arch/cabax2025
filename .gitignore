@@ -11,3 +11,4 @@ venv/
 test_connection.py
 alembic/versions/__pycache__/
 .DS_Store
+node_modules/
