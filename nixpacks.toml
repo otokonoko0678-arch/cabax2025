@@ -1,0 +1,7 @@
+# Railway/Nixpacks のビルダー設定。
+# package.json を追加した(Tailwind ローカルビルド用)ことで Nixpacks が
+# このリポジトリを Node プロジェクトと誤検出し、Python 依存(uvicorn/alembic)を
+# install しないまま起動して deploy が失敗した。
+# 実行時に必要なのは Python のみ(静的CSS app.css はビルド済みをコミットしている)
+# ため、provider を python に固定する。Node ツールチェーンはローカル/CI 専用。
+providers = ["python"]
