@@ -877,7 +877,44 @@ def startup_event():
         db.add_all(staff_members)
         db.commit()
         print("✅ スタッフ作成完了")
-    
+
+    # === メニュー画像の自動紐付け (冪等: image_url が未設定の場合のみ更新) ===
+    try:
+        from sqlalchemy import or_ as _or
+        MENU_IMAGE_MAP = {
+            "山崎 12年": "/static/menu-images/01-yamazaki12.jpg",
+            "山崎12年": "/static/menu-images/01-yamazaki12.jpg",
+            "響 17年": "/static/menu-images/02-hibiki17.jpg",
+            "響17年": "/static/menu-images/02-hibiki17.jpg",
+            "ジャックダニエル": "/static/menu-images/03-jackdaniels.jpg",
+            "ジャック ダニエル": "/static/menu-images/03-jackdaniels.jpg",
+            "森伊蔵": "/static/menu-images/04-moriizo.jpg",
+            "魔王": "/static/menu-images/05-maoh.jpg",
+            "ドン ペリニヨン": "/static/menu-images/06-domperignon.jpg",
+            "ドンペリニヨン": "/static/menu-images/06-domperignon.jpg",
+            "ドンペリ": "/static/menu-images/06-domperignon.jpg",
+            "クリュッグ": "/static/menu-images/07-krug.jpg",
+            "クリュッグ グランキュヴェ": "/static/menu-images/07-krug.jpg",
+            "モエ・エ・シャンドン": "/static/menu-images/08-moet.jpg",
+            "モエ エ シャンドン": "/static/menu-images/08-moet.jpg",
+            "モエ": "/static/menu-images/08-moet.jpg",
+            "シャトー・マルゴー": "/static/menu-images/09-chateaumargaux.jpg",
+            "シャトーマルゴー": "/static/menu-images/09-chateaumargaux.jpg",
+        }
+        linked = 0
+        for _name, _url in MENU_IMAGE_MAP.items():
+            n = db.query(MenuItem).filter(
+                MenuItem.name == _name,
+                _or(MenuItem.image_url == None, MenuItem.image_url == "")  # noqa: E711
+            ).update({"image_url": _url}, synchronize_session=False)
+            linked += n
+        if linked > 0:
+            db.commit()
+            print(f"✅ メニュー画像 自動紐付け: {linked} 件")
+    except Exception as e:
+        db.rollback()
+        print(f"⚠️ メニュー画像 紐付けスキップ: {e}")
+
     db.close()
 
 # ========================

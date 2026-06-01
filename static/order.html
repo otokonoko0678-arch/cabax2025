@@ -1110,6 +1110,11 @@ function renderMenu() {
                 return `
                     <div onclick="openDrinkModal(${item.id})" class="menu-item-card rounded-2xl p-4 sm:p-6 cursor-pointer flex flex-col min-h-[100px] sm:min-h-[140px]">
                         ${
+                            item.image_url
+                                ? `<div class="-mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-3 sm:mb-4 rounded-t-2xl overflow-hidden aspect-[4/3] bg-gray-900"><img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" loading="lazy" class="w-full h-full object-cover"></div>`
+                                : ''
+                        }
+                        ${
                             item.premium
                                 ? '<div class="mb-2 sm:mb-3"><span class="premium-badge">⭐ PREMIUM</span></div>'
                                 : ''
