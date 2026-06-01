@@ -3102,6 +3102,30 @@ async def get_stores(admin_key: str = Depends(get_admin_key_from_header), db: Se
         })
     return result
 
+
+@app.get("/api/super-admin/all-menu")
+async def list_all_menu(
+    admin_key: str = Depends(get_admin_key_from_header),
+    db: Session = Depends(get_db),
+):
+    """全店舗の全メニュー項目を一覧 (super-admin only)。画像対応・メニュー監査用。"""
+    items = db.query(MenuItem).order_by(MenuItem.store_id, MenuItem.category, MenuItem.id).all()
+    stores = {s.id: s.name for s in db.query(Store).all()}
+    return [
+        {
+            "store_id": i.store_id,
+            "store_name": stores.get(i.store_id, "?"),
+            "id": i.id,
+            "name": i.name,
+            "category": i.category,
+            "price": i.price,
+            "image_url": i.image_url,
+            "premium": bool(i.premium),
+            "description": i.description,
+        }
+        for i in items
+    ]
+
 @app.post("/api/stores")
 async def create_store(store: StoreCreate, admin_key: str = Depends(get_admin_key_from_header), db: Session = Depends(get_db)):
     """新規店舗登録"""
