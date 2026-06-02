@@ -725,6 +725,51 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
+# === 既定メニュー画像の自動紐付け ===
+# 商品名(name)が下記の表のキーと完全一致した場合、image_url を自動で設定する。
+# 起動時(全件 idempotent)と /api/menu POST/PUT 時の両方で適用される。
+MENU_IMAGE_MAP = {
+    # ウィスキー
+    "山崎": "/static/menu-images/01-yamazaki12.jpg",
+    "山崎 12年": "/static/menu-images/01-yamazaki12.jpg",
+    "山崎12年": "/static/menu-images/01-yamazaki12.jpg",
+    "響 17年": "/static/menu-images/02-hibiki17.jpg",
+    "響17年": "/static/menu-images/02-hibiki17.jpg",
+    "ジャックダニエル": "/static/menu-images/03-jackdaniels.jpg",
+    "ジャック ダニエル": "/static/menu-images/03-jackdaniels.jpg",
+    # 焼酎
+    "森伊蔵": "/static/menu-images/04-moriizo.jpg",
+    "魔王": "/static/menu-images/05-maoh.jpg",
+    # シャンパン
+    "ドン ペリニヨン": "/static/menu-images/06-domperignon.jpg",
+    "ドンペリニヨン": "/static/menu-images/06-domperignon.jpg",
+    "ドンペリ": "/static/menu-images/06-domperignon.jpg",
+    "クリュッグ": "/static/menu-images/07-krug.jpg",
+    "クリュッグ グランキュヴェ": "/static/menu-images/07-krug.jpg",
+    "モエ・エ・シャンドン": "/static/menu-images/08-moet.jpg",
+    "モエ エ シャンドン": "/static/menu-images/08-moet.jpg",
+    "モエ": "/static/menu-images/08-moet.jpg",
+    # ワイン
+    "シャトー・マルゴー": "/static/menu-images/09-chateaumargaux.jpg",
+    "シャトーマルゴー": "/static/menu-images/09-chateaumargaux.jpg",
+}
+
+
+def _apply_menu_image(item, force: bool = False) -> bool:
+    """商品名から既定の画像URLを当てる。
+    既に image_url が設定されている場合は force=True でない限り何もしない。
+    マッチして設定したら True、未マッチや既設定なら False を返す。
+    """
+    if item.image_url and not force:
+        return False
+    name = (item.name or "").strip()
+    url = MENU_IMAGE_MAP.get(name)
+    if not url:
+        return False
+    item.image_url = url
+    return True
+
+
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
@@ -879,35 +924,17 @@ def startup_event():
         print("✅ スタッフ作成完了")
 
     # === メニュー画像の自動紐付け (冪等: image_url が未設定の場合のみ更新) ===
+    # 上で定義した MENU_IMAGE_MAP / _apply_menu_image を再利用。
+    # POST/PUT /api/menu でも同じ処理が走るので、admin 追加時にも即座に画像が当たる。
     try:
         from sqlalchemy import or_ as _or
-        MENU_IMAGE_MAP = {
-            "山崎 12年": "/static/menu-images/01-yamazaki12.jpg",
-            "山崎12年": "/static/menu-images/01-yamazaki12.jpg",
-            "響 17年": "/static/menu-images/02-hibiki17.jpg",
-            "響17年": "/static/menu-images/02-hibiki17.jpg",
-            "ジャックダニエル": "/static/menu-images/03-jackdaniels.jpg",
-            "ジャック ダニエル": "/static/menu-images/03-jackdaniels.jpg",
-            "森伊蔵": "/static/menu-images/04-moriizo.jpg",
-            "魔王": "/static/menu-images/05-maoh.jpg",
-            "ドン ペリニヨン": "/static/menu-images/06-domperignon.jpg",
-            "ドンペリニヨン": "/static/menu-images/06-domperignon.jpg",
-            "ドンペリ": "/static/menu-images/06-domperignon.jpg",
-            "クリュッグ": "/static/menu-images/07-krug.jpg",
-            "クリュッグ グランキュヴェ": "/static/menu-images/07-krug.jpg",
-            "モエ・エ・シャンドン": "/static/menu-images/08-moet.jpg",
-            "モエ エ シャンドン": "/static/menu-images/08-moet.jpg",
-            "モエ": "/static/menu-images/08-moet.jpg",
-            "シャトー・マルゴー": "/static/menu-images/09-chateaumargaux.jpg",
-            "シャトーマルゴー": "/static/menu-images/09-chateaumargaux.jpg",
-        }
+        items = db.query(MenuItem).filter(
+            _or(MenuItem.image_url == None, MenuItem.image_url == "")  # noqa: E711
+        ).all()
         linked = 0
-        for _name, _url in MENU_IMAGE_MAP.items():
-            n = db.query(MenuItem).filter(
-                MenuItem.name == _name,
-                _or(MenuItem.image_url == None, MenuItem.image_url == "")  # noqa: E711
-            ).update({"image_url": _url}, synchronize_session=False)
-            linked += n
+        for item in items:
+            if _apply_menu_image(item):
+                linked += 1
         if linked > 0:
             db.commit()
             print(f"✅ メニュー画像 自動紐付け: {linked} 件")
@@ -1281,6 +1308,7 @@ def get_menu(db: Session = Depends(get_db), store_id: Optional[int] = Depends(ge
 @app.post("/api/menu", response_model=MenuItemResponse)
 def create_menu_item(item: MenuItemCreate, db: Session = Depends(get_db), store_id: Optional[int] = Depends(get_store_id_from_token)):
     db_item = MenuItem(**item.dict(), store_id=store_id)
+    _apply_menu_image(db_item)  # 商品名がデフォルト画像マップに一致したら image_url を自動セット
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -1296,6 +1324,7 @@ def update_menu_item(item_id: int, item: MenuItemUpdate, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Menu item not found")
     for key, value in item.dict(exclude_unset=True).items():
         setattr(db_item, key, value)
+    _apply_menu_image(db_item)  # 名前変更などで一致したら image_url を自動セット (既設定は触らない)
     db.commit()
     db.refresh(db_item)
     return db_item
