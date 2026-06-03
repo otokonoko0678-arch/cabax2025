@@ -3155,6 +3155,34 @@ async def list_all_menu(
         for i in items
     ]
 
+
+@app.post("/api/super-admin/menu/rename")
+async def super_rename_menu(
+    payload: dict,
+    admin_key: str = Depends(get_admin_key_from_header),
+    db: Session = Depends(get_db),
+):
+    """全店舗で `from` と完全一致するメニュー名を `to` にリネーム。
+    新名前が MENU_IMAGE_MAP に当てはまれば image_url も自動で当たる (既設定は維持)。
+    """
+    src = (payload.get("from") or "").strip()
+    dst = (payload.get("to") or "").strip()
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="from と to の両方が必要です")
+    items = db.query(MenuItem).filter(MenuItem.name == src).all()
+    affected = []
+    for item in items:
+        item.name = dst
+        _apply_menu_image(item)
+        affected.append({
+            "id": item.id,
+            "store_id": item.store_id,
+            "image_url": item.image_url,
+        })
+    db.commit()
+    return {"renamed": len(affected), "from": src, "to": dst, "affected": affected}
+
+
 @app.post("/api/stores")
 async def create_store(store: StoreCreate, admin_key: str = Depends(get_admin_key_from_header), db: Session = Depends(get_db)):
     """新規店舗登録"""
