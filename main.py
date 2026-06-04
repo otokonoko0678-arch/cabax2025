@@ -752,6 +752,27 @@ MENU_IMAGE_MAP = {
     # ワイン
     "シャトー・マルゴー": "/static/menu-images/09-chateaumargaux.jpg",
     "シャトーマルゴー": "/static/menu-images/09-chateaumargaux.jpg",
+    # 焼酎 追加分
+    "いいちこ": "/static/menu-images/10-iichiko.jpg",
+    "黒霧島": "/static/menu-images/11-kurokirishima.jpg",
+    # シャンパン 追加分
+    "アルマンド ブリュット": "/static/menu-images/12-armandbrut.jpg",
+    "アルマンドブリュット": "/static/menu-images/12-armandbrut.jpg",
+    "アルマンド": "/static/menu-images/12-armandbrut.jpg",
+    "アルマンド ロゼ": "/static/menu-images/13-armandrose.jpg",
+    "アルマンドロゼ": "/static/menu-images/13-armandrose.jpg",
+    "ドンペリ ロゼ": "/static/menu-images/14-domperignonrose.jpg",
+    "ドンペリロゼ": "/static/menu-images/14-domperignonrose.jpg",
+    "ドンペリニヨン ロゼ": "/static/menu-images/14-domperignonrose.jpg",
+    "ドンペリニヨンロゼ": "/static/menu-images/14-domperignonrose.jpg",
+    "ローランペリエ": "/static/menu-images/15-laurentperrier.jpg",
+    "ローラン ペリエ": "/static/menu-images/15-laurentperrier.jpg",
+    "サロン": "/static/menu-images/16-salon.jpg",
+    "ベルエポック": "/static/menu-images/17-belleepoque.jpg",
+    "ベル エポック": "/static/menu-images/17-belleepoque.jpg",
+    "ヴーヴクリコ": "/static/menu-images/18-veuveclicquot.jpg",
+    "ヴーヴ クリコ": "/static/menu-images/18-veuveclicquot.jpg",
+    "ヴーヴ クリコ イエローラベル": "/static/menu-images/18-veuveclicquot.jpg",
 }
 
 
