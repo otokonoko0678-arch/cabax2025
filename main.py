@@ -3156,6 +3156,54 @@ async def list_all_menu(
     ]
 
 
+@app.post("/api/super-admin/menu/create")
+async def super_create_menu(
+    payload: dict,
+    admin_key: str = Depends(get_admin_key_from_header),
+    db: Session = Depends(get_db),
+):
+    """メニュー項目を新規追加 (super-admin only)。
+    - 単体: {"name":..., "category":..., "price":..., "premium":..., "store_id":...?}
+    - 一括: {"items": [{...}, {...}]}
+    - store_id 省略時は全店舗に同名で追加。
+    - name が MENU_IMAGE_MAP に当てはまれば image_url 自動。
+    """
+    items_payload = payload.get("items") or [payload]
+    stores_all = db.query(Store).all()
+    created = []
+    errors = []
+    for raw in items_payload:
+        name = (raw.get("name") or "").strip()
+        category = (raw.get("category") or "").strip()
+        if not name or not category:
+            errors.append({"raw": raw, "error": "name と category 必須"})
+            continue
+        sid_one = raw.get("store_id")
+        targets = [s for s in stores_all if not sid_one or s.id == int(sid_one)]
+        for store in targets:
+            item = MenuItem(
+                store_id=store.id,
+                name=name,
+                category=category,
+                price=int(raw.get("price", 0) or 0),
+                cost=int(raw.get("cost", 0) or 0),
+                premium=bool(raw.get("premium", False)),
+                description=raw.get("description") or None,
+            )
+            _apply_menu_image(item)
+            db.add(item)
+            created.append({
+                "store_id": store.id,
+                "store_name": store.name,
+                "name": name,
+                "category": category,
+                "image_url": item.image_url,
+            })
+    if created:
+        db.commit()
+    return {"created_count": len(created), "created": created, "errors": errors}
+
+
 @app.post("/api/super-admin/menu/rename")
 async def super_rename_menu(
     payload: dict,
