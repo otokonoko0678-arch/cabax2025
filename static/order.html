@@ -374,10 +374,7 @@
 
             <!-- カテゴリタブ -->
             <div class="flex gap-2 px-4 sm:px-8 overflow-x-auto hide-scrollbar" id="categoryTabs">
-              <button onclick="filterCategory('all')" class="category-tab active" data-category="all">
-    すべて
-</button>
-<button onclick="filterCategory('tableset')" class="category-tab" data-category="tableset">
+              <button onclick="filterCategory('tableset')" class="category-tab" data-category="tableset">
     卓セット
 </button>
 <button onclick="filterCategory('drink')" class="category-tab" data-category="drink">
@@ -403,6 +400,9 @@
 </button>
 <button onclick="showNominationModal()" class="category-tab" data-category="nomination">
     場内指名
+</button>
+<button onclick="filterCategory('all')" class="category-tab active" data-category="all">
+    すべて
 </button>
             </div>
         </div>
