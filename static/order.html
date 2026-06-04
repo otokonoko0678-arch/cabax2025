@@ -932,13 +932,13 @@ async function loadTables() {
 
                 return `
                     <div onclick="selectTable('${escapeHtml(table.id)}')"
-                         class="luxury-card ${statusClass} rounded-3xl p-12 cursor-pointer text-center w-full">
-                        ${table.is_vip ? '<div class="text-sm gold-accent font-bold mb-3">⭐ VIP</div>' : ''}
-                        <div class="text-5xl font-bold text-gray-100 mb-2">
+                         class="luxury-card ${statusClass} rounded-3xl p-4 sm:p-12 cursor-pointer text-center w-full overflow-hidden">
+                        ${table.is_vip ? '<div class="text-xs sm:text-sm gold-accent font-bold mb-2 sm:mb-3">⭐ VIP</div>' : ''}
+                        <div class="text-2xl sm:text-5xl font-bold text-gray-100 mb-1 sm:mb-2 truncate">
                             ${escapeHtml(table.table_name || table.table_number || table.name || 'テーブル')}
                         </div>
-                        <div class="text-lg text-gray-400">${escapeHtml(statusText)}</div>
-                        ${guestsText ? `<div class="text-sm text-gray-500 mt-2">${escapeHtml(guestsText)}</div>` : ''}
+                        <div class="text-xs sm:text-lg text-gray-400">${escapeHtml(statusText)}</div>
+                        ${guestsText ? `<div class="text-[10px] sm:text-sm text-gray-500 mt-1 sm:mt-2">${escapeHtml(guestsText)}</div>` : ''}
                     </div>
                 `;
             }).join('');
@@ -948,12 +948,12 @@ async function loadTables() {
         const grid = document.getElementById('tablesGrid');
         grid.innerHTML = STATIC_TABLES.map(table => `
             <div onclick="selectTable('${escapeHtml(table.id)}')"
-                 class="luxury-card bg-green-900/20 border-green-700/40 rounded-3xl p-12 cursor-pointer text-center w-full">
-                ${table.is_vip ? '<div class="text-sm gold-accent font-bold mb-3">⭐ VIP</div>' : ''}
-                <div class="text-5xl font-bold text-gray-100 mb-2">
+                 class="luxury-card bg-green-900/20 border-green-700/40 rounded-3xl p-4 sm:p-12 cursor-pointer text-center w-full overflow-hidden">
+                ${table.is_vip ? '<div class="text-xs sm:text-sm gold-accent font-bold mb-2 sm:mb-3">⭐ VIP</div>' : ''}
+                <div class="text-2xl sm:text-5xl font-bold text-gray-100 mb-1 sm:mb-2 truncate">
                     ${escapeHtml(table.table_name)}
                 </div>
-                <div class="text-lg text-gray-400">空席</div>
+                <div class="text-xs sm:text-lg text-gray-400">空席</div>
             </div>
         `).join('');
 
