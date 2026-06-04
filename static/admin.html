@@ -1836,10 +1836,11 @@
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">カテゴリ</label>
                         <select id="menuCategory" style="width:100%; padding:12px 16px; border-radius:12px; background:#2a2a2a; color:#f5f5f5; border:1px solid #444; font-size:14px; cursor:pointer;">
+                            <option value="tableset">卓セット</option>
                             <option value="drink">ドリンク</option>
                             <option value="castdrink">キャスト/スタッフドリンク</option>
-                            <option value="tableset">卓セット</option>
-                            <option value="bottle" selected>ボトル</option>
+                            <option value="shochu">焼酎</option>
+                            <option value="whisky" selected>ウイスキー</option>
                             <option value="champagne">シャンパン</option>
                             <option value="wine">ワイン</option>
                             <option value="food">フード</option>
@@ -1888,10 +1889,11 @@
                     <div>
                         <label class="block text-sm text-gray-400 mb-2">カテゴリ</label>
                         <select id="editMenuCategory" style="width:100%; padding:12px 16px; border-radius:12px; background:#2a2a2a; color:#f5f5f5; border:1px solid #444; font-size:14px; cursor:pointer;">
+                            <option value="tableset">卓セット</option>
                             <option value="drink">ドリンク</option>
                             <option value="castdrink">キャスト/スタッフドリンク</option>
-                            <option value="tableset">卓セット</option>
-                            <option value="bottle">ボトル</option>
+                            <option value="shochu">焼酎</option>
+                            <option value="whisky">ウイスキー</option>
                             <option value="champagne">シャンパン</option>
                             <option value="wine">ワイン</option>
                             <option value="food">フード</option>
@@ -5657,12 +5659,16 @@ async function syncWithBackend() {
 
         function getCategoryLabel(category) {
             const labels = {
-                'bottle': 'ボトル',
+                'tableset': '卓セット',
+                'set': '卓セット',
                 'drink': 'ドリンク',
-                'food': 'フード',
-                'set': 'セット',
+                'castdrink': 'キャスト/スタッフドリンク',
+                'shochu': '焼酎',
+                'whisky': 'ウイスキー',
                 'champagne': 'シャンパン',
                 'wine': 'ワイン',
+                'food': 'フード',
+                'bottle': 'ボトル',
                 'other': 'その他'
             };
             return labels[category] || 'その他';
