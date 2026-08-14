@@ -19,6 +19,9 @@ class JSONFormatter(logging.Formatter):
         "path",
         "status_code",
         "duration_ms",
+        # 例外の内容。ここに無いと extra={"error": ...} が黙って捨てられ、
+        # ログには "health_deep_db_fail" のような見出しだけが残って原因が追えない。
+        "error",
     )
 
     def format(self, record: logging.LogRecord) -> str:

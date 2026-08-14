@@ -60,3 +60,18 @@ def test_json_formatter_includes_exception_on_error(caplog):
     parsed = json.loads(output)
     assert "exception" in parsed
     assert "ValueError: boom" in parsed["exception"]
+
+
+def test_json_formatter_emits_error_detail():
+    """extra={"error": ...} を落とすと、ログに見出しだけ残って原因が追えなくなる。"""
+    formatter = JSONFormatter()
+    record = logging.LogRecord(
+        name="cabax", level=logging.ERROR, pathname="x", lineno=1,
+        msg="health_deep_db_fail", args=(), exc_info=None
+    )
+    record.error = "(ENOTFOUND) tenant/user not found"
+
+    parsed = json.loads(formatter.format(record))
+
+    assert parsed["message"] == "health_deep_db_fail"
+    assert parsed["error"] == "(ENOTFOUND) tenant/user not found"
