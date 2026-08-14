@@ -18,6 +18,12 @@ def test_health_deep_returns_200_when_db_reachable(client):
     assert body.get("database") == "ok"
 
 
+def test_health_endpoints_accept_head(client):
+    """外形監視は HEAD で叩いてくる。405 を返すと DB の生死に関係なく常時ダウン扱いになる。"""
+    assert client.head("/health").status_code == 200
+    assert client.head("/health/deep").status_code == 200
+
+
 def test_health_deep_returns_503_when_db_unreachable(client):
     from main import app, get_db
 

@@ -53,7 +53,16 @@ if RESET_DB and "sqlite" in DATABASE_URL:
         print(f"🗑️ DB削除: {db_path}")
 
 # データベース設定
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+_is_sqlite = "sqlite" in DATABASE_URL
+# pool_pre_ping: 接続を使う前に生死を確認する。これが無いと、DB側が停止・再起動
+# （Supabaseの一時停止など）した後にプール内の死んだ接続を掴み続け、DBが復帰しても
+# アプリを再起動するまで全クエリが失敗し続ける。
+# pool_recycle: 中間のプーラーやNATに黙って切られた接続を掴まないよう定期的に張り直す。
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if _is_sqlite else {},
+    **({} if _is_sqlite else {"pool_pre_ping": True, "pool_recycle": 300}),
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -3083,12 +3092,15 @@ async def serve_super_admin_html():
     return await serve_super_admin()
 
 # ヘルスチェック
-@app.get("/health")
+# GET だけでなく HEAD も受ける。FastAPI は @app.get に HEAD を自動で足さないため、
+# HEAD で叩く外形監視（UptimeRobot 等）には 405 を返してしまい、DBの生死に関わらず
+# 常時ダウン扱いになる。実際に 2026-06-02 以降その状態が続いていた。
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
 
-@app.get("/health/deep")
+@app.api_route("/health/deep", methods=["GET", "HEAD"])
 def health_deep(db: Session = Depends(get_db)):
     from sqlalchemy import text
     try:
